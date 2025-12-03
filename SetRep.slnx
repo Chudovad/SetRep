@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="SetRep.API/SetRep.API.csproj" />
+  <Project Path="SetRep.Core/SetRep.Core.csproj" />
+  <Project Path="SetRep.Infrastructure/SetRep.Infrastructure.csproj" />
+  <Project Path="SetRep.Shared/SetRep.Shared.csproj" />
+</Solution>
