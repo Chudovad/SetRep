@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
+using SetRep.Core.Repositories;
 using SetRep.Infrastructure.Data;
+using SetRep.Infrastructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,6 +14,14 @@ builder.Services.AddOpenApi();
 // Добавляем DbContext для PostgreSQL
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// Регистрируем репозитории
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IExerciseRepository, ExerciseRepository>();
+builder.Services.AddScoped<IWorkoutRepository, WorkoutRepository>();
+builder.Services.AddScoped<IWorkoutExerciseRepository, WorkoutExerciseRepository>();
+builder.Services.AddScoped<ISetRepository, SetRepository>();
+builder.Services.AddScoped<IWeightHistoryRepository, WeightHistoryRepository>();
 
 var app = builder.Build();
 
