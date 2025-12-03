@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using SetRep.API.Services;
 using SetRep.Core.Repositories;
 using SetRep.Infrastructure.Data;
 using SetRep.Infrastructure.Repositories;
@@ -23,6 +24,21 @@ builder.Services.AddScoped<IWorkoutExerciseRepository, WorkoutExerciseRepository
 builder.Services.AddScoped<ISetRepository, SetRepository>();
 builder.Services.AddScoped<IWeightHistoryRepository, WeightHistoryRepository>();
 
+// Регистрируем сервис валидации Telegram WebApp
+builder.Services.AddScoped<ITelegramWebAppValidationService, TelegramWebAppValidationService>();
+
+// Настройка CORS для доступа из WebApp
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowWebApp", policy =>
+    {
+        policy.WithOrigins("https://localhost:7001", "http://localhost:5186")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -32,6 +48,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors("AllowWebApp");
 
 app.UseAuthorization();
 

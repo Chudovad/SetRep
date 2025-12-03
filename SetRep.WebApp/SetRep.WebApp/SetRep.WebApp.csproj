@@ -8,6 +8,7 @@
 
 
   <ItemGroup>
+    <ProjectReference Include="..\..\SetRep.Shared\SetRep.Shared.csproj" />
     <ProjectReference Include="..\SetRep.WebApp.Client\SetRep.WebApp.Client.csproj" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.*" />
   </ItemGroup>

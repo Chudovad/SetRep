@@ -68,6 +68,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SetRep.Infrastructure\SetRep.Infrastructure.csproj" />
+    <ProjectReference Include="..\SetRep.Shared\SetRep.Shared.csproj" />
   </ItemGroup>
 
 </Project>
