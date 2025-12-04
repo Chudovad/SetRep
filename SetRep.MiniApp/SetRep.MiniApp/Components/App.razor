@@ -9,13 +9,15 @@
     <link href=@Assets["_content/MudBlazor/MudBlazor.min.css"] rel="stylesheet" />
     <ImportMap />
     <link rel="icon" type="image/ico" href="favicon.ico" />
-    <HeadOutlet @rendermode="InteractiveWebAssembly" />
+    <HeadOutlet />
 </head>
 
 <body>
-    <Routes @rendermode="InteractiveWebAssembly" />
+    <Routes />
     <script src="_framework/blazor.web.js"></script>
     <script src=@Assets["_content/MudBlazor/MudBlazor.min.js"]></script>
+    <script src="_content/SetRep.MiniApp.Client/telegram-webapp.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </body>
 
 </html>

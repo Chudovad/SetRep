@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using SetRep.API.Services;
-using SetRep.Shared.Telegram;
 
 namespace SetRep.API.Controllers;
 

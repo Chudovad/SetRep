@@ -106,28 +106,47 @@ public class TelegramWebAppValidationService : ITelegramWebAppValidationService
 
     private bool ValidateSignature(Dictionary<string, string> parameters, string receivedHash, string botToken)
     {
-        // Исключаем hash из проверки
+        // Исключаем hash из проверки и сортируем по ключу
         var dataToCheck = parameters
             .Where(p => p.Key != "hash")
-            .OrderBy(p => p.Key)
+            .OrderBy(p => p.Key, StringComparer.Ordinal)
             .Select(p => $"{p.Key}={p.Value}")
             .ToArray();
 
         var dataCheckString = string.Join("\n", dataToCheck);
 
-        // Вычисляем секретный ключ из токена бота
-        using var sha256 = SHA256.Create();
-        var secretKey = sha256.ComputeHash(Encoding.UTF8.GetBytes(botToken));
+        // Генерируем секретный ключ согласно официальной схеме Telegram:
+        // secret_key = HMACSHA256("WebAppData", bot_token)
+        byte[] secretKey;
+        using (var hmacForSecret = new HMACSHA256(Encoding.UTF8.GetBytes("WebAppData")))
+        {
+            secretKey = hmacForSecret.ComputeHash(Encoding.UTF8.GetBytes(botToken));
+        }
 
-        // Вычисляем HMAC-SHA256
-        using var hmac = new HMACSHA256(secretKey);
-        var computedHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(dataCheckString));
-        var computedHashHex = BitConverter.ToString(computedHash)
-            .Replace("-", "", StringComparison.Ordinal)
-            .ToLowerInvariant();
+        // Вычисляем HMAC-SHA256 для проверки подписи
+        byte[] computedHash;
+        using (var hmac = new HMACSHA256(secretKey))
+        {
+            computedHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(dataCheckString));
+        }
 
-        // Сравниваем хэши
-        return string.Equals(computedHashHex, receivedHash, StringComparison.OrdinalIgnoreCase);
+        // Преобразуем вычисленный хэш в hex строку
+        var computedHashHex = Convert.ToHexString(computedHash).ToLowerInvariant();
+
+        // Преобразуем полученный хэш из hex строки в байты для сравнения
+        byte[] receivedHashBytes;
+        try
+        {
+            receivedHashBytes = Convert.FromHexString(receivedHash);
+        }
+        catch
+        {
+            // Если не удалось преобразовать, сравниваем как строки
+            return string.Equals(computedHashHex, receivedHash, StringComparison.OrdinalIgnoreCase);
+        }
+
+        // Сравниваем хэши побайтово (более безопасно)
+        return computedHash.SequenceEqual(receivedHashBytes);
     }
 
     private TelegramWebAppData ParseWebAppData(Dictionary<string, string> parameters)

@@ -1,0 +1,57 @@
+@using SetRep.MiniApp.Client.Services
+@using SetRep.Shared.Telegram
+
+@inject ITelegramWebAppService? TelegramWebAppService
+@inject ITelegramWebAppStateService? TelegramWebAppStateService
+@inject ILogger<TelegramWebAppInitializer>? Logger
+@implements IAsyncDisposable
+@rendermode InteractiveServer
+
+@* Компонент для инициализации и валидации Telegram WebApp данных при загрузке приложения *@
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && TelegramWebAppService != null && TelegramWebAppStateService != null)
+        {
+            try
+            {
+                Logger?.LogInformation("Начало валидации Telegram WebApp данных");
+                var validationResult = await TelegramWebAppService.GetAndValidateAsync();
+                
+                // Сохраняем результат в сервисе состояния
+                TelegramWebAppStateService.SetValidationResult(validationResult);
+                
+                if (validationResult.IsValid)
+                {
+                    Logger?.LogInformation("Telegram WebApp данные успешно валидированы. User ID: {UserId}", 
+                        validationResult.Data?.User?.Id);
+                }
+                else
+                {
+                    Logger?.LogWarning("Ошибка валидации Telegram WebApp данных: {Error}", 
+                        validationResult.ErrorMessage);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Критическая ошибка при валидации Telegram WebApp данных");
+                if (TelegramWebAppStateService != null)
+                {
+                    TelegramWebAppStateService.SetValidationResult(new TelegramWebAppValidationResult
+                    {
+                        IsValid = false,
+                        ErrorMessage = $"Критическая ошибка: {ex.Message}"
+                    });
+                }
+            }
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        // Очистка ресурсов при необходимости
+        await Task.CompletedTask;
+    }
+}
+

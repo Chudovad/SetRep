@@ -3,7 +3,7 @@
   <Project Path="SetRep.Bot/SetRep.Bot.csproj" Id="095afecc-afa1-4cbb-aa90-07e1f88c149a" />
   <Project Path="SetRep.Core/SetRep.Core.csproj" />
   <Project Path="SetRep.Infrastructure/SetRep.Infrastructure.csproj" />
+  <Project Path="SetRep.MiniApp/SetRep.MiniApp.Client/SetRep.MiniApp.Client.csproj" Id="c769599d-ef34-413d-9258-248caf318895" />
+  <Project Path="SetRep.MiniApp/SetRep.MiniApp/SetRep.MiniApp.csproj" Id="795e1edd-b0b6-44d1-a376-de4186d5560a" />
   <Project Path="SetRep.Shared/SetRep.Shared.csproj" />
-  <Project Path="SetRep.WebApp/SetRep.WebApp.Client/SetRep.WebApp.Client.csproj" Id="858e22f6-8ec5-4f7e-901b-b3d3232cb7a8" />
-  <Project Path="SetRep.WebApp/SetRep.WebApp/SetRep.WebApp.csproj" Id="fc7c7f65-f5ee-4240-a1b4-29d9fd0645a7" />
 </Solution>

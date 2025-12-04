@@ -27,12 +27,15 @@ builder.Services.AddScoped<IWeightHistoryRepository, WeightHistoryRepository>();
 // Регистрируем сервис валидации Telegram WebApp
 builder.Services.AddScoped<ITelegramWebAppValidationService, TelegramWebAppValidationService>();
 
-// Настройка CORS для доступа из WebApp
+// Настройка CORS для доступа из WebApp и MiniApp
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowWebApp", policy =>
     {
-        policy.WithOrigins("https://localhost:7001", "http://localhost:5186")
+        policy.WithOrigins(
+                "https://localhost:7001", "http://localhost:5186", // WebApp
+                "https://localhost:7001", "http://localhost:5096"  // MiniApp
+              )
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
