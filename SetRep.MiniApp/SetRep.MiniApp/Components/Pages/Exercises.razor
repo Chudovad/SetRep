@@ -1,0 +1,301 @@
+@page "/exercises"
+@using SetRep.Core.Entities
+@using SetRep.Core.Enums
+@using SetRep.MiniApp.Components.Dialog
+@rendermode InteractiveServer
+@inject HttpClient Http
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>SetRep - Упражнения</PageTitle>
+
+<div class="exercises-container">
+    <!-- Кнопка добавления упражнения -->
+    <MudButton Variant="Variant.Filled" 
+               Color="Color.Primary" 
+               FullWidth="true" 
+               Class="mb-4 add-exercise-btn"
+               StartIcon="@Icons.Material.Filled.Add"
+               OnClick="OpenAddExerciseDialog">
+        Добавить упражнение
+    </MudButton>
+    @if (isLoading)
+    {
+        <MudCard Elevation="2" Class="loading-card">
+            <MudCardContent>
+                <div class="loading-state">
+                    <MudProgressCircular Indeterminate="true" Size="Size.Large" Class="mb-4" />
+                    <MudText Typo="Typo.body1" Color="Color.Secondary" Align="Align.Center">
+                        Загрузка упражнений...
+                    </MudText>
+                </div>
+            </MudCardContent>
+        </MudCard>
+    }
+    else if (errorMessage != null)
+    {
+        <MudCard Elevation="2" Class="error-card">
+            <MudCardContent>
+                <div class="error-state">
+                    <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Large" Color="Color.Error" Class="mb-4" />
+                    <MudText Typo="Typo.h6" Align="Align.Center" Class="mb-2">
+                        Ошибка загрузки
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="mb-4">
+                        @errorMessage
+                    </MudText>
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               StartIcon="@Icons.Material.Filled.Refresh"
+                               OnClick="LoadExercises">
+                        Попробовать снова
+                    </MudButton>
+                </div>
+            </MudCardContent>
+        </MudCard>
+    }
+    else if (exercises.Any())
+    {
+        @foreach (var exercise in exercises)
+        {
+            <MudCard Elevation="2" Class="mb-3 exercise-item-card">
+                <MudCardContent>
+                    <div class="exercise-item-header">
+                        <div class="exercise-item-info">
+                            <MudText Typo="Typo.h6" Class="mb-1">@exercise.Name</MudText>
+                            @if (!string.IsNullOrWhiteSpace(exercise.Description))
+                            {
+                                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
+                                    @exercise.Description
+                                </MudText>
+                            }
+                            <div class="exercise-item-meta">
+                                @if (exercise.MuscleGroup.HasValue)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text">
+                                        @GetMuscleGroupName(exercise.MuscleGroup.Value)
+                                    </MudChip>
+                                }
+                                @if (exercise.IsSystem)
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text">
+                                        Системное
+                                    </MudChip>
+                                }
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    Ед. изм.: @exercise.WeightUnit
+                                </MudText>
+                            </div>
+                        </div>
+                    </div>
+                </MudCardContent>
+                <MudCardActions>
+                    <MudButton Variant="Variant.Text" 
+                               Color="Color.Primary" 
+                               Size="Size.Small"
+                               EndIcon="@Icons.Material.Filled.ChevronRight"
+                               OnClick="() => ViewExercise(exercise.Id)">
+                        Подробнее
+                    </MudButton>
+                </MudCardActions>
+            </MudCard>
+        }
+    }
+    else
+    {
+        <MudCard Elevation="2" Class="empty-state-card">
+            <MudCardContent>
+                <div class="empty-state">
+                    <MudIcon Icon="@Icons.Material.Filled.FitnessCenter" Size="Size.Large" Color="Color.Secondary" Class="mb-4" />
+                    <MudText Typo="Typo.h6" Align="Align.Center" Class="mb-2">
+                        Нет упражнений
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
+                        Упражнения пока не добавлены
+                    </MudText>
+                </div>
+            </MudCardContent>
+        </MudCard>
+    }
+</div>
+
+<style>
+    .exercises-container {
+        max-width: 100%;
+    }
+
+    .exercise-item-card {
+        border-radius: 12px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .exercise-item-card:hover {
+        transform: translateY(-2px);
+    }
+
+    .exercise-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .exercise-item-info {
+        flex: 1;
+    }
+
+    .exercise-item-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        margin-top: 8px;
+    }
+
+    .empty-state-card {
+        border-radius: 12px;
+        margin-top: 32px;
+    }
+
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px;
+    }
+
+    .loading-card, .error-card {
+        border-radius: 12px;
+        margin-top: 32px;
+    }
+
+    .loading-state, .error-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px;
+    }
+
+    .add-exercise-btn {
+        height: 48px;
+        border-radius: 12px;
+        text-transform: none;
+        font-weight: 500;
+    }
+</style>
+
+@code {
+    private List<Exercise> exercises = new();
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadExercises();
+    }
+
+    private async Task LoadExercises()
+    {
+        isLoading = true;
+        errorMessage = null;
+        
+        try
+        {
+            var response = await Http.GetAsync("api/exercises");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<List<Exercise>>();
+                exercises = data ?? new List<Exercise>();
+            }
+            else
+            {
+                var statusCode = (int)response.StatusCode;
+                var statusText = response.StatusCode.ToString();
+                
+                errorMessage = statusCode switch
+                {
+                    502 => "Сервер API недоступен (Bad Gateway). Убедитесь, что API сервер запущен и доступен.",
+                    503 => "Сервис временно недоступен. Попробуйте позже.",
+                    404 => "Эндпоинт API не найден. Проверьте конфигурацию API URL.",
+                    401 => "Требуется авторизация для доступа к API.",
+                    403 => "Доступ запрещен.",
+                    _ => $"Ошибка при загрузке упражнений: {statusText} (код {statusCode})"
+                };
+                
+                exercises = new List<Exercise>();
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = $"Ошибка сети при подключении к API: {ex.Message}. " +
+                          "Убедитесь, что API сервер запущен и доступен.";
+            exercises = new List<Exercise>();
+        }
+        catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
+        {
+            errorMessage = "Превышено время ожидания ответа от API. Сервер может быть перегружен или недоступен.";
+            exercises = new List<Exercise>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Не удалось загрузить упражнения: {ex.Message}";
+            exercises = new List<Exercise>();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task OpenAddExerciseDialog()
+    {
+        var parameters = new DialogParameters();
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true, 
+            MaxWidth = MaxWidth.Small, 
+            FullWidth = true 
+        };
+        
+        var dialogReference = await DialogService.ShowAsync<AddExerciseDialog>("Добавить упражнение", parameters, options);
+        var result = await dialogReference.Result;
+        
+        if (!result.Canceled && result.Data is Exercise createdExercise)
+        {
+            // Добавляем новое упражнение в начало списка
+            exercises.Insert(0, createdExercise);
+            Snackbar.Add("Упражнение успешно добавлено", Severity.Success);
+            StateHasChanged();
+        }
+    }
+
+    private void ViewExercise(Guid exerciseId)
+    {
+        // TODO: Навигация на страницу деталей упражнения
+    }
+
+    private string GetMuscleGroupName(MuscleGroup muscleGroup)
+    {
+        return muscleGroup switch
+        {
+            MuscleGroup.Chest => "Грудь",
+            MuscleGroup.Back => "Спина",
+            MuscleGroup.Shoulders => "Плечи",
+            MuscleGroup.Biceps => "Бицепс",
+            MuscleGroup.Triceps => "Трицепс",
+            MuscleGroup.Quadriceps => "Ноги",
+            MuscleGroup.Hamstrings => "Бицепс бедра",
+            MuscleGroup.Glutes => "Ягодицы",
+            MuscleGroup.Calves => "Икры",
+            MuscleGroup.Abs => "Пресс",
+            MuscleGroup.Forearms => "Предплечья",
+            MuscleGroup.Traps => "Трапеции",
+            MuscleGroup.Cardio => "Кардио",
+            MuscleGroup.FullBody => "Полное тело",
+            MuscleGroup.Other => "Другое",
+            _ => muscleGroup.ToString()
+        };
+    }
+}
+

@@ -8,6 +8,7 @@
 
 
   <ItemGroup>
+    <ProjectReference Include="..\..\SetRep.Core\SetRep.Core.csproj" />
     <ProjectReference Include="..\SetRep.MiniApp.Client\SetRep.MiniApp.Client.csproj" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.*" />
   </ItemGroup>

@@ -1,0 +1,166 @@
+@using SetRep.Core.Entities
+@using SetRep.Core.Enums
+@using MudBlazor
+@inject HttpClient Http
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Добавить упражнение</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="@isFormValid">
+            <MudTextField T="string" 
+                         Label="Название упражнения" 
+                         @bind-Value="exercise.Name"
+                         Variant="Variant.Outlined"
+                         Required="true"
+                         RequiredError="Название обязательно для заполнения"
+                         Class="mb-3" />
+            
+            <MudTextField T="string" 
+                         Label="Описание" 
+                         @bind-Value="exercise.Description"
+                         Variant="Variant.Outlined"
+                         Lines="3"
+                         Class="mb-3" />
+            
+            <MudSelect T="MuscleGroup?" 
+                      Label="Группа мышц" 
+                      @bind-Value="exercise.MuscleGroup"
+                      Variant="Variant.Outlined"
+                      AnchorOrigin="Origin.BottomCenter"
+                      Class="mb-3">
+                <MudSelectItem Value="@((MuscleGroup?)null)">Не выбрано</MudSelectItem>
+                <MudSelectItem Value="@MuscleGroup.Chest">Грудь</MudSelectItem>
+                <MudSelectItem Value="@MuscleGroup.Back">Спина</MudSelectItem>
+                <MudSelectItem Value="@MuscleGroup.Shoulders">Плечи</MudSelectItem>
+                <MudSelectItem Value="@MuscleGroup.Biceps">Бицепс</MudSelectItem>
+                <MudSelectItem Value="@MuscleGroup.Triceps">Трицепс</MudSelectItem>
+                <MudSelectItem Value="@MuscleGroup.Quadriceps">Ноги</MudSelectItem>
+                <MudSelectItem Value="@MuscleGroup.Hamstrings">Бицепс бедра</MudSelectItem>
+                <MudSelectItem Value="@MuscleGroup.Glutes">Ягодицы</MudSelectItem>
+                <MudSelectItem Value="@MuscleGroup.Calves">Икры</MudSelectItem>
+                <MudSelectItem Value="@MuscleGroup.Abs">Пресс</MudSelectItem>
+                <MudSelectItem Value="@MuscleGroup.Forearms">Предплечья</MudSelectItem>
+                <MudSelectItem Value="@MuscleGroup.Traps">Трапеции</MudSelectItem>
+                <MudSelectItem Value="@MuscleGroup.Cardio">Кардио</MudSelectItem>
+                <MudSelectItem Value="@MuscleGroup.FullBody">Полное тело</MudSelectItem>
+                <MudSelectItem Value="@MuscleGroup.Other">Другое</MudSelectItem>
+            </MudSelect>
+            
+            <MudSelect T="string" 
+                      Label="Единица измерения веса" 
+                      @bind-Value="exercise.WeightUnit"
+                      Variant="Variant.Outlined"
+                      AnchorOrigin="Origin.BottomCenter"
+                      Class="mb-3">
+                <MudSelectItem Value="@("кг")">кг</MudSelectItem>
+                <MudSelectItem Value="@("lbs")">lbs</MudSelectItem>
+            </MudSelect>
+        </MudForm>
+        
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <MudAlert Severity="Severity.Error" Class="mt-3">@errorMessage</MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Отмена</MudButton>
+        <MudButton Color="Color.Primary" 
+                   Variant="Variant.Filled" 
+                   OnClick="Save"
+                   Disabled="@(!isFormValid || isSaving)">
+            @if (isSaving)
+            {
+                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                <MudText Class="ms-2">Сохранение...</MudText>
+            }
+            else
+            {
+                <MudText>Сохранить</MudText>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IDialogReference? DialogReference { get; set; }
+    
+    private MudForm? form;
+    private bool isFormValid;
+    private bool isSaving = false;
+    private string? errorMessage;
+    
+    private Exercise exercise = new()
+    {
+        Name = string.Empty,
+        Description = null,
+        MuscleGroup = null,
+        WeightUnit = "кг",
+        IsSystem = false
+    };
+    
+    private void Cancel()
+    {
+        if (DialogReference != null)
+        {
+            DialogReference.Close(DialogResult.Cancel());
+        }
+    }
+    
+    private async Task Save()
+    {
+        await form!.Validate();
+        
+        if (!isFormValid || isSaving)
+            return;
+            
+        isSaving = true;
+        errorMessage = null;
+        
+        try
+        {
+            // Устанавливаем Id и CreatedAt
+            if (exercise.Id == Guid.Empty)
+            {
+                exercise.Id = Guid.NewGuid();
+            }
+            exercise.CreatedAt = DateTime.UtcNow;
+            
+            var response = await Http.PostAsJsonAsync("api/exercises", exercise);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var createdExercise = await response.Content.ReadFromJsonAsync<Exercise>();
+                if (DialogReference != null)
+                {
+                    DialogReference.Close(DialogResult.Ok(createdExercise));
+                }
+            }
+            else
+            {
+                var responseContent = await response.Content.ReadAsStringAsync();
+                var statusCode = (int)response.StatusCode;
+                errorMessage = statusCode switch
+                {
+                    400 => $"Неверные данные. Проверьте заполненные поля. {responseContent}",
+                    500 => "Ошибка сервера при создании упражнения.",
+                    _ => $"Ошибка при создании упражнения: код {statusCode}"
+                };
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = $"Ошибка сети: {ex.Message}";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Не удалось создать упражнение: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+}
+

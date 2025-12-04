@@ -17,6 +17,20 @@ builder.Services.AddRazorComponents()
 // На сервере эти сервисы будут использоваться только при prerendering
 // В WebAssembly они будут переопределены регистрацией из Client/Program.cs
 var apiBaseUrl = builder.Configuration["ApiBaseUrl"] ?? "https://localhost:7097";
+
+// Регистрация HttpClient для серверных компонентов
+builder.Services.AddHttpClient("ApiClient", client =>
+{
+    client.BaseAddress = new Uri(apiBaseUrl);
+});
+
+// Регистрация HttpClient для прямой инъекции (для совместимости с WebAssembly)
+builder.Services.AddScoped(sp =>
+{
+    var httpClientFactory = sp.GetRequiredService<IHttpClientFactory>();
+    return httpClientFactory.CreateClient("ApiClient");
+});
+
 builder.Services.AddScoped<ITelegramWebAppService>(sp =>
 {
     var httpClient = new HttpClient { BaseAddress = new Uri(apiBaseUrl) };
