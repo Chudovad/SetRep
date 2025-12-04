@@ -1,0 +1,137 @@
+@page "/profile"
+@rendermode InteractiveServer
+@using SetRep.MiniApp.Components.Layout
+
+<PageTitle>SetRep - Профиль</PageTitle>
+
+<div class="profile-container">
+    <!-- Информация о пользователе -->
+    <MudCard Elevation="2" Class="mb-4 profile-card">
+        <MudCardContent>
+            <div class="profile-header">
+                <MudAvatar Size="Size.Large" Color="Color.Primary" Class="profile-avatar">
+                    <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Large" />
+                </MudAvatar>
+                <div class="profile-info">
+                    <MudText Typo="Typo.h6">@UserName</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">@UserEmail</MudText>
+                </div>
+            </div>
+        </MudCardContent>
+    </MudCard>
+
+    <!-- Цель по весу -->
+    <MudCard Elevation="2" Class="mb-4 settings-card">
+        <MudCardContent>
+            <MudText Typo="Typo.h6" GutterBottom="true">Цель по весу</MudText>
+            <MudNumericField T="double" 
+                             @bind-Value="TargetWeight" 
+                             Label="Целевой вес (кг)" 
+                             Variant="Variant.Outlined"
+                             Adornment="Adornment.End"
+                             AdornmentIcon="@Icons.Material.Filled.Scale"
+                             Class="mb-3" />
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       FullWidth="true"
+                       OnClick="SaveTargetWeight">
+                Сохранить
+            </MudButton>
+        </MudCardContent>
+    </MudCard>
+
+    <!-- Единицы измерения -->
+    <MudCard Elevation="2" Class="mb-4 settings-card">
+        <MudCardContent>
+            <MudText Typo="Typo.h6" GutterBottom="true">Единицы измерения</MudText>
+            <MudSelect T="string" 
+                       @bind-Value="WeightUnit" 
+                       Label="Единица веса" 
+                       Variant="Variant.Outlined"
+                       Class="mb-3">
+                <MudSelectItem T="string" Value="@("kg")">Килограммы (кг)</MudSelectItem>
+                <MudSelectItem T="string" Value="@("lb")">Фунты (lb)</MudSelectItem>
+            </MudSelect>
+        </MudCardContent>
+    </MudCard>
+
+    <!-- Тема -->
+    <MudCard Elevation="2" Class="mb-4 settings-card">
+        <MudCardContent>
+            <MudText Typo="Typo.h6" GutterBottom="true">Внешний вид</MudText>
+            <div class="theme-switch">
+                <MudText Typo="Typo.body1">Тёмная тема</MudText>
+                <MudSwitch T="bool" Checked="@Layout?.IsDarkMode" CheckedChanged="OnThemeChanged" Color="Color.Primary" />
+            </div>
+        </MudCardContent>
+    </MudCard>
+
+    <!-- Дополнительные настройки -->
+    <MudCard Elevation="2" Class="mb-4 settings-card">
+        <MudCardContent>
+            <MudText Typo="Typo.h6" GutterBottom="true">Дополнительно</MudText>
+            <MudListItem T="string" Href="#" Icon="@Icons.Material.Filled.Notifications" Text="Уведомления" />
+            <MudDivider Class="my-2" />
+            <MudListItem T="string" Href="#" Icon="@Icons.Material.Filled.Help" Text="Помощь" />
+            <MudDivider Class="my-2" />
+            <MudListItem T="string" Href="#" Icon="@Icons.Material.Filled.Info" Text="О приложении" />
+        </MudCardContent>
+    </MudCard>
+</div>
+
+<style>
+    .profile-container {
+        max-width: 100%;
+    }
+
+    .profile-card {
+        border-radius: 12px;
+    }
+
+    .profile-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .profile-avatar {
+        width: 64px;
+        height: 64px;
+    }
+
+    .profile-info {
+        flex: 1;
+    }
+
+    .settings-card {
+        border-radius: 12px;
+    }
+
+    .theme-switch {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+    }
+</style>
+
+@code {
+    [CascadingParameter(Name = "MainLayout")] 
+    private MainLayout? Layout { get; set; }
+
+    private string UserName { get; set; } = "Пользователь";
+    private string UserEmail { get; set; } = "user@example.com";
+    private double TargetWeight { get; set; } = 70.0;
+    private string WeightUnit { get; set; } = "kg";
+
+    private void OnThemeChanged(bool isDark)
+    {
+        Layout?.ToggleTheme();
+    }
+
+    private void SaveTargetWeight()
+    {
+        // TODO: Сохранение цели по весу
+    }
+}
+

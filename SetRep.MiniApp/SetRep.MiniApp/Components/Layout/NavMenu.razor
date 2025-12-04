@@ -1,10 +1,96 @@
-﻿
-<MudNavMenu>
-    <MudNavLink Href="" Match="NavLinkMatch.All" Icon="@Icons.Material.Filled.Home">Home</MudNavLink>
-    <MudNavLink Href="counter" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Add">Counter</MudNavLink>
-    
-    <MudNavLink Href="weather" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.List">Weather</MudNavLink>
+﻿<MudPaper Elevation="3" Class="mobile-bottom-nav">
+    <MudNavLink Href="/" Match="NavLinkMatch.All" Class="nav-item" ActiveClass="nav-item-active">
+        <div class="nav-content">
+            <MudIcon Icon="@Icons.Material.Filled.Home" Size="Size.Medium" Class="nav-icon" />
+            <MudText Typo="Typo.caption" Class="nav-label">Главная</MudText>
+        </div>
+    </MudNavLink>
+    <MudNavLink Href="/workouts" Match="NavLinkMatch.Prefix" Class="nav-item" ActiveClass="nav-item-active">
+        <div class="nav-content">
+            <MudIcon Icon="@Icons.Material.Filled.FitnessCenter" Size="Size.Medium" Class="nav-icon" />
+            <MudText Typo="Typo.caption" Class="nav-label">Тренировки</MudText>
+        </div>
+    </MudNavLink>
+    <MudNavLink Href="/statistics" Match="NavLinkMatch.Prefix" Class="nav-item" ActiveClass="nav-item-active">
+        <div class="nav-content">
+            <MudIcon Icon="@Icons.Material.Filled.BarChart" Size="Size.Medium" Class="nav-icon" />
+            <MudText Typo="Typo.caption" Class="nav-label">Статистика</MudText>
+        </div>
+    </MudNavLink>
+    <MudNavLink Href="/profile" Match="NavLinkMatch.Prefix" Class="nav-item" ActiveClass="nav-item-active">
+        <div class="nav-content">
+            <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Medium" Class="nav-icon" />
+            <MudText Typo="Typo.caption" Class="nav-label">Профиль</MudText>
+        </div>
+    </MudNavLink>
+</MudPaper>
 
-</MudNavMenu>
+<style>
+    .mobile-bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        z-index: 1000;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        padding: 0;
+        background: var(--mud-palette-surface);
+        border-top: 1px solid var(--mud-palette-divider);
+        box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
+        height: 64px;
+    }
 
+    .nav-item {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+        color: var(--mud-palette-text-secondary);
+        transition: color 0.2s ease;
+        border-radius: 0;
+        flex: 1;
+        height: 100%;
+        padding: 0;
+    }
 
+    .nav-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        padding: 8px 4px;
+    }
+
+    .nav-item:hover {
+        color: var(--mud-palette-primary);
+    }
+
+    .nav-item-active {
+        color: var(--mud-palette-primary);
+    }
+
+        .nav-item-active .nav-icon {
+            color: var(--mud-palette-primary);
+        }
+
+    .nav-icon {
+        font-size: 24px;
+    }
+
+    .nav-label {
+        font-size: 0.7rem;
+        text-align: center;
+        white-space: nowrap;
+        line-height: 1.2;
+        font-weight: 400;
+    }
+
+    @@media (max-width: 420px) {
+        .nav-label {
+            font-size: 0.65rem;
+        }
+    }
+</style>

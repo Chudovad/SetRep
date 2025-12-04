@@ -1,63 +1,148 @@
 ﻿@page "/"
+@rendermode InteractiveServer
 
-<PageTitle>SetRep - Home</PageTitle>
+<PageTitle>SetRep - Главная</PageTitle>
 
-<TelegramWebAppInitializer/>
+<div class="home-container">
+    <!-- Карточка текущего веса -->
+    <MudCard Elevation="2" Class="mb-4 stat-card">
+        <MudCardContent>
+            <div class="stat-header">
+                <MudIcon Icon="@Icons.Material.Filled.MonitorWeight" Size="Size.Large" Color="Color.Primary" />
+                <div class="stat-content">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Текущий вес</MudText>
+                    <MudText Typo="Typo.h4" Class="mt-1">@(CurrentWeight?.ToString("F1") ?? "--") кг</MudText>
+                </div>
+            </div>
+        </MudCardContent>
+    </MudCard>
 
-<TelegramWebAppStatus />
+    <!-- Карточка тренировок за неделю -->
+    <MudCard Elevation="2" Class="mb-4 stat-card">
+        <MudCardContent>
+            <div class="stat-header">
+                <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Large" Color="Color.Success" />
+                <div class="stat-content">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Тренировок за неделю</MudText>
+                    <MudText Typo="Typo.h4" Class="mt-1">@WeeklyWorkouts</MudText>
+                </div>
+            </div>
+        </MudCardContent>
+    </MudCard>
 
-<MudText Typo="Typo.h3" GutterBottom="true">Добро пожаловать в SetRep!</MudText>
-<MudText Class="mb-8">Welcome to your new app, powered by MudBlazor and the .NET 9 Template!</MudText>
+    <!-- Карточка ближайшей тренировки -->
+    @if (NextWorkout != null)
+    {
+        <MudCard Elevation="2" Class="mb-4 workout-card">
+            <MudCardContent>
+                <MudText Typo="Typo.h6" GutterBottom="true">Ближайшая тренировка</MudText>
+                <MudText Typo="Typo.body1" Class="mb-2">
+                    <MudIcon Icon="@Icons.Material.Filled.Event" Size="Size.Small" Class="mr-2" />
+                    @NextWorkout.Date.ToString("dd MMMM yyyy")
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    @NextWorkout.ExerciseCount упражнений
+                </MudText>
+            </MudCardContent>
+        </MudCard>
+    }
+    else
+    {
+        <MudCard Elevation="2" Class="mb-4 workout-card">
+            <MudCardContent>
+                <MudText Typo="Typo.body1" Color="Color.Secondary" Align="Align.Center">
+                    Нет запланированных тренировок
+                </MudText>
+            </MudCardContent>
+        </MudCard>
+    }
 
-<MudAlert Severity="Severity.Normal" ContentAlignment="HorizontalAlignment.Start">
-    You can find documentation and examples on our website here:
-    <MudLink Href="https://mudblazor.com" Target="_blank" Typo="Typo.body2" Color="Color.Primary">
-        <b>www.mudblazor.com</b>
-    </MudLink>
-</MudAlert>
+    <!-- Быстрые действия -->
+    <MudText Typo="Typo.h6" Class="mb-3 mt-4">Быстрые действия</MudText>
+    
+    <div class="quick-actions">
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   FullWidth="true" 
+                   Class="mb-3 quick-action-btn"
+                   StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="AddWorkout">
+            Добавить тренировку
+        </MudButton>
+        
+        <MudButton Variant="Variant.Outlined" 
+                   Color="Color.Primary" 
+                   FullWidth="true" 
+                   Class="quick-action-btn"
+                   StartIcon="@Icons.Material.Filled.Scale"
+                   OnClick="RecordWeight">
+            Записать вес
+        </MudButton>
+    </div>
+</div>
 
-<br />
-<MudText Typo="Typo.h5" GutterBottom="true">Interactivity in this Template</MudText>
-<br />
-<MudText Typo="Typo.body2">
-    When you opt for the "Global" Interactivity Location, <br />
-    the render modes are defined in App.razor and consequently apply to all child components.<br />
-    In this case, providers are globally set in the MainLayout.<br />
-    <br />
-    On the other hand, if you choose the "Per page/component" Interactivity Location,<br />
-    it is necessary to include the <br />
-    <br />
-    &lt;MudPopoverProvider /&gt; <br />
-    &lt;MudDialogProvider /&gt; <br />
-    &lt;MudSnackbarProvider /&gt; <br />
-    <br />
-    components on every interactive page.<br />
-    <br />
-    If a render mode is not specified for a page, it defaults to Server-Side Rendering (SSR),<br />
-    similar to this page. While MudBlazor allows pages to be rendered in SSR,<br />
-    please note that interactive features, such as buttons and dropdown menus, will not be functional.
-</MudText>
+<style>
+    .home-container {
+        max-width: 100%;
+    }
 
-<br />
-<MudText Typo="Typo.h5" GutterBottom="true">What's New in Blazor with the Release of .NET 9</MudText>
-<br />
+    .stat-card {
+        border-radius: 12px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
 
-<MudText Typo="Typo.h6" GutterBottom="true">Prerendering</MudText>
-<MudText Typo="Typo.body2" GutterBottom="true">
-    If you're exploring the features of .NET 9 Blazor,<br /> you might be pleasantly surprised to learn that each page is prerendered on the server,<br /> regardless of the selected render mode.<br /><br />
-    This means that you'll need to inject all necessary services on the server,<br /> even when opting for the wasm (WebAssembly) render mode.<br /><br />
-    This prerendering functionality is crucial to ensuring that WebAssembly mode feels fast and responsive,<br /> especially when it comes to initial page load times.<br /><br />
-    For more information on how to detect prerendering and leverage the RenderContext, you can refer to the following link:
-    <MudLink Href="https://github.com/dotnet/aspnetcore/issues/51468#issuecomment-1783568121" Target="_blank" Typo="Typo.body2" Color="Color.Primary">
-        More details
-    </MudLink>
-</MudText>
+    .stat-card:hover {
+        transform: translateY(-2px);
+    }
 
-<br />
-<MudText Typo="Typo.h6" GutterBottom="true">InteractiveAuto</MudText>
-<MudText Typo="Typo.body2">
-    A discussion on how to achieve this can be found here:
-    <MudLink Href="https://github.com/dotnet/aspnetcore/issues/51468#issue-1950424116" Target="_blank" Typo="Typo.body2" Color="Color.Primary">
-        More details
-    </MudLink>
-</MudText>
+    .stat-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .stat-content {
+        flex: 1;
+    }
+
+    .workout-card {
+        border-radius: 12px;
+    }
+
+    .quick-actions {
+        margin-top: 8px;
+    }
+
+    .quick-action-btn {
+        height: 48px;
+        border-radius: 12px;
+        text-transform: none;
+        font-weight: 500;
+    }
+</style>
+
+@code {
+    private double? CurrentWeight { get; set; } = 75.5;
+    private int WeeklyWorkouts { get; set; } = 3;
+    private WorkoutInfo? NextWorkout { get; set; } = new WorkoutInfo 
+    { 
+        Date = DateTime.Now.AddDays(1), 
+        ExerciseCount = 5 
+    };
+
+    private void AddWorkout()
+    {
+        // TODO: Навигация на страницу добавления тренировки
+    }
+
+    private void RecordWeight()
+    {
+        // TODO: Открыть диалог записи веса
+    }
+
+    private class WorkoutInfo
+    {
+        public DateTime Date { get; set; }
+        public int ExerciseCount { get; set; }
+    }
+}

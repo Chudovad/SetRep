@@ -1,0 +1,96 @@
+/* Мобильные стили для Telegram WebApp */
+
+:root {
+    --mobile-max-width: 420px;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Ограничение ширины контента для мобильных устройств */
+@media (min-width: 421px) {
+    .mobile-layout {
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    }
+}
+
+/* Улучшение скролла на мобильных */
+.mobile-content {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+}
+
+/* Стили для карточек */
+.mud-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mud-card:active {
+    transform: scale(0.98);
+}
+
+/* Стили для кнопок */
+.mud-button-root {
+    transition: all 0.2s ease;
+}
+
+.mud-button-root:active {
+    transform: scale(0.95);
+}
+
+/* Адаптация графиков для мобильных */
+.mud-chart {
+    touch-action: pan-x pan-y;
+}
+
+/* Улучшение читаемости текста */
+.mud-typography {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+/* Стили для таб-бара */
+.mobile-bottom-nav {
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+/* Улучшение доступности */
+.mud-button-root:focus-visible,
+.mud-nav-link:focus-visible {
+    outline: 2px solid var(--mud-palette-primary);
+    outline-offset: 2px;
+}
+
+/* Анимации */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.mobile-content > * {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Оптимизация для Telegram WebApp */
+html {
+    height: 100%;
+    width: 100%;
+}
+
+#app {
+    height: 100%;
+    width: 100%;
+}
+
