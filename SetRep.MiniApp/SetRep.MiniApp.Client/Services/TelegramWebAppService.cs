@@ -99,7 +99,24 @@ public class TelegramWebAppService : ITelegramWebAppService
             }
             else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
             {
-                var errorResponse = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+                ErrorResponse? errorResponse = null;
+                try
+                {
+                    var contentLength = response.Content.Headers.ContentLength;
+                    if (contentLength.HasValue && contentLength.Value > 0)
+                    {
+                        var contentType = response.Content.Headers.ContentType?.MediaType;
+                        if (contentType?.Contains("json", StringComparison.OrdinalIgnoreCase) == true)
+                        {
+                            errorResponse = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Не удалось десериализовать ответ об ошибке");
+                }
+                
                 return new TelegramWebAppValidationResult
                 {
                     IsValid = false,
@@ -108,7 +125,24 @@ public class TelegramWebAppService : ITelegramWebAppService
             }
             else
             {
-                var errorResponse = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+                ErrorResponse? errorResponse = null;
+                try
+                {
+                    var contentLength = response.Content.Headers.ContentLength;
+                    if (contentLength.HasValue && contentLength.Value > 0)
+                    {
+                        var contentType = response.Content.Headers.ContentType?.MediaType;
+                        if (contentType?.Contains("json", StringComparison.OrdinalIgnoreCase) == true)
+                        {
+                            errorResponse = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Не удалось десериализовать ответ об ошибке");
+                }
+                
                 return new TelegramWebAppValidationResult
                 {
                     IsValid = false,

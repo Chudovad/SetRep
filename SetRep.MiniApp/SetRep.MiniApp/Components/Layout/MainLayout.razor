@@ -1,7 +1,10 @@
 ﻿@inherits LayoutComponentBase
 @implements IDisposable
 @inject NavigationManager NavigationManager
+@inject IJSRuntime JSRuntime
+@inject ILogger<MainLayout>? Logger
 
+<TelegramWebAppInitializer />
 <MudThemeProvider Theme="@_theme" IsDarkMode="_isDarkMode" />
 <MudPopoverProvider />
 <MudDialogProvider />
@@ -16,11 +19,9 @@
             @Body
         </CascadingValue>
     </MudMainContent>
-    
+
     <NavMenu />
 </MudLayout>
-
-<TelegramWebAppInitializer />
 
 <style>
     .mobile-layout {
@@ -32,18 +33,11 @@
         background: var(--mud-palette-background);
     }
 
-    .mobile-appbar {
-        position: sticky;
-        top: 0;
-        z-index: 1000;
-        backdrop-filter: blur(10px);
-    }
-
     .mobile-content {
         flex: 1;
         overflow-y: auto;
         padding: 16px;
-        padding-bottom: 90px; /* Отступ для нижнего меню */
+        padding-bottom: 90px;
         min-height: calc(100vh - 90px);
     }
 
@@ -56,15 +50,10 @@
 
 @code {
     [Parameter] public string PageTitle { get; set; } = "SetRep";
-    
-    private bool _isDarkMode = false;
-    private MudTheme? _theme = null;
 
-    public void ToggleTheme()
-    {
-        _isDarkMode = !_isDarkMode;
-        StateHasChanged();
-    }
+    private bool _isDarkMode = true;
+    private MudTheme? _theme = null;
+    private DotNetObjectReference<MainLayout>? _dotNetRef;
 
     public bool IsDarkMode => _isDarkMode;
 
@@ -85,9 +74,72 @@
         };
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _dotNetRef = DotNetObjectReference.Create(this);
+            await InitializeTelegramTheme();
+        }
+    }
+
+    private async Task InitializeTelegramTheme()
+    {
+        try
+        {
+            var startTime = DateTime.UtcNow;
+            var timeout = TimeSpan.FromSeconds(3);
+
+            while (DateTime.UtcNow - startTime < timeout)
+            {
+                try
+                {
+                    var isReady = await JSRuntime.InvokeAsync<bool>("telegramThemeHelper.isReady");
+
+                    if (isReady)
+                    {
+                        var theme = await JSRuntime.InvokeAsync<string>("telegramThemeHelper.getTheme");
+                        Logger?.LogInformation("Загружена тема Telegram: {Theme}", theme);
+
+                        _isDarkMode = theme == "dark";
+                        StateHasChanged();
+
+                        await JSRuntime.InvokeVoidAsync("telegramThemeHelper.setThemeCallback", _dotNetRef);
+
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogDebug(ex, "Ожидание загрузки веб-приложения Telegram...");
+                }
+
+                await Task.Delay(100);
+            }
+
+            Logger?.LogWarning("Веб-приложение Telegram не загрузилось вовремя из-за использования темы по умолчанию");
+            _isDarkMode = true;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogError(ex, "Ошибка при инициализации темы Telegram");
+            _isDarkMode = true;
+            StateHasChanged();
+        }
+    }
+
+    [JSInvokable]
+    public void OnTelegramThemeChanged(string theme)
+    {
+        Logger?.LogInformation("Тема изменена на: {Theme}", theme);
+        _isDarkMode = theme == "dark";
+        StateHasChanged();
+    }
+
     public void Dispose()
     {
-        // Очистка ресурсов при необходимости
+        _dotNetRef?.Dispose();
     }
 
     private readonly PaletteLight _lightPalette = new()

@@ -55,17 +55,6 @@
         </MudCardContent>
     </MudCard>
 
-    <!-- Тема -->
-    <MudCard Elevation="2" Class="mb-4 settings-card">
-        <MudCardContent>
-            <MudText Typo="Typo.h6" GutterBottom="true">Внешний вид</MudText>
-            <div class="theme-switch">
-                <MudText Typo="Typo.body1">Тёмная тема</MudText>
-                <MudSwitch T="bool" Checked="@Layout?.IsDarkMode" CheckedChanged="OnThemeChanged" Color="Color.Primary" />
-            </div>
-        </MudCardContent>
-    </MudCard>
-
     <!-- Дополнительные настройки -->
     <MudCard Elevation="2" Class="mb-4 settings-card">
         <MudCardContent>
@@ -106,28 +95,13 @@
     .settings-card {
         border-radius: 12px;
     }
-
-    .theme-switch {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 8px 0;
-    }
 </style>
 
 @code {
-    [CascadingParameter(Name = "MainLayout")] 
-    private MainLayout? Layout { get; set; }
-
     private string UserName { get; set; } = "Пользователь";
     private string UserEmail { get; set; } = "user@example.com";
     private double TargetWeight { get; set; } = 70.0;
     private string WeightUnit { get; set; } = "kg";
-
-    private void OnThemeChanged(bool isDark)
-    {
-        Layout?.ToggleTheme();
-    }
 
     private void SaveTargetWeight()
     {

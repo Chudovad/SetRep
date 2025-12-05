@@ -10,15 +10,16 @@
     <link href="css/mobile.css" rel="stylesheet" />
     <ImportMap />
     <link rel="icon" type="image/ico" href="favicon.ico" />
-    <HeadOutlet />
+    <HeadOutlet @rendermode="InteractiveServer"/>
 </head>
 
 <body>
-    <Routes />
+    <Routes @rendermode="InteractiveServer" />
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="_framework/blazor.web.js"></script>
     <script src=@Assets["_content/MudBlazor/MudBlazor.min.js"]></script>
     <script src="_content/SetRep.MiniApp.Client/telegram-webapp.js"></script>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="js/telegram-theme.js"></script>
 </body>
 
 </html>
