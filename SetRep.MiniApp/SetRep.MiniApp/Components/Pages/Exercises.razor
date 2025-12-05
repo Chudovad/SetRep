@@ -6,10 +6,20 @@
 @inject HttpClient Http
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
+@inject NavigationManager NavigationManager
 
 <PageTitle>SetRep - Упражнения</PageTitle>
 
 <div class="exercises-container">
+    <!-- Кнопка назад -->
+    <MudButton Variant="Variant.Text" 
+               Color="Color.Default" 
+               Class="mb-3 back-btn"
+               StartIcon="@Icons.Material.Filled.ArrowBack"
+               OnClick="GoBack">
+        Назад
+    </MudButton>
+    
     <!-- Кнопка добавления упражнения -->
     <MudButton Variant="Variant.Filled" 
                Color="Color.Primary" 
@@ -182,6 +192,11 @@
         text-transform: none;
         font-weight: 500;
     }
+
+    .back-btn {
+        text-transform: none;
+        font-weight: 500;
+    }
 </style>
 
 @code {
@@ -250,7 +265,7 @@
 
     private async Task OpenAddExerciseDialog()
     {
-        var parameters = new DialogParameters();
+        var parameters = new DialogParameters<AddExerciseDialog>();
         var options = new DialogOptions 
         { 
             CloseOnEscapeKey = true, 
@@ -268,6 +283,11 @@
             Snackbar.Add("Упражнение успешно добавлено", Severity.Success);
             StateHasChanged();
         }
+    }
+
+    private void GoBack()
+    {
+        NavigationManager.NavigateTo("/");
     }
 
     private void ViewExercise(Guid exerciseId)

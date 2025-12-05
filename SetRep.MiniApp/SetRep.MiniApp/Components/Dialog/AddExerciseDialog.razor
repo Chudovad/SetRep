@@ -1,6 +1,9 @@
 @using SetRep.Core.Entities
 @using SetRep.Core.Enums
-@using MudBlazor
+@using SetRep.Core.Extensions
+@using System
+@using System.Linq
+
 @inject HttpClient Http
 
 <MudDialog>
@@ -23,29 +26,18 @@
                          Variant="Variant.Outlined"
                          Lines="3"
                          Class="mb-3" />
-            
-            <MudSelect T="MuscleGroup?" 
-                      Label="Группа мышц" 
-                      @bind-Value="exercise.MuscleGroup"
-                      Variant="Variant.Outlined"
-                      AnchorOrigin="Origin.BottomCenter"
-                      Class="mb-3">
-                <MudSelectItem Value="@((MuscleGroup?)null)">Не выбрано</MudSelectItem>
-                <MudSelectItem Value="@MuscleGroup.Chest">Грудь</MudSelectItem>
-                <MudSelectItem Value="@MuscleGroup.Back">Спина</MudSelectItem>
-                <MudSelectItem Value="@MuscleGroup.Shoulders">Плечи</MudSelectItem>
-                <MudSelectItem Value="@MuscleGroup.Biceps">Бицепс</MudSelectItem>
-                <MudSelectItem Value="@MuscleGroup.Triceps">Трицепс</MudSelectItem>
-                <MudSelectItem Value="@MuscleGroup.Quadriceps">Ноги</MudSelectItem>
-                <MudSelectItem Value="@MuscleGroup.Hamstrings">Бицепс бедра</MudSelectItem>
-                <MudSelectItem Value="@MuscleGroup.Glutes">Ягодицы</MudSelectItem>
-                <MudSelectItem Value="@MuscleGroup.Calves">Икры</MudSelectItem>
-                <MudSelectItem Value="@MuscleGroup.Abs">Пресс</MudSelectItem>
-                <MudSelectItem Value="@MuscleGroup.Forearms">Предплечья</MudSelectItem>
-                <MudSelectItem Value="@MuscleGroup.Traps">Трапеции</MudSelectItem>
-                <MudSelectItem Value="@MuscleGroup.Cardio">Кардио</MudSelectItem>
-                <MudSelectItem Value="@MuscleGroup.FullBody">Полное тело</MudSelectItem>
-                <MudSelectItem Value="@MuscleGroup.Other">Другое</MudSelectItem>
+
+            <MudSelect T="MuscleGroup?"
+                       Label="Группа мышц"
+                       @bind-Value="exercise.MuscleGroup"
+                       Variant="Variant.Outlined"
+                       AnchorOrigin="Origin.BottomCenter"
+                       Class="mb-3">
+                <MudSelectItem T="MuscleGroup?" Value="@((MuscleGroup?)null)">Не выбрано</MudSelectItem>
+                @foreach (var muscleGroup in Enum.GetValues<MuscleGroup>())
+                {
+                    <MudSelectItem T="MuscleGroup?" Value="@muscleGroup">@muscleGroup.GetDescription()</MudSelectItem>
+                }
             </MudSelect>
             
             <MudSelect T="string" 
@@ -84,7 +76,7 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] IDialogReference? DialogReference { get; set; }
+    [CascadingParameter] IMudDialogInstance? MudDialog { get; set; }
     
     private MudForm? form;
     private bool isFormValid;
@@ -102,10 +94,7 @@
     
     private void Cancel()
     {
-        if (DialogReference != null)
-        {
-            DialogReference.Close(DialogResult.Cancel());
-        }
+        MudDialog?.Cancel();
     }
     
     private async Task Save()
@@ -120,7 +109,6 @@
         
         try
         {
-            // Устанавливаем Id и CreatedAt
             if (exercise.Id == Guid.Empty)
             {
                 exercise.Id = Guid.NewGuid();
@@ -132,10 +120,7 @@
             if (response.IsSuccessStatusCode)
             {
                 var createdExercise = await response.Content.ReadFromJsonAsync<Exercise>();
-                if (DialogReference != null)
-                {
-                    DialogReference.Close(DialogResult.Ok(createdExercise));
-                }
+                MudDialog?.Close(DialogResult.Ok(createdExercise));
             }
             else
             {
