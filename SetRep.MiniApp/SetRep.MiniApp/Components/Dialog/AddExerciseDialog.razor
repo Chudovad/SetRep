@@ -12,12 +12,18 @@
     </TitleContent>
     <DialogContent>
         <MudForm @ref="form" @bind-IsValid="@isFormValid">
+            <MudTextField T="string"
+                          Label="Название упражнения"
+                          @bind-Value="exercise.Name"
+                          Variant="Variant.Outlined"
+                          Required="true"
+                          RequiredError="Название обязательно для заполнения"
+                          Class="mb-3" />
+
             <MudTextField T="string" 
-                         Label="Название упражнения" 
-                         @bind-Value="exercise.Name"
+                         Label="Изображение упражнения" 
+                         @bind-Value="exercise.Image"
                          Variant="Variant.Outlined"
-                         Required="true"
-                         RequiredError="Название обязательно для заполнения"
                          Class="mb-3" />
             
             <MudTextField T="string" 
@@ -86,6 +92,7 @@
     private Exercise exercise = new()
     {
         Name = string.Empty,
+        Image = string.Empty,
         Description = null,
         MuscleGroup = null,
         WeightUnit = "кг",

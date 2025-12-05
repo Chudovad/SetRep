@@ -2,24 +2,17 @@
 @using SetRep.Core.Entities
 @using SetRep.Core.Enums
 @using SetRep.MiniApp.Components.Dialog
+@using SetRep.MiniApp.Client.Services
 @rendermode InteractiveServer
 @inject HttpClient Http
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
-@inject NavigationManager NavigationManager
+@inject ITelegramBackButtonService TelegramBackButtonService
+@implements IAsyncDisposable
 
 <PageTitle>SetRep - Упражнения</PageTitle>
 
 <div class="exercises-container">
-    <!-- Кнопка назад -->
-    <MudButton Variant="Variant.Text" 
-               Color="Color.Default" 
-               Class="mb-3 back-btn"
-               StartIcon="@Icons.Material.Filled.ArrowBack"
-               OnClick="GoBack">
-        Назад
-    </MudButton>
-    
     <!-- Кнопка добавления упражнения -->
     <MudButton Variant="Variant.Filled" 
                Color="Color.Primary" 
@@ -192,11 +185,6 @@
         text-transform: none;
         font-weight: 500;
     }
-
-    .back-btn {
-        text-transform: none;
-        font-weight: 500;
-    }
 </style>
 
 @code {
@@ -207,6 +195,14 @@
     protected override async Task OnInitializedAsync()
     {
         await LoadExercises();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await TelegramBackButtonService.ShowAsync();
+        }
     }
 
     private async Task LoadExercises()
@@ -285,11 +281,6 @@
         }
     }
 
-    private void GoBack()
-    {
-        NavigationManager.NavigateTo("/");
-    }
-
     private void ViewExercise(Guid exerciseId)
     {
         // TODO: Навигация на страницу деталей упражнения
@@ -316,6 +307,11 @@
             MuscleGroup.Other => "Другое",
             _ => muscleGroup.ToString()
         };
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await TelegramBackButtonService.HideAsync();
     }
 }
 

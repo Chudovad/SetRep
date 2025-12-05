@@ -24,6 +24,9 @@ public class ExerciseConfiguration : IEntityTypeConfiguration<Exercise>
 
         builder.HasIndex(e => e.Name);
 
+        builder.Property(e => e.Image)
+            .HasMaxLength(2000);
+
         builder.Property(e => e.Description)
             .HasMaxLength(2000);
 

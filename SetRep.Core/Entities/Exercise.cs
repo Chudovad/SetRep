@@ -18,6 +18,11 @@ public class Exercise
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
+    /// Гифка упражнения
+    /// </summary>
+    public string Image { get; set; } = string.Empty;
+
+    /// <summary>
     /// Описание упражнения
     /// </summary>
     public string? Description { get; set; }
