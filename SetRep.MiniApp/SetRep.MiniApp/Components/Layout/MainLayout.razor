@@ -49,6 +49,7 @@
 </style>
 
 @code {
+
     [Parameter] public string PageTitle { get; set; } = "SetRep";
 
     private bool _isDarkMode = true;
@@ -101,7 +102,8 @@
                         var theme = await JSRuntime.InvokeAsync<string>("telegramThemeHelper.getTheme");
                         Logger?.LogInformation("Загружена тема Telegram: {Theme}", theme);
 
-                        _isDarkMode = theme == "dark";
+                        //_isDarkMode = theme == "dark";
+                        _isDarkMode = true;//TODO УБРАТЬ ПОТОМ!!!
                         StateHasChanged();
 
                         await JSRuntime.InvokeVoidAsync("telegramThemeHelper.setThemeCallback", _dotNetRef);

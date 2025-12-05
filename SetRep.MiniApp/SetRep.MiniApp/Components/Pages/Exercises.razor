@@ -1,12 +1,14 @@
 @page "/exercises"
 @using SetRep.Core.Entities
 @using SetRep.Core.Enums
+@using SetRep.Core.Extensions
 @using SetRep.MiniApp.Components.Dialog
 @using SetRep.MiniApp.Client.Services
 @rendermode InteractiveServer
 @inject HttpClient Http
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
+@inject NavigationManager Navigation
 @inject ITelegramBackButtonService TelegramBackButtonService
 @implements IAsyncDisposable
 
@@ -61,47 +63,43 @@
     {
         @foreach (var exercise in exercises)
         {
-            <MudCard Elevation="2" Class="mb-3 exercise-item-card">
-                <MudCardContent>
-                    <div class="exercise-item-header">
-                        <div class="exercise-item-info">
-                            <MudText Typo="Typo.h6" Class="mb-1">@exercise.Name</MudText>
-                            @if (!string.IsNullOrWhiteSpace(exercise.Description))
-                            {
-                                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
-                                    @exercise.Description
-                                </MudText>
-                            }
-                            <div class="exercise-item-meta">
-                                @if (exercise.MuscleGroup.HasValue)
+            <div @onclick="() => ViewExercise(exercise.Id)" class="exercise-card-wrapper">
+                <MudCard Elevation="2" Class="mb-3 exercise-item-card">
+                    <MudCardContent>
+                        <div class="exercise-item-header">
+                            <div class="exercise-item-info">
+                                <MudText Typo="Typo.h6" Class="mb-1">@exercise.Name</MudText>
+                                @if (!string.IsNullOrWhiteSpace(exercise.Description))
                                 {
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text">
-                                        @GetMuscleGroupName(exercise.MuscleGroup.Value)
-                                    </MudChip>
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
+                                        @exercise.Description
+                                    </MudText>
                                 }
-                                @if (exercise.IsSystem)
-                                {
-                                    <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text">
-                                        Системное
-                                    </MudChip>
-                                }
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                    Ед. изм.: @exercise.WeightUnit
-                                </MudText>
+                                <div class="exercise-item-meta">
+                                    @if (exercise.MuscleGroup.HasValue)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text">
+                                            @exercise.MuscleGroup.Value.GetDescription()
+                                        </MudChip>
+                                    }
+                                    @if (exercise.IsSystem)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text">
+                                            Системное
+                                        </MudChip>
+                                    }
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        Ед. изм.: @exercise.WeightUnit
+                                    </MudText>
+                                </div>
                             </div>
+                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" 
+                                     Color="Color.Secondary" 
+                                     Class="exercise-arrow-icon" />
                         </div>
-                    </div>
-                </MudCardContent>
-                <MudCardActions>
-                    <MudButton Variant="Variant.Text" 
-                               Color="Color.Primary" 
-                               Size="Size.Small"
-                               EndIcon="@Icons.Material.Filled.ChevronRight"
-                               OnClick="() => ViewExercise(exercise.Id)">
-                        Подробнее
-                    </MudButton>
-                </MudCardActions>
-            </MudCard>
+                    </MudCardContent>
+                </MudCard>
+            </div>
         }
     }
     else
@@ -127,12 +125,16 @@
         max-width: 100%;
     }
 
+    .exercise-card-wrapper {
+        cursor: pointer;
+    }
+
     .exercise-item-card {
         border-radius: 12px;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
 
-    .exercise-item-card:hover {
+    .exercise-card-wrapper:hover .exercise-item-card {
         transform: translateY(-2px);
     }
 
@@ -145,6 +147,11 @@
 
     .exercise-item-info {
         flex: 1;
+    }
+
+    .exercise-arrow-icon {
+        flex-shrink: 0;
+        margin-top: 4px;
     }
 
     .exercise-item-meta {
@@ -274,7 +281,6 @@
         
         if (!result.Canceled && result.Data is Exercise createdExercise)
         {
-            // Добавляем новое упражнение в начало списка
             exercises.Insert(0, createdExercise);
             Snackbar.Add("Упражнение успешно добавлено", Severity.Success);
             StateHasChanged();
@@ -283,30 +289,7 @@
 
     private void ViewExercise(Guid exerciseId)
     {
-        // TODO: Навигация на страницу деталей упражнения
-    }
-
-    private string GetMuscleGroupName(MuscleGroup muscleGroup)
-    {
-        return muscleGroup switch
-        {
-            MuscleGroup.Chest => "Грудь",
-            MuscleGroup.Back => "Спина",
-            MuscleGroup.Shoulders => "Плечи",
-            MuscleGroup.Biceps => "Бицепс",
-            MuscleGroup.Triceps => "Трицепс",
-            MuscleGroup.Quadriceps => "Ноги",
-            MuscleGroup.Hamstrings => "Бицепс бедра",
-            MuscleGroup.Glutes => "Ягодицы",
-            MuscleGroup.Calves => "Икры",
-            MuscleGroup.Abs => "Пресс",
-            MuscleGroup.Forearms => "Предплечья",
-            MuscleGroup.Traps => "Трапеции",
-            MuscleGroup.Cardio => "Кардио",
-            MuscleGroup.FullBody => "Полное тело",
-            MuscleGroup.Other => "Другое",
-            _ => muscleGroup.ToString()
-        };
+        Navigation.NavigateTo($"/exercises/{exerciseId}");
     }
 
     public async ValueTask DisposeAsync()
