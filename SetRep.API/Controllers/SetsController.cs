@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using SetRep.Core.Entities;
 using SetRep.Core.Repositories;
+using SetRep.Shared.DTO;
 
 namespace SetRep.API.Controllers;
 
@@ -65,13 +66,23 @@ public class SetsController : ControllerBase
     /// Создать новый подход
     /// </summary>
     [HttpPost]
-    public async Task<ActionResult<Set>> Create([FromBody] Set set)
+    public async Task<ActionResult<Set>> Create([FromBody] CreateSetDto dto)
     {
-        if (set.Id == Guid.Empty)
+        var set = new Set
         {
-            set.Id = Guid.NewGuid();
-        }
-        set.CreatedAt = DateTime.UtcNow;
+            Id = Guid.NewGuid(),
+            WorkoutExerciseId = dto.WorkoutExerciseId,
+            SetNumber = dto.SetNumber,
+            Reps = dto.Reps,
+            Weight = dto.Weight,
+            DurationSeconds = dto.DurationSeconds,
+            DistanceMeters = dto.DistanceMeters,
+            RestSeconds = dto.RestSeconds,
+            IsCompleted = dto.IsCompleted,
+            Notes = dto.Notes,
+            CompletedAt = dto.CompletedAt,
+            CreatedAt = DateTime.UtcNow
+        };
 
         await _setRepository.AddAsync(set);
         await _setRepository.SaveChangesAsync();
@@ -83,21 +94,27 @@ public class SetsController : ControllerBase
     /// Обновить подход
     /// </summary>
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(Guid id, [FromBody] Set set)
+    public async Task<IActionResult> Update(Guid id, [FromBody] CreateSetDto dto)
     {
-        if (id != set.Id)
-        {
-            return BadRequest();
-        }
-
         var existing = await _setRepository.GetByIdAsync(id);
         if (existing == null)
         {
             return NotFound();
         }
 
-        set.UpdatedAt = DateTime.UtcNow;
-        await _setRepository.UpdateAsync(set);
+        existing.WorkoutExerciseId = dto.WorkoutExerciseId;
+        existing.SetNumber = dto.SetNumber;
+        existing.Reps = dto.Reps;
+        existing.Weight = dto.Weight;
+        existing.DurationSeconds = dto.DurationSeconds;
+        existing.DistanceMeters = dto.DistanceMeters;
+        existing.RestSeconds = dto.RestSeconds;
+        existing.IsCompleted = dto.IsCompleted;
+        existing.Notes = dto.Notes;
+        existing.CompletedAt = dto.CompletedAt;
+        existing.UpdatedAt = DateTime.UtcNow;
+
+        await _setRepository.UpdateAsync(existing);
         await _setRepository.SaveChangesAsync();
 
         return NoContent();

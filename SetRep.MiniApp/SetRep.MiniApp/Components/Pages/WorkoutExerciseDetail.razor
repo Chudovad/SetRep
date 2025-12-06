@@ -1,0 +1,435 @@
+@page "/workouts/{WorkoutId:guid}/exercises/{WorkoutExerciseId:guid}"
+@using SetRep.Core.Entities
+@using SetRep.Shared.DTO
+@using SetRep.MiniApp.Client.Services
+@rendermode InteractiveServer
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject ITelegramBackButtonService TelegramBackButtonService
+@inject ISnackbar Snackbar
+@implements IAsyncDisposable
+
+<PageTitle>SetRep - @(workoutExercise?.Exercise?.Name ?? "Упражнение")</PageTitle>
+
+@if (isLoading)
+{
+    <div class="workout-exercise-detail-container">
+        <MudCard Elevation="2" Class="loading-card">
+            <MudCardContent>
+                <div class="loading-state">
+                    <MudProgressCircular Indeterminate="true" Size="Size.Large" Class="mb-4" />
+                    <MudText Typo="Typo.body1" Color="Color.Secondary" Align="Align.Center">
+                        Загрузка упражнения...
+                    </MudText>
+                </div>
+            </MudCardContent>
+        </MudCard>
+    </div>
+}
+else if (errorMessage != null)
+{
+    <div class="workout-exercise-detail-container">
+        <MudCard Elevation="2" Class="error-card">
+            <MudCardContent>
+                <div class="error-state">
+                    <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Large" Color="Color.Error" Class="mb-4" />
+                    <MudText Typo="Typo.h6" Align="Align.Center" Class="mb-2">
+                        Ошибка загрузки
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="mb-4">
+                        @errorMessage
+                    </MudText>
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               StartIcon="@Icons.Material.Filled.Refresh"
+                               OnClick="LoadWorkoutExercise">
+                        Попробовать снова
+                    </MudButton>
+                    <MudButton Variant="Variant.Text" 
+                               Color="Color.Primary" 
+                               Class="mt-2"
+                               StartIcon="@Icons.Material.Filled.ArrowBack"
+                               OnClick="GoBack">
+                        Вернуться к тренировке
+                    </MudButton>
+                </div>
+            </MudCardContent>
+        </MudCard>
+    </div>
+}
+else if (workoutExercise != null && workoutExercise.Exercise != null)
+{
+    <div class="workout-exercise-detail-container">
+        <!-- Картинка упражнения -->
+        @if (!string.IsNullOrWhiteSpace(workoutExercise.Exercise.Image))
+        {
+            <MudCard Elevation="2" Class="mb-4 exercise-image-card">
+                <MudCardContent Class="pa-0">
+                    <img src="@workoutExercise.Exercise.Image" alt="@workoutExercise.Exercise.Name" class="exercise-image" />
+                </MudCardContent>
+            </MudCard>
+        }
+        else
+        {
+            <MudCard Elevation="2" Class="mb-4 exercise-image-card">
+                <MudCardContent>
+                    <div class="exercise-image-placeholder">
+                        <MudIcon Icon="@Icons.Material.Filled.FitnessCenter" Size="Size.Large" Color="Color.Secondary" />
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="mt-2">
+                            Изображение отсутствует
+                        </MudText>
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        }
+
+        <!-- Название и форма добавления подхода -->
+        <MudCard Elevation="2" Class="mb-4 exercise-form-card">
+            <MudCardContent>
+                <MudText Typo="Typo.h5" Class="mb-4">@workoutExercise.Exercise.Name</MudText>
+                
+                <div class="add-set-form">
+                    <MudGrid>
+                        <MudItem xs="12" sm="4">
+                            <MudNumericField T="decimal?" 
+                                           @bind-Value="newSetWeight" 
+                                           Label="@weightLabel" 
+                                           Variant="Variant.Outlined"
+                                           Min="0"
+                                           Step="@((decimal?)0.5)" />
+                        </MudItem>
+                        <MudItem xs="12" sm="4">
+                            <MudNumericField T="int" 
+                                           @bind-Value="newSetReps" 
+                                           Label="Повторения" 
+                                           Variant="Variant.Outlined"
+                                           Min="0"
+                                           Step="1" />
+                        </MudItem>
+                        <MudItem xs="12" sm="4" Class="d-flex align-center">
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       FullWidth="true"
+                                       StartIcon="@Icons.Material.Filled.Add"
+                                       OnClick="AddSet"
+                                       Disabled="isAddingSet || (newSetReps <= 0 && (!newSetWeight.HasValue || newSetWeight <= 0))">
+                            </MudButton>
+                        </MudItem>
+                    </MudGrid>
+                </div>
+            </MudCardContent>
+        </MudCard>
+
+        <!-- Таблица подходов -->
+        @if (sets != null && sets.Any())
+        {
+            <MudCard Elevation="2" Class="mb-4 sets-table-card">
+                <MudCardContent>
+                    <MudText Typo="Typo.h6" Class="mb-3">Подходы</MudText>
+                    <MudTable Items="@sets" Hover="true" Dense="true" Striped="true" HorizontalScrollbar="true">
+                        <HeaderContent>
+                            <MudTh>№</MudTh>
+                            <MudTh>Вес</MudTh>
+                            <MudTh>Повторения</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd DataLabel="№">@context.SetNumber</MudTd>
+                            <MudTd DataLabel="Вес">
+                                @if (context.Weight.HasValue)
+                                {
+                                    <span>@context.Weight.Value.ToString("0.##") @(workoutExercise.Exercise.WeightUnit)</span>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">-</MudText>
+                                }
+                            </MudTd>
+                            <MudTd DataLabel="Повторения">
+                                @if (context.Reps > 0)
+                                {
+                                    <span>@context.Reps</span>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">-</MudText>
+                                }
+                            </MudTd>
+                            <MudTd DataLabel="Действия">
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                             Color="Color.Error" 
+                                             Size="Size.Small"
+                                             OnClick="() => DeleteSet(context.Id)" />
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                </MudCardContent>
+            </MudCard>
+        }
+        else
+        {
+            <MudCard Elevation="2" Class="empty-state-card">
+                <MudCardContent>
+                    <div class="empty-state">
+                        <MudIcon Icon="@Icons.Material.Filled.FitnessCenter" Size="Size.Large" Color="Color.Secondary" Class="mb-4" />
+                        <MudText Typo="Typo.h6" Align="Align.Center" Class="mb-2">
+                            Нет подходов
+                        </MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
+                            Добавьте первый подход, используя форму выше
+                        </MudText>
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        }
+    </div>
+}
+
+<style>
+    .workout-exercise-detail-container {
+        max-width: 100%;
+    }
+
+    .exercise-image-card {
+        border-radius: 12px;
+        overflow: hidden;
+    }
+
+    .exercise-image {
+        width: 100%;
+        height: auto;
+        display: block;
+        max-height: 400px;
+        object-fit: contain;
+        background-color: #f5f5f5;
+    }
+
+    .exercise-image-placeholder {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 48px 24px;
+        min-height: 200px;
+        background-color: #f5f5f5;
+        border-radius: 12px;
+    }
+
+    .exercise-form-card, .sets-table-card {
+        border-radius: 12px;
+    }
+
+    .add-set-form {
+        margin-top: 16px;
+    }
+
+    .empty-state-card {
+        border-radius: 12px;
+        margin-top: 16px;
+    }
+
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px;
+    }
+
+    .loading-card, .error-card {
+        border-radius: 12px;
+        margin-top: 32px;
+    }
+
+    .loading-state, .error-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px;
+    }
+</style>
+
+@code {
+    [Parameter] public Guid WorkoutId { get; set; }
+    [Parameter] public Guid WorkoutExerciseId { get; set; }
+
+    private WorkoutExercise? workoutExercise;
+    private List<Set> sets = new();
+    private bool isLoading = true;
+    private bool isAddingSet = false;
+    private string? errorMessage;
+    private decimal? newSetWeight;
+    private int newSetReps;
+    private string weightLabel = "Вес (кг)";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadWorkoutExercise();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await TelegramBackButtonService.ShowAsync();
+        }
+    }
+
+    private async Task LoadWorkoutExercise()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var response = await Http.GetAsync($"api/workoutexercises/{WorkoutExerciseId}/with-sets");
+
+            if (response.IsSuccessStatusCode)
+            {
+                workoutExercise = await response.Content.ReadFromJsonAsync<WorkoutExercise>();
+                if (workoutExercise != null && workoutExercise.Sets != null)
+                {
+                    sets = workoutExercise.Sets.OrderBy(s => s.SetNumber).ToList();
+                    if (workoutExercise.Exercise != null)
+                    {
+                        weightLabel = $"Вес ({workoutExercise.Exercise.WeightUnit})";
+                    }
+                }
+            }
+            else
+            {
+                var statusCode = (int)response.StatusCode;
+                var statusText = response.StatusCode.ToString();
+
+                errorMessage = statusCode switch
+                {
+                    404 => "Упражнение не найдено.",
+                    502 => "Сервер API недоступен (Bad Gateway). Убедитесь, что API сервер запущен и доступен.",
+                    503 => "Сервис временно недоступен. Попробуйте позже.",
+                    401 => "Требуется авторизация для доступа к API.",
+                    403 => "Доступ запрещен.",
+                    _ => $"Ошибка при загрузке упражнения: {statusText} (код {statusCode})"
+                };
+
+                workoutExercise = null;
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = $"Ошибка сети при подключении к API: {ex.Message}. " +
+                          "Убедитесь, что API сервер запущен и доступен.";
+            workoutExercise = null;
+        }
+        catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
+        {
+            errorMessage = "Превышено время ожидания ответа от API. Сервер может быть перегружен или недоступен.";
+            workoutExercise = null;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Не удалось загрузить упражнение: {ex.Message}";
+            workoutExercise = null;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task AddSet()
+    {
+        if (workoutExercise == null || (newSetReps <= 0 && (!newSetWeight.HasValue || newSetWeight <= 0)))
+        {
+            return;
+        }
+
+        isAddingSet = true;
+
+        try
+        {
+            var nextSetNumber = sets.Any() ? sets.Max(s => s.SetNumber) + 1 : 1;
+
+            var createSetDto = new CreateSetDto
+            {
+                WorkoutExerciseId = WorkoutExerciseId,
+                SetNumber = nextSetNumber,
+                Reps = newSetReps,
+                Weight = newSetWeight,
+                IsCompleted = true,
+                CompletedAt = DateTime.UtcNow
+            };
+
+            var response = await Http.PostAsJsonAsync("api/sets", createSetDto);
+            if (response.IsSuccessStatusCode)
+            {
+                // Перезагружаем список подходов для получения актуальных данных
+                var setsResponse = await Http.GetAsync($"api/sets/workout-exercise/{WorkoutExerciseId}");
+                if (setsResponse.IsSuccessStatusCode)
+                {
+                    var updatedSets = await setsResponse.Content.ReadFromJsonAsync<List<Set>>();
+                    if (updatedSets != null)
+                    {
+                        sets = updatedSets.OrderBy(s => s.SetNumber).ToList();
+                    }
+                }
+                newSetWeight = null;
+                newSetReps = 0;
+                Snackbar.Add("Подход успешно добавлен", Severity.Success);
+                StateHasChanged();
+            }
+            else
+            {
+                Snackbar.Add("Ошибка при добавлении подхода", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Не удалось добавить подход: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isAddingSet = false;
+        }
+    }
+
+    private async Task DeleteSet(Guid setId)
+    {
+        try
+        {
+            var response = await Http.DeleteAsync($"api/sets/{setId}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                // Перезагружаем только подходы
+                var setsResponse = await Http.GetAsync($"api/sets/workout-exercise/{WorkoutExerciseId}");
+                if (setsResponse.IsSuccessStatusCode)
+                {
+                    var updatedSets = await setsResponse.Content.ReadFromJsonAsync<List<Set>>();
+                    if (updatedSets != null)
+                    {
+                        sets = updatedSets.OrderBy(s => s.SetNumber).ToList();
+                    }
+                }
+                Snackbar.Add("Подход удален", Severity.Success);
+                StateHasChanged();
+            }
+            else
+            {
+                Snackbar.Add("Ошибка при удалении подхода", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Не удалось удалить подход: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo($"/workouts/{WorkoutId}");
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await TelegramBackButtonService.HideAsync();
+    }
+}
+

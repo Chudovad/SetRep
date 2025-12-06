@@ -4,6 +4,7 @@
 @using System
 @using System.Linq
 
+@inject ITelegramWebAppStateService TelegramWebAppStateService
 @inject HttpClient Http
 
 <MudDialog>
@@ -83,12 +84,12 @@
 
 @code {
     [CascadingParameter] IMudDialogInstance? MudDialog { get; set; }
-    
+
     private MudForm? form;
     private bool isFormValid;
     private bool isSaving = false;
     private string? errorMessage;
-    
+
     private Exercise exercise = new()
     {
         Name = string.Empty,
@@ -98,22 +99,22 @@
         WeightUnit = "кг",
         IsSystem = false
     };
-    
+
     private void Cancel()
     {
         MudDialog?.Cancel();
     }
-    
+
     private async Task Save()
     {
         await form!.Validate();
-        
+
         if (!isFormValid || isSaving)
             return;
-            
+
         isSaving = true;
         errorMessage = null;
-        
+
         try
         {
             if (exercise.Id == Guid.Empty)
@@ -121,7 +122,12 @@
                 exercise.Id = Guid.NewGuid();
             }
             exercise.CreatedAt = DateTime.UtcNow;
-            
+
+            if (TelegramWebAppStateService.ValidationResult?.Data?.User != null)
+            {
+                exercise.CreatedByUserId = TelegramWebAppStateService.ValidationResult.Data.User.Id;
+            }
+
             var response = await Http.PostAsJsonAsync("api/exercises", exercise);
             
             if (response.IsSuccessStatusCode)
