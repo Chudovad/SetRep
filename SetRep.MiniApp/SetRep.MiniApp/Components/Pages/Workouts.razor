@@ -61,20 +61,7 @@
                         <div class="workout-item-header">
                             <div class="workout-item-info">
                                 <MudText Typo="Typo.h6" Class="mb-1">
-                                    @if (!string.IsNullOrWhiteSpace(workout.Name))
-                                    {
-                                        @workout.Name
-                                    }
-                                    else
-                                    {
-                                        @workout.StartTime.ToString("dd MMMM yyyy")
-                                    }
-                                </MudText>
-                                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-1">
-                                    @workout.StartTime.ToString("dd MMMM yyyy HH:mm")
-                                </MudText>
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                    @(workout.WorkoutExercises?.Count ?? 0) упражнений
+                                    @workout.Name
                                 </MudText>
                             </div>
                             <MudIcon Icon="@Icons.Material.Filled.ChevronRight" 

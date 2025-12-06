@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using SetRep.Core.Entities;
 using SetRep.Core.Repositories;
+using SetRep.Shared.DTO;
 
 namespace SetRep.API.Controllers;
 
@@ -71,13 +72,17 @@ public class WorkoutExercisesController : ControllerBase
     /// Создать новую связь тренировки и упражнения
     /// </summary>
     [HttpPost]
-    public async Task<ActionResult<WorkoutExercise>> Create([FromBody] WorkoutExercise workoutExercise)
+    public async Task<ActionResult<WorkoutExercise>> Create([FromBody] CreateWorkoutExerciseDto dto)
     {
-        if (workoutExercise.Id == Guid.Empty)
+        var workoutExercise = new WorkoutExercise
         {
-            workoutExercise.Id = Guid.NewGuid();
-        }
-        workoutExercise.CreatedAt = DateTime.UtcNow;
+            Id = Guid.NewGuid(),
+            WorkoutId = dto.WorkoutId,
+            ExerciseId = dto.ExerciseId,
+            Order = dto.Order,
+            Notes = dto.Notes,
+            CreatedAt = DateTime.UtcNow
+        };
 
         await _workoutExerciseRepository.AddAsync(workoutExercise);
         await _workoutExerciseRepository.SaveChangesAsync();
@@ -89,20 +94,20 @@ public class WorkoutExercisesController : ControllerBase
     /// Обновить связь тренировки и упражнения
     /// </summary>
     [HttpPut("{id}")]
-    public async Task<IActionResult> Update(Guid id, [FromBody] WorkoutExercise workoutExercise)
+    public async Task<IActionResult> Update(Guid id, [FromBody] CreateWorkoutExerciseDto dto)
     {
-        if (id != workoutExercise.Id)
-        {
-            return BadRequest();
-        }
-
         var existing = await _workoutExerciseRepository.GetByIdAsync(id);
         if (existing == null)
         {
             return NotFound();
         }
 
-        await _workoutExerciseRepository.UpdateAsync(workoutExercise);
+        existing.WorkoutId = dto.WorkoutId;
+        existing.ExerciseId = dto.ExerciseId;
+        existing.Order = dto.Order;
+        existing.Notes = dto.Notes;
+
+        await _workoutExerciseRepository.UpdateAsync(existing);
         await _workoutExerciseRepository.SaveChangesAsync();
 
         return NoContent();

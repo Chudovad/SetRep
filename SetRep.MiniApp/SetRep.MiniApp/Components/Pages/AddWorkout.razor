@@ -25,7 +25,11 @@
                             Variant="Variant.Outlined"
                             Placeholder="Например: Тренировка груди"
                             Class="mb-3" />
-
+                <MudTextField T="string"
+                              Label="Заметки к тренировке"
+                              @bind-Value="workoutDto.Notes"
+                              Variant="Variant.Outlined"
+                              Class="mb-3" />
             </MudForm>
         </MudCardContent>
     </MudCard>
@@ -248,7 +252,7 @@
 
             // Создаем тренировку через DTO
             var workoutResponse = await Http.PostAsJsonAsync("api/workouts", workoutDto);
-            
+
             if (!workoutResponse.IsSuccessStatusCode)
             {
                 var responseContent = await workoutResponse.Content.ReadAsStringAsync();
@@ -269,21 +273,19 @@
                 return;
             }
 
+            //TODO переделать на добавление одним запросом и тренировку и упражнения.
             // Добавляем упражнения в тренировку
             int order = 0;
             foreach (var exercise in selectedExercises)
             {
-                var workoutExercise = new WorkoutExercise
+                var workoutExerciseDto = new CreateWorkoutExerciseDto
                 {
-                    Id = Guid.NewGuid(),
                     WorkoutId = createdWorkout.Id,
                     ExerciseId = exercise.Id,
-                    Order = order++,
-                    CreatedAt = DateTime.UtcNow
+                    Order = order++
                 };
 
-                var exerciseResponse = await Http.PostAsJsonAsync("api/workoutexercises", workoutExercise);
-                
+                var exerciseResponse = await Http.PostAsJsonAsync("api/workoutexercises", workoutExerciseDto);
                 if (!exerciseResponse.IsSuccessStatusCode)
                 {
                     errorMessage = $"Ошибка при добавлении упражнения '{exercise.Name}' в тренировку.";
