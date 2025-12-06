@@ -1,0 +1,166 @@
+@using SetRep.Core.Entities
+@using SetRep.Core.Enums
+@using SetRep.Core.Extensions
+
+@inject HttpClient Http
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Выберите упражнения</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (isLoading)
+        {
+            <div class="loading-container">
+                <MudProgressCircular Indeterminate="true" Size="Size.Medium" Class="mb-3" />
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
+                    Загрузка упражнений...
+                </MudText>
+            </div>
+        }
+        else if (errorMessage != null)
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-3">@errorMessage</MudAlert>
+        }
+        else if (availableExercises.Any())
+        {
+            <MudList T="Guid"
+                     @bind-SelectedValues="selectedExerciseIds"
+                     SelectionMode="SelectionMode.MultiSelection"
+                     CheckBoxColor="Color.Primary"
+                     Dense="true"
+                     Class="exercise-list">
+                @foreach (var exercise in availableExercises)
+                {
+                    <MudListItem @key="exercise.Id" Value="@exercise.Id">
+                        <div class="exercise-item">
+                            <MudText Typo="Typo.body1" Class="exercise-name">@exercise.Name</MudText>
+                            @if (exercise.MuscleGroup.HasValue)
+                            {
+                                <MudChip T="string"
+                                         Size="Size.Small"
+                                         Color="Color.Primary"
+                                         Variant="Variant.Text"
+                                         Class="mt-1">
+                                    @exercise.MuscleGroup.Value.GetDescription()
+                                </MudChip>
+                            }
+                        </div>
+                    </MudListItem>
+                }
+            </MudList>
+        }
+        else
+        {
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="py-4">
+                Нет доступных упражнений
+            </MudText>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="ClearSelection"
+                   Disabled="@(!selectedExerciseIds.Any() || isSaving)"
+                   Variant="Variant.Text">
+            Очистить
+        </MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   OnClick="AddSelected"
+                   Disabled="@(!selectedExerciseIds.Any() || isSaving)">
+            @if (isSaving)
+            {
+                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                <MudText Class="ms-2">Добавление...</MudText>
+            }
+            else
+            {
+                <MudText>Добавить (@selectedExerciseIds.Count)</MudText>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+<style>
+    .loading-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px;
+    }
+
+    .exercise-list {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .exercise-item {
+        flex: 1;
+    }
+
+    .exercise-name {
+        font-weight: 500;
+    }
+</style>
+
+@code {
+    [CascadingParameter] IMudDialogInstance? MudDialog { get; set; }
+
+    private List<Exercise> availableExercises = new();
+    private IReadOnlyCollection<Guid> selectedExerciseIds = [];
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadExercises();
+    }
+
+    private async Task LoadExercises()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var response = await Http.GetAsync("api/exercises");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<List<Exercise>>();
+                availableExercises = data ?? new List<Exercise>();
+            }
+            else
+            {
+                var statusCode = (int)response.StatusCode;
+                errorMessage = $"Ошибка при загрузке упражнений: код {statusCode}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Не удалось загрузить упражнения: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ClearSelection()
+    {
+        //selectedExerciseIds.Clear();
+        StateHasChanged();
+    }
+
+    private void AddSelected()
+    {
+        if (!selectedExerciseIds.Any() || isSaving)
+            return;
+
+        var selectedExercises = availableExercises
+            .Where(e => selectedExerciseIds.Contains(e.Id))
+            .ToList();
+
+        MudDialog?.Close(DialogResult.Ok(selectedExercises));
+    }
+}

@@ -45,7 +45,7 @@ public class UsersController : ControllerBase
     /// Получить пользователя по Telegram ID
     /// </summary>
     [HttpGet("telegram/{telegramId}")]
-    public async Task<ActionResult<User>> GetByTelegramId(Guid telegramId)
+    public async Task<ActionResult<User>> GetByTelegramId(long telegramId)
     {
         var user = await _userRepository.GetByTelegramIdAsync(telegramId);
         if (user == null)

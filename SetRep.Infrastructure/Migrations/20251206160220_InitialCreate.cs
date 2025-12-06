@@ -17,6 +17,7 @@ namespace SetRep.Infrastructure.Migrations
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    Image = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: false),
                     Description = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true),
                     MuscleGroup = table.Column<int>(type: "integer", nullable: true, comment: "Группа мышц"),
                     WeightUnit = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: false, defaultValue: "кг"),
@@ -35,7 +36,7 @@ namespace SetRep.Infrastructure.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    TelegramId = table.Column<Guid>(type: "uuid", nullable: false),
+                    TelegramId = table.Column<long>(type: "bigint", nullable: false),
                     Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
                     Username = table.Column<string>(type: "character varying(320)", maxLength: 320, nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),

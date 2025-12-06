@@ -1,4 +1,5 @@
 using SetRep.Shared.Telegram;
+using SetRep.Shared.DTO;
 
 namespace SetRep.MiniApp.Client.Services;
 

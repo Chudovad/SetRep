@@ -1,0 +1,316 @@
+@page "/workouts/add"
+@using SetRep.Core.Entities
+@using SetRep.MiniApp.Components.Dialog
+@using SetRep.Shared.DTO
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@rendermode InteractiveServer
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject ITelegramBackButtonService TelegramBackButtonService
+@inject ITelegramWebAppStateService TelegramWebAppStateService
+@implements IAsyncDisposable
+
+<PageTitle>SetRep - Добавить тренировку</PageTitle>
+
+<div class="add-workout-container">
+    <MudCard Elevation="2" Class="mb-4">
+        <MudCardContent>
+            <MudForm @ref="form" @bind-IsValid="@isFormValid">
+                <MudTextField T="string"
+                            Label="Название тренировки"
+                            @bind-Value="workoutDto.Name"
+                            Variant="Variant.Outlined"
+                            Placeholder="Например: Тренировка груди"
+                            Class="mb-3" />
+
+            </MudForm>
+        </MudCardContent>
+    </MudCard>
+
+    <!-- Список добавленных упражнений -->
+    @if (selectedExercises.Any())
+    {
+        <MudCard Elevation="2" Class="mb-4">
+            <MudCardContent>
+                <MudText Typo="Typo.h6" Class="mb-3">Добавленные упражнения (@selectedExercises.Count)</MudText>
+                <MudList T="List<Exercise>" Dense="true">
+                    @for (int i = 0; i < selectedExercises.Count; i++)
+                    {
+                        var exercise = selectedExercises[i];
+                        <MudListItem>
+                            <div class="exercise-list-item">
+                                <div class="exercise-info">
+                                    <MudText Typo="Typo.body1" Class="exercise-name">@exercise.Name</MudText>
+                                    @if (!string.IsNullOrWhiteSpace(exercise.Description))
+                                    {
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1">
+                                            @exercise.Description
+                                        </MudText>
+                                    }
+                                </div>
+                                <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                             Color="Color.Error" 
+                                             Size="Size.Small"
+                                             OnClick="() => RemoveExercise(exercise.Id)" />
+                            </div>
+                        </MudListItem>
+                    }
+                </MudList>
+            </MudCardContent>
+        </MudCard>
+    }
+
+    <!-- Кнопка добавления упражнений -->
+    <MudButton Variant="Variant.Filled" 
+               Color="Color.Primary" 
+               FullWidth="true" 
+               Class="mb-4 add-exercise-btn"
+               StartIcon="@Icons.Material.Filled.Add"
+               OnClick="OpenSelectExercisesDialog">
+        Добавить новое упражнение
+    </MudButton>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">@errorMessage</MudAlert>
+    }
+
+    <!-- Кнопки действий -->
+    <div class="action-buttons">
+        <MudButton Variant="Variant.Text" 
+                   Color="Color.Default" 
+                   FullWidth="true" 
+                   Class="mb-3"
+                   OnClick="Cancel">
+            Отмена
+        </MudButton>
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   FullWidth="true" 
+                   Class="save-btn"
+                   OnClick="SaveWorkout"
+                   Disabled="@(!isFormValid || isSaving || !selectedExercises.Any())">
+            @if (isSaving)
+            {
+                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                <MudText Class="ms-2">Сохранение...</MudText>
+            }
+            else
+            {
+                <MudText>Сохранить тренировку</MudText>
+            }
+        </MudButton>
+    </div>
+</div>
+
+<style>
+    .add-workout-container {
+        max-width: 100%;
+    }
+
+    .exercise-list-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        gap: 16px;
+    }
+
+    .exercise-info {
+        flex: 1;
+    }
+
+    .exercise-name {
+        font-weight: 500;
+    }
+
+    .add-exercise-btn {
+        height: 48px;
+        border-radius: 12px;
+        text-transform: none;
+        font-weight: 500;
+    }
+
+    .action-buttons {
+        margin-top: 16px;
+    }
+
+    .save-btn {
+        height: 48px;
+        border-radius: 12px;
+        text-transform: none;
+        font-weight: 500;
+    }
+</style>
+
+@code {
+    private MudForm? form;
+    private bool isFormValid;
+    private bool isSaving = false;
+    private string? errorMessage;
+
+    private CreateWorkoutDto workoutDto = new()
+    {
+        Name = string.Empty,
+        UserId = Guid.Empty,
+        StartTime = DateTime.UtcNow
+    };
+
+    private List<Exercise> selectedExercises = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await TelegramBackButtonService.ShowAsync();
+    }
+
+    private async Task OpenSelectExercisesDialog()
+    {
+        var parameters = new DialogParameters<SelectExercisesDialog>();
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true, 
+            MaxWidth = MaxWidth.Medium, 
+            FullWidth = true 
+        };
+
+        var dialogReference = await DialogService.ShowAsync<SelectExercisesDialog>("Выберите упражнения", parameters, options);
+        var result = await dialogReference.Result;
+
+        if (!result.Canceled && result.Data is List<Exercise> exercises)
+        {
+            foreach (var exercise in exercises)
+            {
+                if (!selectedExercises.Any(e => e.Id == exercise.Id))
+                {
+                    selectedExercises.Add(exercise);
+                }
+            }
+            StateHasChanged();
+        }
+    }
+
+    private void RemoveExercise(Guid exerciseId)
+    {
+        selectedExercises.RemoveAll(e => e.Id == exerciseId);
+        StateHasChanged();
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/workouts");
+    }
+
+    private async Task SaveWorkout()
+    {
+        await form!.Validate();
+
+        if (!isFormValid || isSaving || !selectedExercises.Any())
+            return;
+
+        isSaving = true;
+        errorMessage = null;
+
+        try
+        {
+            if (workoutDto.UserId == Guid.Empty && TelegramWebAppStateService.ValidationResult?.Data?.User != null)
+            {
+                var telegramId = TelegramWebAppStateService.ValidationResult.Data.User.TelegramId;
+                var userResponse = await Http.GetAsync($"api/Users/telegram/{telegramId}");
+
+                if (userResponse.IsSuccessStatusCode)
+                {
+                    var user = await userResponse.Content.ReadFromJsonAsync<UserDto>();
+                    if (user != null)
+                    {
+                        workoutDto.UserId = user.Id;
+                    }
+                    else
+                    {
+                        errorMessage = "Не удалось получить данные пользователя.";
+                        return;
+                    }
+                }
+                else
+                {
+                    errorMessage = "Пользователь не найден. Пожалуйста, перезагрузите страницу.";
+                    return;
+                }
+            }
+
+            // Устанавливаем обязательные поля
+            if (workoutDto.StartTime == default)
+            {
+                workoutDto.StartTime = DateTime.UtcNow;
+            }
+
+            // Создаем тренировку через DTO
+            var workoutResponse = await Http.PostAsJsonAsync("api/workouts", workoutDto);
+            
+            if (!workoutResponse.IsSuccessStatusCode)
+            {
+                var responseContent = await workoutResponse.Content.ReadAsStringAsync();
+                var statusCode = (int)workoutResponse.StatusCode;
+                errorMessage = statusCode switch
+                {
+                    400 => $"Неверные данные. Проверьте заполненные поля. {responseContent}",
+                    500 => "Ошибка сервера при создании тренировки.",
+                    _ => $"Ошибка при создании тренировки: код {statusCode}"
+                };
+                return;
+            }
+
+            var createdWorkout = await workoutResponse.Content.ReadFromJsonAsync<Workout>();
+            if (createdWorkout == null)
+            {
+                errorMessage = "Не удалось получить созданную тренировку.";
+                return;
+            }
+
+            // Добавляем упражнения в тренировку
+            int order = 0;
+            foreach (var exercise in selectedExercises)
+            {
+                var workoutExercise = new WorkoutExercise
+                {
+                    Id = Guid.NewGuid(),
+                    WorkoutId = createdWorkout.Id,
+                    ExerciseId = exercise.Id,
+                    Order = order++,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                var exerciseResponse = await Http.PostAsJsonAsync("api/workoutexercises", workoutExercise);
+                
+                if (!exerciseResponse.IsSuccessStatusCode)
+                {
+                    errorMessage = $"Ошибка при добавлении упражнения '{exercise.Name}' в тренировку.";
+                    return;
+                }
+            }
+
+            Snackbar.Add("Тренировка успешно создана", Severity.Success);
+            Navigation.NavigateTo("/workouts");
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = $"Ошибка сети: {ex.Message}";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Не удалось создать тренировку: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+
+    public async ValueTask DisposeAsync()
+    {
+        await TelegramBackButtonService.HideAsync();
+    }
+}

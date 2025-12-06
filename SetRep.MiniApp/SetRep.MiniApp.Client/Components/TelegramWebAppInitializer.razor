@@ -1,8 +1,12 @@
 @using SetRep.MiniApp.Client.Services
+@using SetRep.Shared.DTO
 @using SetRep.Shared.Telegram
+@using System.Net.Http.Json
+@using System.Text.Json
 
 @inject ITelegramWebAppService? TelegramWebAppService
 @inject ITelegramWebAppStateService? TelegramWebAppStateService
+@inject HttpClient HttpClient
 @inject ILogger<TelegramWebAppInitializer>? Logger
 @implements IAsyncDisposable
 @rendermode InteractiveServer
@@ -18,20 +22,22 @@
             {
                 Logger?.LogInformation("Начало валидации Telegram WebApp данных");
                 var validationResult = await TelegramWebAppService.GetAndValidateAsync();
-                
-                // Сохраняем результат в сервисе состояния
-                TelegramWebAppStateService.SetValidationResult(validationResult);
-                
-                if (validationResult.IsValid)
+
+                if (validationResult.IsValid && validationResult.Data?.User != null)
                 {
                     Logger?.LogInformation("Telegram WebApp данные успешно валидированы. User ID: {UserId}", 
-                        validationResult.Data?.User?.Id);
+                        validationResult.Data.User.TelegramId);
+
+                    await EnsureUserExistsAsync(validationResult.Data.User);
                 }
                 else
                 {
                     Logger?.LogWarning("Ошибка валидации Telegram WebApp данных: {Error}", 
                         validationResult.ErrorMessage);
                 }
+
+                // Сохраняем результат в сервисе состояния
+                TelegramWebAppStateService.SetValidationResult(validationResult);
             }
             catch (Exception ex)
             {
@@ -45,6 +51,58 @@
                     });
                 }
             }
+        }
+    }
+
+    private async Task EnsureUserExistsAsync(TelegramUser telegramUser)
+    {
+        try
+        {
+            UserDto? foundUser = null;
+
+            // Сначала ищем по TelegramId
+            var response = await HttpClient.GetAsync($"api/Users/telegram/{telegramUser.TelegramId}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                foundUser = await response.Content.ReadFromJsonAsync<UserDto>();
+                telegramUser.Id = foundUser.Id;
+                Logger?.LogDebug("Пользователь найден по Telegram ID {TelegramId}", telegramUser.TelegramId);
+            }
+            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                Logger?.LogInformation("Пользователь с Telegram ID {TelegramId} не найден, создаем нового", telegramUser.TelegramId);
+
+                var newUser = new UserDto
+                {
+                    Id = telegramUser.Id != Guid.Empty ? telegramUser.Id : Guid.NewGuid(),
+                    TelegramId = telegramUser.TelegramId,
+                    Name = string.IsNullOrWhiteSpace(telegramUser.LastName)
+                        ? telegramUser.FirstName
+                        : $"{telegramUser.FirstName} {telegramUser.LastName}",
+                    Username = telegramUser.Username ?? string.Empty,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                var createResponse = await HttpClient.PostAsJsonAsync("api/Users", newUser);
+
+                if (createResponse.IsSuccessStatusCode)
+                {
+                    telegramUser.Id = newUser.Id;
+                    Logger?.LogInformation("Пользователь успешно создан с ID {UserId} и сохранен в сервис состояния", newUser.Id);
+                }
+                else
+                {
+                    var errorContent = await createResponse.Content.ReadAsStringAsync();
+                    Logger?.LogError("Ошибка при создании пользователя: {StatusCode} - {Error}",
+                        createResponse.StatusCode, errorContent);
+                }
+            }
+            
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogError(ex, "Ошибка при проверке/создании пользователя");
         }
     }
 

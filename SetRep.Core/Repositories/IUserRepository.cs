@@ -10,7 +10,7 @@ public interface IUserRepository : IRepository<User>
     /// <summary>
     /// Получить пользователя по Telegram ID
     /// </summary>
-    Task<User?> GetByTelegramIdAsync(Guid telegramId);
+    Task<User?> GetByTelegramIdAsync(long telegramId);
 
     /// <summary>
     /// Получить пользователя по имени пользователя

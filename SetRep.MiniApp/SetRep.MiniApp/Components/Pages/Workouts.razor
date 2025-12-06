@@ -1,37 +1,89 @@
 @page "/workouts"
+@using SetRep.Core.Entities
+
 @rendermode InteractiveServer
+@inject HttpClient Http
+@inject NavigationManager Navigation
 
 <PageTitle>SetRep - Тренировки</PageTitle>
 
 <div class="workouts-container">
-    @if (WorkoutsItems.Any())
+    @if (isLoading)
     {
-        @foreach (var workout in WorkoutsItems)
-        {
-            <MudCard Elevation="2" Class="mb-3 workout-item-card">
-                <MudCardContent>
-                    <div class="workout-item-header">
-                        <div class="workout-item-info">
-                            <MudText Typo="Typo.h6" Class="mb-1">@workout.Date.ToString("dd MMMM yyyy")</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                @workout.ExerciseCount упражнений
-                            </MudText>
-                        </div>
-                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Filled">
-                            @workout.TotalVolume.ToString("F0") кг
-                        </MudChip>
-                    </div>
-                </MudCardContent>
-                <MudCardActions>
-                    <MudButton Variant="Variant.Text" 
+        <MudCard Elevation="2" Class="loading-card">
+            <MudCardContent>
+                <div class="loading-state">
+                    <MudProgressCircular Indeterminate="true" Size="Size.Large" Class="mb-4" />
+                    <MudText Typo="Typo.body1" Color="Color.Secondary" Align="Align.Center">
+                        Загрузка тренировок...
+                    </MudText>
+                </div>
+            </MudCardContent>
+        </MudCard>
+    }
+    else if (errorMessage != null)
+    {
+        <MudCard Elevation="2" Class="error-card">
+            <MudCardContent>
+                <div class="error-state">
+                    <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Large" Color="Color.Error" Class="mb-4" />
+                    <MudText Typo="Typo.h6" Align="Align.Center" Class="mb-2">
+                        Ошибка загрузки
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="mb-4">
+                        @errorMessage
+                    </MudText>
+                    <MudButton Variant="Variant.Filled" 
                                Color="Color.Primary" 
-                               Size="Size.Small"
-                               EndIcon="@Icons.Material.Filled.ChevronRight"
-                               OnClick="() => ViewWorkout(workout.Id)">
-                        Подробнее
+                               StartIcon="@Icons.Material.Filled.Refresh"
+                               OnClick="LoadWorkouts">
+                        Попробовать снова
                     </MudButton>
-                </MudCardActions>
-            </MudCard>
+                </div>
+            </MudCardContent>
+        </MudCard>
+    }
+    else if (workouts.Any())
+    {
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   FullWidth="true"
+                   Class="mb-4"
+                   StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="AddWorkout">
+            Добавить тренировку
+        </MudButton>
+        @foreach (var workout in workouts.OrderByDescending(w => w.StartTime))
+        {
+            <div @onclick="() => ViewWorkout(workout.Id)" class="workout-card-wrapper">
+                <MudCard Elevation="2" Class="mb-3 workout-item-card">
+                    <MudCardContent>
+                        <div class="workout-item-header">
+                            <div class="workout-item-info">
+                                <MudText Typo="Typo.h6" Class="mb-1">
+                                    @if (!string.IsNullOrWhiteSpace(workout.Name))
+                                    {
+                                        @workout.Name
+                                    }
+                                    else
+                                    {
+                                        @workout.StartTime.ToString("dd MMMM yyyy")
+                                    }
+                                </MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-1">
+                                    @workout.StartTime.ToString("dd MMMM yyyy HH:mm")
+                                </MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                    @(workout.WorkoutExercises?.Count ?? 0) упражнений
+                                </MudText>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" 
+                                     Color="Color.Secondary" 
+                                     Class="workout-arrow-icon" />
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </div>
         }
     }
     else
@@ -64,12 +116,16 @@
         max-width: 100%;
     }
 
+    .workout-card-wrapper {
+        cursor: pointer;
+    }
+
     .workout-item-card {
         border-radius: 12px;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
 
-    .workout-item-card:hover {
+    .workout-card-wrapper:hover .workout-item-card {
         transform: translateY(-2px);
     }
 
@@ -84,6 +140,11 @@
         flex: 1;
     }
 
+    .workout-arrow-icon {
+        flex-shrink: 0;
+        margin-top: 4px;
+    }
+
     .empty-state-card {
         border-radius: 12px;
         margin-top: 32px;
@@ -95,56 +156,94 @@
         align-items: center;
         padding: 24px;
     }
+
+    .loading-card, .error-card {
+        border-radius: 12px;
+        margin-top: 32px;
+    }
+
+    .loading-state, .error-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px;
+    }
 </style>
 
 @code {
-    private List<WorkoutItem> WorkoutsItems { get; set; } = new();
+    private List<Workout> workouts = new();
+    private bool isLoading = true;
+    private string? errorMessage;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        // Пример данных
-        WorkoutsItems = new List<WorkoutItem>
-        {
-            new WorkoutItem 
-            { 
-                Id = 1, 
-                Date = DateTime.Now.AddDays(-2), 
-                ExerciseCount = 5, 
-                TotalVolume = 1250 
-            },
-            new WorkoutItem 
-            { 
-                Id = 2, 
-                Date = DateTime.Now.AddDays(-5), 
-                ExerciseCount = 4, 
-                TotalVolume = 980 
-            },
-            new WorkoutItem 
-            { 
-                Id = 3, 
-                Date = DateTime.Now.AddDays(-7), 
-                ExerciseCount = 6, 
-                TotalVolume = 1520 
-            }
-        };
+        await LoadWorkouts();
     }
 
-    private void ViewWorkout(int workoutId)
+    private async Task LoadWorkouts()
+    {
+        isLoading = true;
+        errorMessage = null;
+        
+        try
+        {
+            var response = await Http.GetAsync("api/workouts");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<List<Workout>>();
+                workouts = data ?? new List<Workout>();
+            }
+            else
+            {
+                var statusCode = (int)response.StatusCode;
+                var statusText = response.StatusCode.ToString();
+                
+                errorMessage = statusCode switch
+                {
+                    502 => "Сервер API недоступен (Bad Gateway). Убедитесь, что API сервер запущен и доступен.",
+                    503 => "Сервис временно недоступен. Попробуйте позже.",
+                    404 => "Эндпоинт API не найден. Проверьте конфигурацию API URL.",
+                    401 => "Требуется авторизация для доступа к API.",
+                    403 => "Доступ запрещен.",
+                    _ => $"Ошибка при загрузке тренировок: {statusText} (код {statusCode})"
+                };
+                
+                workouts = new List<Workout>();
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = $"Ошибка сети при подключении к API: {ex.Message}. " +
+                          "Убедитесь, что API сервер запущен и доступен.";
+            workouts = new List<Workout>();
+        }
+        catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
+        {
+            errorMessage = "Превышено время ожидания ответа от API. Сервер может быть перегружен или недоступен.";
+            workouts = new List<Workout>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Не удалось загрузить тренировки: {ex.Message}";
+            workouts = new List<Workout>();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ViewWorkout(Guid workoutId)
     {
         // TODO: Навигация на страницу деталей тренировки
+        // Пока заглушка - можно будет добавить страницу /workouts/{id}
+        Navigation.NavigateTo($"/workouts/{workoutId}");
     }
 
     private void AddWorkout()
     {
-        // TODO: Навигация на страницу добавления тренировки
-    }
-
-    private class WorkoutItem
-    {
-        public int Id { get; set; }
-        public DateTime Date { get; set; }
-        public int ExerciseCount { get; set; }
-        public double TotalVolume { get; set; }
+        Navigation.NavigateTo("/workouts/add");
     }
 }
 

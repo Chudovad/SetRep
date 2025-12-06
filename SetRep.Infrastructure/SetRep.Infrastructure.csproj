@@ -71,4 +71,8 @@
     <ProjectReference Include="..\SetRep.Core\SetRep.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Migrations\" />
+  </ItemGroup>
+
 </Project>

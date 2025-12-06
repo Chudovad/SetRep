@@ -13,7 +13,7 @@ public class User
     /// <summary>
     /// Уникальный идентификатор пользователя в Telegram
     /// </summary>
-    public Guid TelegramId { get; set; }
+    public long TelegramId { get; set; }
 
     /// <summary>
     /// Имя пользователя

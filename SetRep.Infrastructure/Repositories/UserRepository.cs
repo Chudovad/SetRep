@@ -10,7 +10,7 @@ namespace SetRep.Infrastructure.Repositories;
 /// </summary>
 public class UserRepository(ApplicationDbContext context) : Repository<User>(context), IUserRepository
 {
-    public async Task<User?> GetByTelegramIdAsync(Guid telegramId)
+    public async Task<User?> GetByTelegramIdAsync(long telegramId)
     {
         return await _dbSet.FirstOrDefaultAsync(u => u.TelegramId == telegramId);
     }

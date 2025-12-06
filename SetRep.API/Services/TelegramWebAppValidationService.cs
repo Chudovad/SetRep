@@ -174,6 +174,7 @@ public class TelegramWebAppValidationService : ITelegramWebAppValidationService
                 {
                     PropertyNameCaseInsensitive = true
                 });
+
                 if (user != null)
                 {
                     data.User = user;
@@ -184,7 +185,7 @@ public class TelegramWebAppValidationService : ITelegramWebAppValidationService
                 // Если не удалось распарсить JSON, пробуем парсить отдельные поля
                 if (parameters.TryGetValue("id", out var idStr) && long.TryParse(idStr, out var id))
                 {
-                    data.User.Id = id;
+                    data.User.TelegramId = id;
                     data.User.FirstName = parameters.GetValueOrDefault("first_name") ?? string.Empty;
                     data.User.LastName = parameters.GetValueOrDefault("last_name");
                     data.User.Username = parameters.GetValueOrDefault("username");
@@ -206,7 +207,7 @@ public class TelegramWebAppValidationService : ITelegramWebAppValidationService
             // Парсим отдельные поля пользователя
             if (parameters.TryGetValue("id", out var idStr) && long.TryParse(idStr, out var id))
             {
-                data.User.Id = id;
+                data.User.TelegramId = id;
                 data.User.FirstName = parameters.GetValueOrDefault("first_name") ?? string.Empty;
                 data.User.LastName = parameters.GetValueOrDefault("last_name");
                 data.User.Username = parameters.GetValueOrDefault("username");
