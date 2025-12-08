@@ -219,9 +219,6 @@ namespace SetRep.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime?>("EndTime")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -231,9 +228,6 @@ namespace SetRep.Infrastructure.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
 
-                    b.Property<DateTime>("StartTime")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -242,9 +236,7 @@ namespace SetRep.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("StartTime");
-
-                    b.HasIndex("UserId", "StartTime");
+                    b.HasIndex("UserId");
 
                     b.ToTable("Workouts", (string)null);
                 });
@@ -283,6 +275,110 @@ namespace SetRep.Infrastructure.Migrations
                     b.HasIndex("WorkoutId", "Order");
 
                     b.ToTable("WorkoutExercises", (string)null);
+                });
+
+            modelBuilder.Entity("SetRep.Core.Entities.WorkoutHistory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("EndTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTime>("StartTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("WorkoutId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StartTime");
+
+                    b.HasIndex("WorkoutId");
+
+                    b.HasIndex("UserId", "StartTime");
+
+                    b.ToTable("WorkoutHistory", (string)null);
+                });
+
+            modelBuilder.Entity("SetRep.Core.Entities.WorkoutHistorySet", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal?>("DistanceMeters")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<int?>("DurationSeconds")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ExerciseId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsCompleted")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int>("Reps")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0);
+
+                    b.Property<int?>("RestSeconds")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SetNumber")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1);
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal?>("Weight")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<Guid>("WorkoutHistoryId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompletedAt");
+
+                    b.HasIndex("ExerciseId");
+
+                    b.HasIndex("WorkoutHistoryId", "ExerciseId", "SetNumber");
+
+                    b.ToTable("WorkoutHistorySets", (string)null);
                 });
 
             modelBuilder.Entity("SetRep.Core.Entities.Set", b =>
@@ -337,6 +433,44 @@ namespace SetRep.Infrastructure.Migrations
                     b.Navigation("Workout");
                 });
 
+            modelBuilder.Entity("SetRep.Core.Entities.WorkoutHistory", b =>
+                {
+                    b.HasOne("SetRep.Core.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SetRep.Core.Entities.Workout", "Workout")
+                        .WithMany()
+                        .HasForeignKey("WorkoutId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("User");
+
+                    b.Navigation("Workout");
+                });
+
+            modelBuilder.Entity("SetRep.Core.Entities.WorkoutHistorySet", b =>
+                {
+                    b.HasOne("SetRep.Core.Entities.Exercise", "Exercise")
+                        .WithMany()
+                        .HasForeignKey("ExerciseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SetRep.Core.Entities.WorkoutHistory", "WorkoutHistory")
+                        .WithMany("Sets")
+                        .HasForeignKey("WorkoutHistoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Exercise");
+
+                    b.Navigation("WorkoutHistory");
+                });
+
             modelBuilder.Entity("SetRep.Core.Entities.Exercise", b =>
                 {
                     b.Navigation("WorkoutExercises");
@@ -355,6 +489,11 @@ namespace SetRep.Infrastructure.Migrations
                 });
 
             modelBuilder.Entity("SetRep.Core.Entities.WorkoutExercise", b =>
+                {
+                    b.Navigation("Sets");
+                });
+
+            modelBuilder.Entity("SetRep.Core.Entities.WorkoutHistory", b =>
                 {
                     b.Navigation("Sets");
                 });

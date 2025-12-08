@@ -75,18 +75,6 @@ else if (workout != null)
                         Описание отсутствует
                     </MudText>
                 }
-
-                <div class="workout-meta mt-3">
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">
-                        Начало: @workout.StartTime.ToString("dd.MM.yyyy HH:mm")
-                    </MudText>
-                    @if (workout.EndTime.HasValue)
-                    {
-                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
-                            Окончание: @workout.EndTime.Value.ToString("dd.MM.yyyy HH:mm")
-                        </MudText>
-                    }
-                </div>
             </MudCardContent>
         </MudCard>
 
@@ -110,59 +98,6 @@ else if (workout != null)
                                     {
                                         <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
                                             @workoutExercise.Notes
-                                        </MudText>
-                                    }
-
-                                    <!-- Список подходов -->
-                                    @if (workoutExercise.Sets != null && workoutExercise.Sets.Any())
-                                    {
-                                        <div class="sets-list">
-                                            @foreach (var set in workoutExercise.Sets.OrderBy(s => s.SetNumber))
-                                            {
-                                                <div class="set-item">
-                                                    <MudText Typo="Typo.body2" Class="set-number">
-                                                        Подход @set.SetNumber
-                                                    </MudText>
-                                                    <div class="set-details">
-                                                        @if (set.Reps > 0)
-                                                        {
-                                                            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text">
-                                                                @set.Reps повторений
-                                                            </MudChip>
-                                                        }
-                                                        @if (set.Weight.HasValue)
-                                                        {
-                                                            <MudChip T="string" Size="Size.Small" Color="Color.Secondary" Variant="Variant.Text">
-                                                                @set.Weight.Value.ToString("0.##") @(workoutExercise.Exercise?.WeightUnit ?? "кг")
-                                                            </MudChip>
-                                                        }
-                                                        @if (set.DurationSeconds.HasValue)
-                                                        {
-                                                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Text">
-                                                                @(set.DurationSeconds.Value / 60) мин
-                                                            </MudChip>
-                                                        }
-                                                        @if (set.DistanceMeters.HasValue)
-                                                        {
-                                                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Text">
-                                                                @set.DistanceMeters.Value.ToString("0.##") м
-                                                            </MudChip>
-                                                        }
-                                                    </div>
-                                                    @if (!string.IsNullOrWhiteSpace(set.Notes))
-                                                    {
-                                                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
-                                                            @set.Notes
-                                                        </MudText>
-                                                    }
-                                                </div>
-                                            }
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2">
-                                            Подходы не добавлены
                                         </MudText>
                                     }
                                 </div>

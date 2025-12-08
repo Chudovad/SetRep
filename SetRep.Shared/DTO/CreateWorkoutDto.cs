@@ -16,16 +16,6 @@ public class CreateWorkoutDto
     public string Name { get; set; } = string.Empty;
 
     /// <summary>
-    /// Дата и время начала тренировки
-    /// </summary>
-    public DateTime StartTime { get; set; }
-
-    /// <summary>
-    /// Дата и время окончания тренировки
-    /// </summary>
-    public DateTime? EndTime { get; set; }
-
-    /// <summary>
     /// Заметки к тренировке
     /// </summary>
     public string? Notes { get; set; }

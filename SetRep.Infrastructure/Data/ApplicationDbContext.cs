@@ -43,6 +43,16 @@ public class ApplicationDbContext : DbContext
     /// </summary>
     public DbSet<WeightHistory> WeightHistory { get; set; } = null!;
 
+    /// <summary>
+    /// История выполненных тренировок
+    /// </summary>
+    public DbSet<WorkoutHistory> WorkoutHistory { get; set; } = null!;
+
+    /// <summary>
+    /// Подходы в истории тренировок
+    /// </summary>
+    public DbSet<WorkoutHistorySet> WorkoutHistorySets { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

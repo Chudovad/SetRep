@@ -29,6 +29,8 @@ builder.Services.AddScoped<IWorkoutRepository, WorkoutRepository>();
 builder.Services.AddScoped<IWorkoutExerciseRepository, WorkoutExerciseRepository>();
 builder.Services.AddScoped<ISetRepository, SetRepository>();
 builder.Services.AddScoped<IWeightHistoryRepository, WeightHistoryRepository>();
+builder.Services.AddScoped<IWorkoutHistoryRepository, WorkoutHistoryRepository>();
+builder.Services.AddScoped<IWorkoutHistorySetRepository, WorkoutHistorySetRepository>();
 
 // Регистрируем сервис валидации Telegram WebApp
 builder.Services.AddScoped<ITelegramWebAppValidationService, TelegramWebAppValidationService>();

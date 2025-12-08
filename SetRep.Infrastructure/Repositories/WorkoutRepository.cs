@@ -14,15 +14,6 @@ public class WorkoutRepository(ApplicationDbContext context) : Repository<Workou
     {
         return await _dbSet
             .Where(w => w.UserId == userId)
-            .OrderByDescending(w => w.StartTime)
-            .ToListAsync();
-    }
-
-    public async Task<IEnumerable<Workout>> GetByUserIdAndDateRangeAsync(Guid userId, DateTime startDate, DateTime endDate)
-    {
-        return await _dbSet
-            .Where(w => w.UserId == userId && w.StartTime >= startDate && w.StartTime <= endDate)
-            .OrderByDescending(w => w.StartTime)
             .ToListAsync();
     }
 
@@ -30,7 +21,6 @@ public class WorkoutRepository(ApplicationDbContext context) : Repository<Workou
     {
         return await _dbSet
             .Where(w => w.UserId == userId)
-            .OrderByDescending(w => w.StartTime)
             .FirstOrDefaultAsync();
     }
 

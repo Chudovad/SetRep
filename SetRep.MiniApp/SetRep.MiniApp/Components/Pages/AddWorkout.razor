@@ -160,7 +160,6 @@
     {
         Name = string.Empty,
         UserId = Guid.Empty,
-        StartTime = DateTime.UtcNow
     };
 
     private List<Exercise> selectedExercises = new();
@@ -242,12 +241,6 @@
                     errorMessage = "Пользователь не найден. Пожалуйста, перезагрузите страницу.";
                     return;
                 }
-            }
-
-            // Устанавливаем обязательные поля
-            if (workoutDto.StartTime == default)
-            {
-                workoutDto.StartTime = DateTime.UtcNow;
             }
 
             // Создаем тренировку через DTO

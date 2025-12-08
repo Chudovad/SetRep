@@ -13,11 +13,6 @@ public interface IWorkoutRepository : IRepository<Workout>
     Task<IEnumerable<Workout>> GetByUserIdAsync(Guid userId);
 
     /// <summary>
-    /// Получить тренировки пользователя за период
-    /// </summary>
-    Task<IEnumerable<Workout>> GetByUserIdAndDateRangeAsync(Guid userId, DateTime startDate, DateTime endDate);
-
-    /// <summary>
     /// Получить последнюю тренировку пользователя
     /// </summary>
     Task<Workout?> GetLastWorkoutByUserIdAsync(Guid userId);
