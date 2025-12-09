@@ -45,6 +45,11 @@ builder.Services.AddScoped<ITelegramBackButtonService>(sp =>
     var logger = sp.GetRequiredService<ILogger<TelegramBackButtonService>>();
     return new TelegramBackButtonService(jsRuntime, logger);
 });
+builder.Services.AddScoped<IWorkoutHistoryService>(sp =>
+{
+    var httpClient = sp.GetRequiredService<HttpClient>();
+    return new WorkoutHistoryService(httpClient);
+});
 
 var app = builder.Build();
 

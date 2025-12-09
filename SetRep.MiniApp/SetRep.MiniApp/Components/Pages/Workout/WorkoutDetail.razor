@@ -5,6 +5,9 @@
 @inject HttpClient Http
 @inject NavigationManager Navigation
 @inject ITelegramBackButtonService TelegramBackButtonService
+@inject IWorkoutHistoryService WorkoutHistoryService
+@inject ITelegramWebAppStateService TelegramWebAppStateService
+@inject ISnackbar Snackbar
 @implements IAsyncDisposable
 
 <PageTitle>SetRep - @(workout?.Name ?? "Тренировка")</PageTitle>
@@ -77,6 +80,43 @@ else if (workout != null)
                 }
             </MudCardContent>
         </MudCard>
+
+        <!-- Кнопка начала тренировки -->
+        @if (workout.WorkoutExercises != null && workout.WorkoutExercises.Any())
+        {
+            @if (activeWorkoutHistory != null)
+            {
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Info"
+                           FullWidth="true"
+                           Class="mb-4 start-workout-button"
+                           StartIcon="@Icons.Material.Filled.FitnessCenter"
+                           OnClick="ContinueWorkout"
+                           Disabled="isStartingWorkout">
+                    <span>Тренировка начата - Продолжить</span>
+                </MudButton>
+            }
+            else
+            {
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Success"
+                           FullWidth="true"
+                           Class="mb-4 start-workout-button"
+                           StartIcon="@Icons.Material.Filled.PlayArrow"
+                           OnClick="StartWorkout"
+                           Disabled="isStartingWorkout">
+                    @if (isStartingWorkout)
+                    {
+                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                        <span class="ms-2">Запуск тренировки...</span>
+                    }
+                    else
+                    {
+                        <span>Начать тренировку</span>
+                    }
+                </MudButton>
+            }
+        }
 
         <!-- Список упражнений -->
         @if (workout.WorkoutExercises != null && workout.WorkoutExercises.Any())
@@ -216,6 +256,13 @@ else if (workout != null)
         padding: 24px;
     }
 
+    .start-workout-button {
+        border-radius: 12px;
+        height: 48px;
+        font-size: 1rem;
+        font-weight: 500;
+    }
+
     .loading-card, .error-card {
         border-radius: 12px;
         margin-top: 32px;
@@ -233,12 +280,15 @@ else if (workout != null)
     [Parameter] public Guid WorkoutId { get; set; }
 
     private Workout? workout;
+    private WorkoutHistory? activeWorkoutHistory;
     private bool isLoading = true;
+    private bool isStartingWorkout = false;
     private string? errorMessage;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadWorkout();
+        await CheckActiveWorkout();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -247,6 +297,12 @@ else if (workout != null)
         {
             await TelegramBackButtonService.ShowAsync();
         }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Обновляем проверку активной тренировки при изменении параметров
+        await CheckActiveWorkout();
     }
 
     private async Task LoadWorkout()
@@ -299,6 +355,107 @@ else if (workout != null)
         finally
         {
             isLoading = false;
+        }
+    }
+
+    private async Task CheckActiveWorkout()
+    {
+        try
+        {
+            Guid userId = Guid.Empty;
+            if (TelegramWebAppStateService.ValidationResult?.Data?.User != null)
+            {
+                userId = TelegramWebAppStateService.ValidationResult.Data.User.Id;
+            }
+
+            if (userId == Guid.Empty)
+            {
+                return;
+            }
+
+            // Получаем историю тренировок для данного шаблона
+            var response = await Http.GetAsync($"api/workouthistory/workout/{WorkoutId}");
+            if (response.IsSuccessStatusCode)
+            {
+                var workoutHistories = await response.Content.ReadFromJsonAsync<List<WorkoutHistory>>();
+                if (workoutHistories != null)
+                {
+                    // Ищем активную тренировку (без EndTime) для текущего пользователя
+                    activeWorkoutHistory = workoutHistories
+                        .FirstOrDefault(wh => wh.UserId == userId && wh.EndTime == null);
+                    
+                    if (activeWorkoutHistory != null)
+                    {
+                        StateHasChanged();
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Игнорируем ошибки при проверке активной тренировки
+        }
+    }
+
+    private async Task StartWorkout()
+    {
+        if (workout == null || isStartingWorkout)
+        {
+            return;
+        }
+
+        isStartingWorkout = true;
+        StateHasChanged();
+
+        try
+        {
+            Guid userId = Guid.Empty;
+            if (TelegramWebAppStateService.ValidationResult?.Data?.User != null)
+            {
+                userId = TelegramWebAppStateService.ValidationResult.Data.User.Id;
+            }
+
+            if (userId == Guid.Empty)
+            {
+                Snackbar.Add("Не удалось определить пользователя", Severity.Error);
+                return;
+            }
+
+            // Создаем запись истории тренировки
+            var workoutHistory = await WorkoutHistoryService.StartWorkoutAsync(WorkoutId, userId);
+            
+            if (workoutHistory != null)
+            {
+                // Копируем подходы из тренировки
+                await WorkoutHistoryService.CopySetsFromWorkoutAsync(workoutHistory.Id, WorkoutId);
+                
+                // Обновляем активную тренировку
+                activeWorkoutHistory = workoutHistory;
+                
+                // Переходим на страницу активной тренировки
+                Navigation.NavigateTo($"/workouts/{WorkoutId}/active/{workoutHistory.Id}");
+            }
+            else
+            {
+                Snackbar.Add("Не удалось начать тренировку", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка при запуске тренировки: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isStartingWorkout = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ContinueWorkout()
+    {
+        if (activeWorkoutHistory != null)
+        {
+            Navigation.NavigateTo($"/workouts/{WorkoutId}/active/{activeWorkoutHistory.Id}");
         }
     }
 

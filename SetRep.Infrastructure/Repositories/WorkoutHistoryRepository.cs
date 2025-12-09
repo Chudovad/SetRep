@@ -13,6 +13,7 @@ public class WorkoutHistoryRepository(ApplicationDbContext context) : Repository
     public async Task<IEnumerable<WorkoutHistory>> GetByUserIdAsync(Guid userId)
     {
         return await _dbSet
+            .Include(wh => wh.Workout)
             .Where(wh => wh.UserId == userId)
             .OrderByDescending(wh => wh.StartTime)
             .ToListAsync();
