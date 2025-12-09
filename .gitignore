@@ -363,3 +363,4 @@ MigrationBackup/
 FodyWeavers.xsd
 /SetRep.Bot/appsettings.Development.json
 /DOCKER_SETUP.md
+/.env
