@@ -25,13 +25,6 @@ public class WorkoutConfiguration : IEntityTypeConfiguration<Workout>
             .IsRequired()
             .HasMaxLength(200);
 
-        builder.Property(w => w.StartTime)
-            .IsRequired();
-
-        builder.HasIndex(w => w.StartTime);
-
-        builder.Property(w => w.EndTime);
-
         builder.Property(w => w.Notes)
             .HasMaxLength(2000);
 
@@ -41,7 +34,7 @@ public class WorkoutConfiguration : IEntityTypeConfiguration<Workout>
         builder.Property(w => w.UpdatedAt);
 
         // Индексы
-        builder.HasIndex(w => new { w.UserId, w.StartTime });
+        builder.HasIndex(w => w.UserId);
 
         // Связи
         builder.HasMany(w => w.WorkoutExercises)

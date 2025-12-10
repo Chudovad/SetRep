@@ -14,6 +14,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\SetRep.Core\SetRep.Core.csproj" />
     <ProjectReference Include="..\..\SetRep.Shared\SetRep.Shared.csproj" />
   </ItemGroup>
 

@@ -53,7 +53,7 @@
                    OnClick="AddWorkout">
             Добавить тренировку
         </MudButton>
-        @foreach (var workout in workouts.OrderByDescending(w => w.StartTime))
+        @foreach (var workout in workouts.OrderByDescending(w => w.CreatedAt))
         {
             <div @onclick="() => ViewWorkout(workout.Id)" class="workout-card-wrapper">
                 <MudCard Elevation="2" Class="mb-3 workout-item-card">

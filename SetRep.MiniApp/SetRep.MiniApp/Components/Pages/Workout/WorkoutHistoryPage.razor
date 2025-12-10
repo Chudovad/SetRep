@@ -1,0 +1,276 @@
+@page "/workout/history"
+@using SetRep.Core.Entities
+@using SetRep.MiniApp.Client.Services
+@rendermode InteractiveServer
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject ITelegramBackButtonService TelegramBackButtonService
+@inject ITelegramWebAppStateService TelegramWebAppStateService
+@implements IAsyncDisposable
+
+<PageTitle>SetRep - История тренировок</PageTitle>
+
+@if (isLoading)
+{
+    <div class="workout-history-container">
+        <MudCard Elevation="2" Class="loading-card">
+            <MudCardContent>
+                <div class="loading-state">
+                    <MudProgressCircular Indeterminate="true" Size="Size.Large" Class="mb-4" />
+                    <MudText Typo="Typo.body1" Color="Color.Secondary" Align="Align.Center">
+                        Загрузка истории тренировок...
+                    </MudText>
+                </div>
+            </MudCardContent>
+        </MudCard>
+    </div>
+}
+else if (errorMessage != null)
+{
+    <div class="workout-history-container">
+        <MudCard Elevation="2" Class="error-card">
+            <MudCardContent>
+                <div class="error-state">
+                    <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Large" Color="Color.Error" Class="mb-4" />
+                    <MudText Typo="Typo.h6" Align="Align.Center" Class="mb-2">
+                        Ошибка загрузки
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="mb-4">
+                        @errorMessage
+                    </MudText>
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               StartIcon="@Icons.Material.Filled.Refresh"
+                               OnClick="LoadWorkoutHistory">
+                        Попробовать снова
+                    </MudButton>
+                </div>
+            </MudCardContent>
+        </MudCard>
+    </div>
+}
+else if (workoutHistoryList.Any())
+{
+    <div class="workout-history-container">
+        @foreach (var workoutHistory in workoutHistoryList)
+        {
+            <div @onclick="() => ViewWorkoutHistoryDetails(workoutHistory.Id)" class="workout-history-card-wrapper">
+                <MudCard Elevation="2" Class="mb-3 workout-history-item-card">
+                    <MudCardContent>
+                        <div class="workout-history-header">
+                            <div class="workout-history-info">
+                                <MudText Typo="Typo.h6" Class="mb-1">
+                                    @(workoutHistory.Workout?.Name ?? "Тренировка")
+                                </MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-1">
+                                    @FormatDate(workoutHistory.StartTime)
+                                </MudText>
+                                @if (workoutHistory.EndTime.HasValue)
+                                {
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                        Длительность: @FormatDuration(workoutHistory.EndTime.Value - workoutHistory.StartTime)
+                                    </MudText>
+                                }
+                                else
+                                {
+                                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Variant="Variant.Text">
+                                        В процессе
+                                    </MudChip>
+                                }
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" 
+                                     Color="Color.Secondary" 
+                                     Class="workout-history-arrow-icon" />
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="workout-history-container">
+        <MudCard Elevation="2" Class="empty-state-card">
+            <MudCardContent>
+                <div class="empty-state">
+                    <MudIcon Icon="@Icons.Material.Filled.History" Size="Size.Large" Color="Color.Secondary" Class="mb-4" />
+                    <MudText Typo="Typo.h6" Align="Align.Center" Class="mb-2">
+                        Нет истории тренировок
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
+                        Начните тренировку, чтобы она появилась в истории
+                    </MudText>
+                </div>
+            </MudCardContent>
+        </MudCard>
+    </div>
+}
+
+<style>
+    .workout-history-container {
+        max-width: 100%;
+    }
+
+    .workout-history-card-wrapper {
+        cursor: pointer;
+    }
+
+    .workout-history-item-card {
+        border-radius: 12px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .workout-history-card-wrapper:hover .workout-history-item-card {
+        transform: translateY(-2px);
+    }
+
+    .workout-history-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .workout-history-info {
+        flex: 1;
+    }
+
+    .workout-history-arrow-icon {
+        flex-shrink: 0;
+        margin-top: 4px;
+    }
+
+    .empty-state-card {
+        border-radius: 12px;
+        margin-top: 32px;
+    }
+
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px;
+    }
+
+    .loading-card, .error-card {
+        border-radius: 12px;
+        margin-top: 32px;
+    }
+
+    .loading-state, .error-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px;
+    }
+</style>
+
+@code {
+    private List<WorkoutHistory> workoutHistoryList = new();
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadWorkoutHistory();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await TelegramBackButtonService.ShowAsync();
+        }
+    }
+
+    private async Task LoadWorkoutHistory()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            Guid userId = Guid.Empty;
+            if (TelegramWebAppStateService.ValidationResult?.Data?.User != null)
+            {
+                userId = TelegramWebAppStateService.ValidationResult.Data.User.Id;
+            }
+
+            if (userId == Guid.Empty)
+            {
+                errorMessage = "Не удалось определить пользователя";
+                return;
+            }
+
+            var response = await Http.GetAsync($"api/workouthistory/user/{userId}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var data = await response.Content.ReadFromJsonAsync<List<WorkoutHistory>>();
+                workoutHistoryList = data?.Where(wh => wh.EndTime.HasValue).OrderByDescending(wh => wh.StartTime).ToList() ?? new List<WorkoutHistory>();
+            }
+            else
+            {
+                var statusCode = (int)response.StatusCode;
+                var statusText = response.StatusCode.ToString();
+
+                errorMessage = statusCode switch
+                {
+                    404 => "История тренировок не найдена.",
+                    502 => "Сервер API недоступен (Bad Gateway). Убедитесь, что API сервер запущен и доступен.",
+                    503 => "Сервис временно недоступен. Попробуйте позже.",
+                    401 => "Требуется авторизация для доступа к API.",
+                    403 => "Доступ запрещен.",
+                    _ => $"Ошибка при загрузке истории тренировок: {statusText} (код {statusCode})"
+                };
+
+                workoutHistoryList = new List<WorkoutHistory>();
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = $"Ошибка сети при подключении к API: {ex.Message}. " +
+                          "Убедитесь, что API сервер запущен и доступен.";
+            workoutHistoryList = new List<WorkoutHistory>();
+        }
+        catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
+        {
+            errorMessage = "Превышено время ожидания ответа от API. Сервер может быть перегружен или недоступен.";
+            workoutHistoryList = new List<WorkoutHistory>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Не удалось загрузить историю тренировок: {ex.Message}";
+            workoutHistoryList = new List<WorkoutHistory>();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ViewWorkoutHistoryDetails(Guid workoutHistoryId)
+    {
+        Navigation.NavigateTo($"/workout/history/{workoutHistoryId}");
+    }
+
+    private string FormatDate(DateTime date)
+    {
+        return date.ToString("dd.MM.yyyy HH:mm");
+    }
+
+    private string FormatDuration(TimeSpan duration)
+    {
+        if (duration.TotalHours >= 1)
+        {
+            return $"{(int)duration.TotalHours}ч {duration.Minutes}м";
+        }
+        return $"{duration.Minutes}м {duration.Seconds}с";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await TelegramBackButtonService.HideAsync();
+    }
+}

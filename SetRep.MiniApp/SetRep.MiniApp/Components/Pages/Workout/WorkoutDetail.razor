@@ -1,0 +1,477 @@
+@page "/workouts/{WorkoutId:guid}"
+@using SetRep.Core.Entities
+@using SetRep.MiniApp.Client.Services
+@rendermode InteractiveServer
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject ITelegramBackButtonService TelegramBackButtonService
+@inject IWorkoutHistoryService WorkoutHistoryService
+@inject ITelegramWebAppStateService TelegramWebAppStateService
+@inject ISnackbar Snackbar
+@implements IAsyncDisposable
+
+<PageTitle>SetRep - @(workout?.Name ?? "Тренировка")</PageTitle>
+
+@if (isLoading)
+{
+    <div class="workout-detail-container">
+        <MudCard Elevation="2" Class="loading-card">
+            <MudCardContent>
+                <div class="loading-state">
+                    <MudProgressCircular Indeterminate="true" Size="Size.Large" Class="mb-4" />
+                    <MudText Typo="Typo.body1" Color="Color.Secondary" Align="Align.Center">
+                        Загрузка тренировки...
+                    </MudText>
+                </div>
+            </MudCardContent>
+        </MudCard>
+    </div>
+}
+else if (errorMessage != null)
+{
+    <div class="workout-detail-container">
+        <MudCard Elevation="2" Class="error-card">
+            <MudCardContent>
+                <div class="error-state">
+                    <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Large" Color="Color.Error" Class="mb-4" />
+                    <MudText Typo="Typo.h6" Align="Align.Center" Class="mb-2">
+                        Ошибка загрузки
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="mb-4">
+                        @errorMessage
+                    </MudText>
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               StartIcon="@Icons.Material.Filled.Refresh"
+                               OnClick="LoadWorkout">
+                        Попробовать снова
+                    </MudButton>
+                    <MudButton Variant="Variant.Text" 
+                               Color="Color.Primary" 
+                               Class="mt-2"
+                               StartIcon="@Icons.Material.Filled.ArrowBack"
+                               OnClick="GoBack">
+                        Вернуться к списку
+                    </MudButton>
+                </div>
+            </MudCardContent>
+        </MudCard>
+    </div>
+}
+else if (workout != null)
+{
+    <div class="workout-detail-container">
+        <!-- Название и описание тренировки -->
+        <MudCard Elevation="2" Class="mb-4 workout-info-card">
+            <MudCardContent>
+                <MudText Typo="Typo.h4" Class="mb-3">@workout.Name</MudText>
+                
+                @if (!string.IsNullOrWhiteSpace(workout.Notes))
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="workout-description">
+                        @workout.Notes
+                    </MudText>
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        Описание отсутствует
+                    </MudText>
+                }
+            </MudCardContent>
+        </MudCard>
+
+        <!-- Кнопка начала тренировки -->
+        @if (workout.WorkoutExercises != null && workout.WorkoutExercises.Any())
+        {
+            @if (activeWorkoutHistory != null)
+            {
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Info"
+                           FullWidth="true"
+                           Class="mb-4 start-workout-button"
+                           StartIcon="@Icons.Material.Filled.FitnessCenter"
+                           OnClick="ContinueWorkout"
+                           Disabled="isStartingWorkout">
+                    <span>Тренировка начата - Продолжить</span>
+                </MudButton>
+            }
+            else
+            {
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Success"
+                           FullWidth="true"
+                           Class="mb-4 start-workout-button"
+                           StartIcon="@Icons.Material.Filled.PlayArrow"
+                           OnClick="StartWorkout"
+                           Disabled="isStartingWorkout">
+                    @if (isStartingWorkout)
+                    {
+                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                        <span class="ms-2">Запуск тренировки...</span>
+                    }
+                    else
+                    {
+                        <span>Начать тренировку</span>
+                    }
+                </MudButton>
+            }
+        }
+
+        <!-- Список упражнений -->
+        @if (workout.WorkoutExercises != null && workout.WorkoutExercises.Any())
+        {
+            <MudText Typo="Typo.h6" Class="mb-3">Упражнения</MudText>
+            
+            @foreach (var workoutExercise in workout.WorkoutExercises.OrderBy(we => we.Order))
+            {
+                <div @onclick="() => ViewWorkoutExercise(workoutExercise.Id)" class="exercise-card-wrapper">
+                    <MudCard Elevation="2" Class="mb-3 exercise-card">
+                        <MudCardContent>
+                            <div class="exercise-header">
+                                <div class="exercise-header-content">
+                                    <MudText Typo="Typo.h6" Class="mb-2">
+                                        @(workoutExercise.Exercise?.Name ?? "Неизвестное упражнение")
+                                    </MudText>
+                            
+                                    @if (!string.IsNullOrWhiteSpace(workoutExercise.Notes))
+                                    {
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+                                            @workoutExercise.Notes
+                                        </MudText>
+                                    }
+                                </div>
+                                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" 
+                                         Color="Color.Secondary" 
+                                         Class="exercise-arrow-icon" />
+                            </div>
+                        </MudCardContent>
+                    </MudCard>
+                </div>
+            }
+        }
+        else
+        {
+            <MudCard Elevation="2" Class="empty-state-card">
+                <MudCardContent>
+                    <div class="empty-state">
+                        <MudIcon Icon="@Icons.Material.Filled.FitnessCenter" Size="Size.Large" Color="Color.Secondary" Class="mb-4" />
+                        <MudText Typo="Typo.h6" Align="Align.Center" Class="mb-2">
+                            Нет упражнений
+                        </MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
+                            В этой тренировке пока нет упражнений
+                        </MudText>
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        }
+    </div>
+}
+
+<style>
+    .workout-detail-container {
+        max-width: 100%;
+    }
+
+    .workout-info-card {
+        border-radius: 12px;
+    }
+
+    .workout-description {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+
+    .workout-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .exercise-card-wrapper {
+        cursor: pointer;
+    }
+
+    .exercise-card {
+        border-radius: 12px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .exercise-card-wrapper:hover .exercise-card {
+        transform: translateY(-2px);
+    }
+
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 12px;
+    }
+
+    .exercise-header-content {
+        flex: 1;
+    }
+
+    .exercise-arrow-icon {
+        flex-shrink: 0;
+        margin-top: 4px;
+    }
+
+    .sets-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 12px;
+    }
+
+    .set-item {
+        padding: 12px;
+        background-color: #f5f5f5;
+        border-radius: 8px;
+    }
+
+    .set-number {
+        font-weight: 500;
+        margin-bottom: 8px;
+    }
+
+    .set-details {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .empty-state-card {
+        border-radius: 12px;
+        margin-top: 16px;
+    }
+
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px;
+    }
+
+    .start-workout-button {
+        border-radius: 12px;
+        height: 48px;
+        font-size: 1rem;
+        font-weight: 500;
+    }
+
+    .loading-card, .error-card {
+        border-radius: 12px;
+        margin-top: 32px;
+    }
+
+    .loading-state, .error-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px;
+    }
+</style>
+
+@code {
+    [Parameter] public Guid WorkoutId { get; set; }
+
+    private Workout? workout;
+    private WorkoutHistory? activeWorkoutHistory;
+    private bool isLoading = true;
+    private bool isStartingWorkout = false;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadWorkout();
+        await CheckActiveWorkout();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await TelegramBackButtonService.ShowAsync();
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Обновляем проверку активной тренировки при изменении параметров
+        await CheckActiveWorkout();
+    }
+
+    private async Task LoadWorkout()
+    {
+        isLoading = true;
+        errorMessage = null;
+        
+        try
+        {
+            var response = await Http.GetAsync($"api/workouts/{WorkoutId}/details");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                workout = await response.Content.ReadFromJsonAsync<Workout>();
+            }
+            else
+            {
+                var statusCode = (int)response.StatusCode;
+                var statusText = response.StatusCode.ToString();
+                
+                errorMessage = statusCode switch
+                {
+                    404 => "Тренировка не найдена.",
+                    502 => "Сервер API недоступен (Bad Gateway). Убедитесь, что API сервер запущен и доступен.",
+                    503 => "Сервис временно недоступен. Попробуйте позже.",
+                    401 => "Требуется авторизация для доступа к API.",
+                    403 => "Доступ запрещен.",
+                    _ => $"Ошибка при загрузке тренировки: {statusText} (код {statusCode})"
+                };
+                
+                workout = null;
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = $"Ошибка сети при подключении к API: {ex.Message}. " +
+                          "Убедитесь, что API сервер запущен и доступен.";
+            workout = null;
+        }
+        catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
+        {
+            errorMessage = "Превышено время ожидания ответа от API. Сервер может быть перегружен или недоступен.";
+            workout = null;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Не удалось загрузить тренировку: {ex.Message}";
+            workout = null;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task CheckActiveWorkout()
+    {
+        try
+        {
+            Guid userId = Guid.Empty;
+            if (TelegramWebAppStateService.ValidationResult?.Data?.User != null)
+            {
+                userId = TelegramWebAppStateService.ValidationResult.Data.User.Id;
+            }
+
+            if (userId == Guid.Empty)
+            {
+                return;
+            }
+
+            // Получаем историю тренировок для данного шаблона
+            var response = await Http.GetAsync($"api/workouthistory/workout/{WorkoutId}");
+            if (response.IsSuccessStatusCode)
+            {
+                var workoutHistories = await response.Content.ReadFromJsonAsync<List<WorkoutHistory>>();
+                if (workoutHistories != null)
+                {
+                    // Ищем активную тренировку (без EndTime) для текущего пользователя
+                    activeWorkoutHistory = workoutHistories
+                        .FirstOrDefault(wh => wh.UserId == userId && wh.EndTime == null);
+                    
+                    if (activeWorkoutHistory != null)
+                    {
+                        StateHasChanged();
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Игнорируем ошибки при проверке активной тренировки
+        }
+    }
+
+    private async Task StartWorkout()
+    {
+        if (workout == null || isStartingWorkout)
+        {
+            return;
+        }
+
+        isStartingWorkout = true;
+        StateHasChanged();
+
+        try
+        {
+            Guid userId = Guid.Empty;
+            if (TelegramWebAppStateService.ValidationResult?.Data?.User != null)
+            {
+                userId = TelegramWebAppStateService.ValidationResult.Data.User.Id;
+            }
+
+            if (userId == Guid.Empty)
+            {
+                Snackbar.Add("Не удалось определить пользователя", Severity.Error);
+                return;
+            }
+
+            // Создаем запись истории тренировки
+            var workoutHistory = await WorkoutHistoryService.StartWorkoutAsync(WorkoutId, userId);
+            
+            if (workoutHistory != null)
+            {
+                // Копируем подходы из тренировки
+                await WorkoutHistoryService.CopySetsFromWorkoutAsync(workoutHistory.Id, WorkoutId);
+                
+                // Обновляем активную тренировку
+                activeWorkoutHistory = workoutHistory;
+                
+                // Переходим на страницу активной тренировки
+                Navigation.NavigateTo($"/workouts/{WorkoutId}/active/{workoutHistory.Id}");
+            }
+            else
+            {
+                Snackbar.Add("Не удалось начать тренировку", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка при запуске тренировки: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isStartingWorkout = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ContinueWorkout()
+    {
+        if (activeWorkoutHistory != null)
+        {
+            Navigation.NavigateTo($"/workouts/{WorkoutId}/active/{activeWorkoutHistory.Id}");
+        }
+    }
+
+    private void ViewWorkoutExercise(Guid workoutExerciseId)
+    {
+        Navigation.NavigateTo($"/workouts/{WorkoutId}/exercises/{workoutExerciseId}");
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/workouts");
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await TelegramBackButtonService.HideAsync();
+    }
+}
+

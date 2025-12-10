@@ -67,19 +67,6 @@ public class WorkoutsController : ControllerBase
     }
 
     /// <summary>
-    /// Получить тренировки пользователя за период
-    /// </summary>
-    [HttpGet("user/{userId}/date-range")]
-    public async Task<ActionResult<IEnumerable<Workout>>> GetByDateRange(
-        Guid userId,
-        [FromQuery] DateTime startDate,
-        [FromQuery] DateTime endDate)
-    {
-        var workouts = await _workoutRepository.GetByUserIdAndDateRangeAsync(userId, startDate, endDate);
-        return Ok(workouts);
-    }
-
-    /// <summary>
     /// Получить последнюю тренировку пользователя
     /// </summary>
     [HttpGet("user/{userId}/last")]
@@ -104,8 +91,6 @@ public class WorkoutsController : ControllerBase
             Id = Guid.NewGuid(),
             UserId = dto.UserId,
             Name = dto.Name,
-            StartTime = dto.StartTime,
-            EndTime = dto.EndTime,
             Notes = dto.Notes,
             CreatedAt = DateTime.UtcNow
         };
@@ -130,8 +115,6 @@ public class WorkoutsController : ControllerBase
 
         existingWorkout.Name = dto.Name;
         existingWorkout.UserId = dto.UserId;
-        existingWorkout.StartTime = dto.StartTime;
-        existingWorkout.EndTime = dto.EndTime;
         existingWorkout.Notes = dto.Notes;
         existingWorkout.UpdatedAt = DateTime.UtcNow;
 

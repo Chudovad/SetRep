@@ -18,6 +18,10 @@ builder.Services.AddControllers()
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
+// Добавляем Swagger
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
 // Добавляем DbContext для PostgreSQL
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -29,6 +33,8 @@ builder.Services.AddScoped<IWorkoutRepository, WorkoutRepository>();
 builder.Services.AddScoped<IWorkoutExerciseRepository, WorkoutExerciseRepository>();
 builder.Services.AddScoped<ISetRepository, SetRepository>();
 builder.Services.AddScoped<IWeightHistoryRepository, WeightHistoryRepository>();
+builder.Services.AddScoped<IWorkoutHistoryRepository, WorkoutHistoryRepository>();
+builder.Services.AddScoped<IWorkoutHistorySetRepository, WorkoutHistorySetRepository>();
 
 // Регистрируем сервис валидации Telegram WebApp
 builder.Services.AddScoped<ITelegramWebAppValidationService, TelegramWebAppValidationService>();
@@ -50,13 +56,40 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Применяем миграции базы данных автоматически при старте приложения
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<ApplicationDbContext>();
+        // Применяем все непримененные миграции
+        // Если база данных не существует, она будет создана автоматически
+        context.Database.Migrate();
+        Console.WriteLine("Миграции базы данных успешно применены.");
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Произошла ошибка при применении миграций базы данных.");
+        // Не прерываем запуск приложения, чтобы можно было увидеть ошибку в логах
+    }
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
+    app.UseSwagger();
+    app.UseSwaggerUI();
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
+// Используем HTTPS редирект только если настроен HTTPS порт
+var httpsPort = app.Configuration["ASPNETCORE_HTTPS_PORTS"];
+if (!string.IsNullOrEmpty(httpsPort))
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseCors("AllowWebApp");
 

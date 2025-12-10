@@ -45,6 +45,11 @@ builder.Services.AddScoped<ITelegramBackButtonService>(sp =>
     var logger = sp.GetRequiredService<ILogger<TelegramBackButtonService>>();
     return new TelegramBackButtonService(jsRuntime, logger);
 });
+builder.Services.AddScoped<IWorkoutHistoryService>(sp =>
+{
+    var httpClient = sp.GetRequiredService<HttpClient>();
+    return new WorkoutHistoryService(httpClient);
+});
 
 var app = builder.Build();
 
@@ -60,7 +65,12 @@ else
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+// Используем HTTPS редирект только если настроен HTTPS порт
+var httpsPort = app.Configuration["ASPNETCORE_HTTPS_PORTS"];
+if (!string.IsNullOrEmpty(httpsPort))
+{
+    app.UseHttpsRedirection();
+}
 
 
 app.UseAntiforgery();

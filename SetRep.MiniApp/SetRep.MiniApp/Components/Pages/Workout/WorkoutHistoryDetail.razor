@@ -1,4 +1,4 @@
-@page "/workouts/{WorkoutId:guid}"
+@page "/workout/history/{WorkoutHistoryId:guid}"
 @using SetRep.Core.Entities
 @using SetRep.MiniApp.Client.Services
 @rendermode InteractiveServer
@@ -7,17 +7,17 @@
 @inject ITelegramBackButtonService TelegramBackButtonService
 @implements IAsyncDisposable
 
-<PageTitle>SetRep - @(workout?.Name ?? "Тренировка")</PageTitle>
+<PageTitle>SetRep - Детали тренировки</PageTitle>
 
 @if (isLoading)
 {
-    <div class="workout-detail-container">
+    <div class="workout-history-detail-container">
         <MudCard Elevation="2" Class="loading-card">
             <MudCardContent>
                 <div class="loading-state">
                     <MudProgressCircular Indeterminate="true" Size="Size.Large" Class="mb-4" />
                     <MudText Typo="Typo.body1" Color="Color.Secondary" Align="Align.Center">
-                        Загрузка тренировки...
+                        Загрузка деталей тренировки...
                     </MudText>
                 </div>
             </MudCardContent>
@@ -26,7 +26,7 @@
 }
 else if (errorMessage != null)
 {
-    <div class="workout-detail-container">
+    <div class="workout-history-detail-container">
         <MudCard Elevation="2" Class="error-card">
             <MudCardContent>
                 <div class="error-state">
@@ -40,86 +40,98 @@ else if (errorMessage != null)
                     <MudButton Variant="Variant.Filled" 
                                Color="Color.Primary" 
                                StartIcon="@Icons.Material.Filled.Refresh"
-                               OnClick="LoadWorkout">
+                               OnClick="LoadWorkoutHistory">
                         Попробовать снова
-                    </MudButton>
-                    <MudButton Variant="Variant.Text" 
-                               Color="Color.Primary" 
-                               Class="mt-2"
-                               StartIcon="@Icons.Material.Filled.ArrowBack"
-                               OnClick="GoBack">
-                        Вернуться к списку
                     </MudButton>
                 </div>
             </MudCardContent>
         </MudCard>
     </div>
 }
-else if (workout != null)
+else if (workoutHistory != null)
 {
-    <div class="workout-detail-container">
-        <!-- Название и описание тренировки -->
+    <div class="workout-history-detail-container">
+        <!-- Информация о тренировке -->
         <MudCard Elevation="2" Class="mb-4 workout-info-card">
             <MudCardContent>
-                <MudText Typo="Typo.h4" Class="mb-3">@workout.Name</MudText>
+                <MudText Typo="Typo.h5" Class="mb-3">@(workoutHistory.Workout?.Name ?? "Тренировка")</MudText>
                 
-                @if (!string.IsNullOrWhiteSpace(workout.Notes))
-                {
-                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="workout-description">
-                        @workout.Notes
+                <div class="workout-meta">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-1">
+                        <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" Class="mr-2" />
+                        Начало: @FormatDate(workoutHistory.StartTime)
                     </MudText>
-                }
-                else
-                {
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        Описание отсутствует
-                    </MudText>
-                }
-
-                <div class="workout-meta mt-3">
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">
-                        Начало: @workout.StartTime.ToString("dd.MM.yyyy HH:mm")
-                    </MudText>
-                    @if (workout.EndTime.HasValue)
+                    @if (workoutHistory.EndTime.HasValue)
                     {
-                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
-                            Окончание: @workout.EndTime.Value.ToString("dd.MM.yyyy HH:mm")
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-1">
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-2" />
+                            Окончание: @FormatDate(workoutHistory.EndTime.Value)
+                        </MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            <MudIcon Icon="@Icons.Material.Filled.Timer" Size="Size.Small" Class="mr-2" />
+                            Длительность: @FormatDuration(workoutHistory.EndTime.Value - workoutHistory.StartTime)
                         </MudText>
                     }
                 </div>
+
+                @if (!string.IsNullOrWhiteSpace(workoutHistory.Notes))
+                {
+                    <MudDivider Class="my-3" />
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="workout-notes">
+                        @workoutHistory.Notes
+                    </MudText>
+                }
             </MudCardContent>
         </MudCard>
 
-        <!-- Список упражнений -->
-        @if (workout.WorkoutExercises != null && workout.WorkoutExercises.Any())
+        <!-- Упражнения и подходы -->
+        @if (workoutHistory.Sets != null && workoutHistory.Sets.Any())
         {
-            <MudText Typo="Typo.h6" Class="mb-3">Упражнения</MudText>
+            <MudText Typo="Typo.h6" Class="mb-3">Выполненные упражнения</MudText>
             
-            @foreach (var workoutExercise in workout.WorkoutExercises.OrderBy(we => we.Order))
+            @foreach (var exerciseGroup in workoutHistory.Sets.GroupBy(s => s.ExerciseId).OrderBy(g => g.First().Exercise?.Name ?? ""))
             {
-                <div @onclick="() => ViewWorkoutExercise(workoutExercise.Id)" class="exercise-card-wrapper">
-                    <MudCard Elevation="2" Class="mb-3 exercise-card">
-                        <MudCardContent>
-                            <div class="exercise-header">
-                                <div class="exercise-header-content">
-                                    <MudText Typo="Typo.h6" Class="mb-2">
-                                        @(workoutExercise.Exercise?.Name ?? "Неизвестное упражнение")
-                                    </MudText>
-                            
-                                    @if (!string.IsNullOrWhiteSpace(workoutExercise.Notes))
+                var firstSet = exerciseGroup.First();
+                var exercise = firstSet.Exercise;
+                var sets = exerciseGroup.OrderBy(s => s.SetNumber).ToList();
+                var weightUnit = exercise?.WeightUnit ?? "кг";
+                
+                <MudCard Elevation="2" Class="mb-3 exercise-card">
+                    <MudCardContent>
+                        <MudText Typo="Typo.h6" Class="mb-3">@(exercise?.Name ?? "Неизвестное упражнение")</MudText>
+                        
+                        <MudTable Items="@sets" Hover="true" Dense="true" Striped="true" Class="compact-table">
+                            <HeaderContent>
+                                <MudTh>№</MudTh>
+                                <MudTh>Вес</MudTh>
+                                <MudTh>Повторения</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="№">@context.SetNumber</MudTd>
+                                <MudTd DataLabel="Вес">
+                                    @if (context.Weight.HasValue)
                                     {
-                                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
-                                            @workoutExercise.Notes
-                                        </MudText>
+                                        <span>@context.Weight.Value.ToString("0.##") @weightUnit</span>
                                     }
-                                </div>
-                                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" 
-                                         Color="Color.Secondary" 
-                                         Class="exercise-arrow-icon" />
-                            </div>
-                        </MudCardContent>
-                    </MudCard>
-                </div>
+                                    else
+                                    {
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">-</MudText>
+                                    }
+                                </MudTd>
+                                <MudTd DataLabel="Повторения">
+                                    @if (context.Reps > 0)
+                                    {
+                                        <span>@context.Reps</span>
+                                    }
+                                    else
+                                    {
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">-</MudText>
+                                    }
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </MudCardContent>
+                </MudCard>
             }
         }
         else
@@ -129,10 +141,10 @@ else if (workout != null)
                     <div class="empty-state">
                         <MudIcon Icon="@Icons.Material.Filled.FitnessCenter" Size="Size.Large" Color="Color.Secondary" Class="mb-4" />
                         <MudText Typo="Typo.h6" Align="Align.Center" Class="mb-2">
-                            Нет упражнений
+                            Нет данных о подходах
                         </MudText>
                         <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
-                            В этой тренировке пока нет упражнений
+                            В этой тренировке нет записей о выполненных подходах
                         </MudText>
                     </div>
                 </MudCardContent>
@@ -142,17 +154,12 @@ else if (workout != null)
 }
 
 <style>
-    .workout-detail-container {
+    .workout-history-detail-container {
         max-width: 100%;
     }
 
     .workout-info-card {
         border-radius: 12px;
-    }
-
-    .workout-description {
-        white-space: pre-wrap;
-        word-wrap: break-word;
     }
 
     .workout-meta {
@@ -161,59 +168,21 @@ else if (workout != null)
         gap: 4px;
     }
 
-    .exercise-card-wrapper {
-        cursor: pointer;
+    .workout-notes {
+        white-space: pre-wrap;
+        word-wrap: break-word;
     }
 
     .exercise-card {
         border-radius: 12px;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
 
-    .exercise-card-wrapper:hover .exercise-card {
-        transform: translateY(-2px);
+    .compact-table {
+        font-size: 0.875rem;
     }
 
-    .exercise-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 16px;
-        margin-bottom: 12px;
-    }
-
-    .exercise-header-content {
-        flex: 1;
-    }
-
-    .exercise-arrow-icon {
-        flex-shrink: 0;
-        margin-top: 4px;
-    }
-
-    .sets-list {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        margin-top: 12px;
-    }
-
-    .set-item {
-        padding: 12px;
-        background-color: #f5f5f5;
-        border-radius: 8px;
-    }
-
-    .set-number {
-        font-weight: 500;
-        margin-bottom: 8px;
-    }
-
-    .set-details {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        align-items: center;
+    .compact-table .mud-table-cell {
+        padding: 8px 12px;
     }
 
     .empty-state-card {
@@ -242,15 +211,15 @@ else if (workout != null)
 </style>
 
 @code {
-    [Parameter] public Guid WorkoutId { get; set; }
+    [Parameter] public Guid WorkoutHistoryId { get; set; }
 
-    private Workout? workout;
+    private WorkoutHistory? workoutHistory;
     private bool isLoading = true;
     private string? errorMessage;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadWorkout();
+        await LoadWorkoutHistory();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -261,24 +230,24 @@ else if (workout != null)
         }
     }
 
-    private async Task LoadWorkout()
+    private async Task LoadWorkoutHistory()
     {
         isLoading = true;
         errorMessage = null;
-        
+
         try
         {
-            var response = await Http.GetAsync($"api/workouts/{WorkoutId}/details");
-            
+            var response = await Http.GetAsync($"api/workouthistory/{WorkoutHistoryId}/details");
+
             if (response.IsSuccessStatusCode)
             {
-                workout = await response.Content.ReadFromJsonAsync<Workout>();
+                workoutHistory = await response.Content.ReadFromJsonAsync<WorkoutHistory>();
             }
             else
             {
                 var statusCode = (int)response.StatusCode;
                 var statusText = response.StatusCode.ToString();
-                
+
                 errorMessage = statusCode switch
                 {
                     404 => "Тренировка не найдена.",
@@ -288,25 +257,25 @@ else if (workout != null)
                     403 => "Доступ запрещен.",
                     _ => $"Ошибка при загрузке тренировки: {statusText} (код {statusCode})"
                 };
-                
-                workout = null;
+
+                workoutHistory = null;
             }
         }
         catch (HttpRequestException ex)
         {
             errorMessage = $"Ошибка сети при подключении к API: {ex.Message}. " +
                           "Убедитесь, что API сервер запущен и доступен.";
-            workout = null;
+            workoutHistory = null;
         }
         catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
         {
             errorMessage = "Превышено время ожидания ответа от API. Сервер может быть перегружен или недоступен.";
-            workout = null;
+            workoutHistory = null;
         }
         catch (Exception ex)
         {
             errorMessage = $"Не удалось загрузить тренировку: {ex.Message}";
-            workout = null;
+            workoutHistory = null;
         }
         finally
         {
@@ -314,14 +283,18 @@ else if (workout != null)
         }
     }
 
-    private void ViewWorkoutExercise(Guid workoutExerciseId)
+    private string FormatDate(DateTime date)
     {
-        Navigation.NavigateTo($"/workouts/{WorkoutId}/exercises/{workoutExerciseId}");
+        return date.ToString("dd.MM.yyyy HH:mm");
     }
 
-    private void GoBack()
+    private string FormatDuration(TimeSpan duration)
     {
-        Navigation.NavigateTo("/workouts");
+        if (duration.TotalHours >= 1)
+        {
+            return $"{(int)duration.TotalHours}ч {duration.Minutes}м";
+        }
+        return $"{duration.Minutes}м {duration.Seconds}с";
     }
 
     public async ValueTask DisposeAsync()
@@ -329,4 +302,3 @@ else if (workout != null)
         await TelegramBackButtonService.HideAsync();
     }
 }
-
