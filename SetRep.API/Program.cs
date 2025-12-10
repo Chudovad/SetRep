@@ -56,6 +56,26 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Применяем миграции базы данных автоматически при старте приложения
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<ApplicationDbContext>();
+        // Применяем все непримененные миграции
+        // Если база данных не существует, она будет создана автоматически
+        context.Database.Migrate();
+        Console.WriteLine("Миграции базы данных успешно применены.");
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Произошла ошибка при применении миграций базы данных.");
+        // Не прерываем запуск приложения, чтобы можно было увидеть ошибку в логах
+    }
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
