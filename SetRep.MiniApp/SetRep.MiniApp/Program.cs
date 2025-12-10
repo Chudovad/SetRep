@@ -65,7 +65,12 @@ else
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+// Используем HTTPS редирект только если настроен HTTPS порт
+var httpsPort = app.Configuration["ASPNETCORE_HTTPS_PORTS"];
+if (!string.IsNullOrEmpty(httpsPort))
+{
+    app.UseHttpsRedirection();
+}
 
 
 app.UseAntiforgery();

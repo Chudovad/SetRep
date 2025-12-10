@@ -28,12 +28,10 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
-      - ASPNETCORE_HTTPS_PORTS=8081
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=${POSTGRES_DB:-SetRepDb};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-localdb}
       - BotToken=${BOT_TOKEN}
     ports:
       - "${API_HTTP_PORT:-5181}:8080"
-      - "${API_HTTPS_PORT:-7097}:8081"
     depends_on:
       postgres:
         condition: service_healthy
@@ -48,12 +46,10 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
-      - ASPNETCORE_HTTPS_PORTS=8081
       - BotToken=${BOT_TOKEN}
       - BotWebhookUrl=${BOT_WEBHOOK_URL}
     ports:
       - "${BOT_HTTP_PORT:-5083}:8080"
-      - "${BOT_HTTPS_PORT:-7150}:8081"
     depends_on:
       - api
     networks:
@@ -67,11 +63,9 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
-      - ASPNETCORE_HTTPS_PORTS=8081
       - ApiBaseUrl=${API_BASE_URL:-http://api:8080}
     ports:
       - "${MINIAPP_HTTP_PORT:-5096}:8080"
-      - "${MINIAPP_HTTPS_PORT:-7001}:8081"
     depends_on:
       - api
     networks:
