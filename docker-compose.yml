@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-SetRepDb}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-localdb}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-7d81f16a-51cb-4ed3-8eb3-13a4dec282b4}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
@@ -28,7 +28,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
-      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=${POSTGRES_DB:-SetRepDb};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-localdb}
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=${POSTGRES_DB:-SetRepDb};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-7d81f16a-51cb-4ed3-8eb3-13a4dec282b4}
       - BotToken=${BOT_TOKEN}
     ports:
       - "${API_HTTP_PORT:-5181}:8080"
