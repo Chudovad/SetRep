@@ -17,13 +17,6 @@ jobs:
           ssh-private-key: |
             ${{ secrets.DEPLOY_SSH_KEY }}
 
-      - name: Add known_hosts (опционально, если нет в ssh-agent)
-        if: secrets.DEPLOY_KNOWN_HOSTS != ''
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.DEPLOY_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/known_hosts
-
       - name: Deploy
         env:
           HOST: ${{ secrets.DEPLOY_HOST }}
