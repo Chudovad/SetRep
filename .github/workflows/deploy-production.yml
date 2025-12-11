@@ -1,0 +1,46 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [production]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: |
+            ${{ secrets.DEPLOY_SSH_KEY }}
+
+      - name: Add known_hosts (опционально, если нет в ssh-agent)
+        if: secrets.DEPLOY_KNOWN_HOSTS != ''
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DEPLOY_KNOWN_HOSTS }}" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Deploy
+        env:
+          HOST: ${{ secrets.DEPLOY_HOST }}
+          USER: ${{ secrets.DEPLOY_USER }}
+          APP_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          ssh -o StrictHostKeyChecking=accept-new $USER@$HOST << 'EOF'
+            set -e
+            cd $APP_PATH
+            echo "[INFO] Fetching code..."
+            git fetch origin production
+            git reset --hard origin/production
+
+            echo "[INFO] Pull images/build and restart..."
+            docker-compose pull
+            docker-compose up -d --build
+
+            echo "[INFO] Cleanup old images..."
+            docker-image prune -f
+          EOF
