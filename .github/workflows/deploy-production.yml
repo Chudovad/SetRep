@@ -46,7 +46,7 @@ jobs:
             git fetch origin production
             git reset --hard origin/production
 
-            echo "[INFO] Pull images/build and restart..."
+            echo "[INFO] Stopping and removing old containers..."
             if command -v docker &> /dev/null && docker compose version &> /dev/null; then
               COMPOSE_CMD="docker compose"
             elif command -v docker-compose &> /dev/null; then
@@ -56,8 +56,13 @@ jobs:
               exit 1
             fi
             
+            \${COMPOSE_CMD} down || true
+
+            docker rm -f setrep-api setrep-bot setrep-miniapp setrep-postgres 2>/dev/null || true
+            
+            echo "[INFO] Pull images/build and restart..."
             \${COMPOSE_CMD} pull
-            \${COMPOSE_CMD} up -d --build --force-recreate
+            \${COMPOSE_CMD} up -d --build
 
             echo "[INFO] Cleanup old images..."
             docker image prune -f
