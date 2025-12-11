@@ -14,7 +14,7 @@ public class DesignTimeDbContextFactory : IDesignTimeDbContextFactory<Applicatio
         
         // Используем строку подключения по умолчанию для разработки
         // В продакшене это будет переопределено через конфигурацию
-        optionsBuilder.UseNpgsql("Host=localhost;Port=5432;Database=SetRepDb;Username=postgres;Password=7d81f16a-51cb-4ed3-8eb3-13a4dec282b4");
+        optionsBuilder.UseNpgsql("Host=localhost;Port=5432;Database=SetRepDb;Username=postgres;Password=localdb");
 
         return new ApplicationDbContext(optionsBuilder.Options);
     }
