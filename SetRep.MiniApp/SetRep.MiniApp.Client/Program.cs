@@ -16,7 +16,7 @@ builder.Services.AddScoped(sp => new HttpClient
 // Регистрация сервисов для работы с Telegram WebApp
 builder.Services.AddTransient<ITelegramWebAppService, TelegramWebAppService>();
 builder.Services.AddScoped<ITelegramWebAppStateService, TelegramWebAppStateService>();
-builder.Services.AddTransient<ITelegramBackButtonService, TelegramBackButtonService>();
+builder.Services.AddScoped<ITelegramBackButtonService, TelegramBackButtonService>();
 builder.Services.AddTransient<IWorkoutHistoryService, WorkoutHistoryService>();
 builder.Services.AddScoped<IAppInitializationService, AppInitializationService>();
 

@@ -39,7 +39,7 @@ builder.Services.AddTransient<ITelegramWebAppService>(sp =>
     return new TelegramWebAppService(jsRuntime, httpClient, logger);
 });
 builder.Services.AddScoped<ITelegramWebAppStateService, TelegramWebAppStateService>();
-builder.Services.AddTransient<ITelegramBackButtonService>(sp =>
+builder.Services.AddScoped<ITelegramBackButtonService>(sp =>
 {
     var jsRuntime = sp.GetService<IJSRuntime>() ?? throw new InvalidOperationException("IJSRuntime is not available");
     var logger = sp.GetRequiredService<ILogger<TelegramBackButtonService>>();
