@@ -32,7 +32,7 @@ public class TelegramBackButtonService : ITelegramBackButtonService, IDisposable
             }
 
             var startTime = DateTime.UtcNow;
-            var timeout = TimeSpan.FromSeconds(3);
+            var timeout = TimeSpan.FromSeconds(1);
 
             while (DateTime.UtcNow - startTime < timeout)
             {
@@ -52,7 +52,7 @@ public class TelegramBackButtonService : ITelegramBackButtonService, IDisposable
                     _logger?.LogDebug(ex, "Ожидание загрузки Telegram WebApp...");
                 }
 
-                await Task.Delay(100);
+                await Task.Delay(50);
             }
 
             _logger?.LogWarning("Telegram WebApp не загрузился вовремя, кнопка 'Назад' не показана");
@@ -68,7 +68,7 @@ public class TelegramBackButtonService : ITelegramBackButtonService, IDisposable
         try
         {
             var startTime = DateTime.UtcNow;
-            var timeout = TimeSpan.FromSeconds(3);
+            var timeout = TimeSpan.FromSeconds(1);
 
             while (DateTime.UtcNow - startTime < timeout)
             {
@@ -93,7 +93,7 @@ public class TelegramBackButtonService : ITelegramBackButtonService, IDisposable
                     _logger?.LogDebug(ex, "Ожидание загрузки Telegram WebApp...");
                 }
 
-                await Task.Delay(100);
+                await Task.Delay(50);
             }
 
             _logger?.LogWarning("Telegram WebApp не загрузился вовремя, обработчик клика не установлен");
