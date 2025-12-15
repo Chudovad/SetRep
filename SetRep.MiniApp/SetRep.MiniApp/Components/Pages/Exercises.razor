@@ -15,6 +15,17 @@
 <PageTitle>SetRep - Упражнения</PageTitle>
 
 <div class="exercises-container">
+    <!-- Поле поиска -->
+    <MudTextField @bind-Value="searchQuery"
+                  Variant="Variant.Outlined"
+                  Placeholder="Поиск упражнений..."
+                  Adornment="Adornment.Start"
+                  AdornmentIcon="@Icons.Material.Filled.Search"
+                  IconSize="Size.Medium"
+                  Class="mb-4 search-field"
+                  Immediate="true">
+    </MudTextField>
+    
     <!-- Кнопка добавления упражнения -->
     <MudButton Variant="Variant.Filled" 
                Color="Color.Primary" 
@@ -59,9 +70,9 @@
             </MudCardContent>
         </MudCard>
     }
-    else if (exercises.Any())
+    else if (filteredExercises.Any())
     {
-        @foreach (var exercise in exercises)
+        @foreach (var exercise in filteredExercises)
         {
             <div @onclick="() => ViewExercise(exercise.Id)" class="exercise-card-wrapper">
                 <MudCard Elevation="2" Class="mb-3 exercise-item-card">
@@ -72,7 +83,7 @@
                                 @if (!string.IsNullOrWhiteSpace(exercise.Description))
                                 {
                                     <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
-                                        @exercise.Description
+                                        @TruncateDescription(exercise.Description)
                                     </MudText>
                                 }
                                 <div class="exercise-item-meta">
@@ -192,12 +203,35 @@
         text-transform: none;
         font-weight: 500;
     }
+
+    .search-field {
+        border-radius: 12px;
+    }
 </style>
 
 @code {
-    private List<Exercise> exercises = new();
+    private List<Exercise> allExercises = new();
+    private string searchQuery = string.Empty;
     private bool isLoading = true;
     private string? errorMessage;
+
+    private IEnumerable<Exercise> filteredExercises
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(searchQuery))
+                return allExercises;
+
+            var query = searchQuery.Trim().ToLowerInvariant();
+            return allExercises.Where(e =>
+                e.Name.ToLowerInvariant().Contains(query) ||
+                (!string.IsNullOrWhiteSpace(e.Description) && 
+                 e.Description.ToLowerInvariant().Contains(query)) ||
+                (e.MuscleGroup.HasValue && 
+                 e.MuscleGroup.Value.GetDescription().ToLowerInvariant().Contains(query))
+            );
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -224,7 +258,7 @@
             if (response.IsSuccessStatusCode)
             {
                 var data = await response.Content.ReadFromJsonAsync<List<Exercise>>();
-                exercises = data ?? new List<Exercise>();
+                allExercises = data ?? new List<Exercise>();
             }
             else
             {
@@ -241,24 +275,24 @@
                     _ => $"Ошибка при загрузке упражнений: {statusText} (код {statusCode})"
                 };
                 
-                exercises = new List<Exercise>();
+                allExercises = new List<Exercise>();
             }
         }
         catch (HttpRequestException ex)
         {
             errorMessage = $"Ошибка сети при подключении к API: {ex.Message}. " +
                           "Убедитесь, что API сервер запущен и доступен.";
-            exercises = new List<Exercise>();
+            allExercises = new List<Exercise>();
         }
         catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
         {
             errorMessage = "Превышено время ожидания ответа от API. Сервер может быть перегружен или недоступен.";
-            exercises = new List<Exercise>();
+            allExercises = new List<Exercise>();
         }
         catch (Exception ex)
         {
             errorMessage = $"Не удалось загрузить упражнения: {ex.Message}";
-            exercises = new List<Exercise>();
+            allExercises = new List<Exercise>();
         }
         finally
         {
@@ -281,7 +315,7 @@
         
         if (!result.Canceled && result.Data is Exercise createdExercise)
         {
-            exercises.Insert(0, createdExercise);
+            allExercises.Insert(0, createdExercise);
             Snackbar.Add("Упражнение успешно добавлено", Severity.Success);
             StateHasChanged();
         }
@@ -290,6 +324,18 @@
     private void ViewExercise(Guid exerciseId)
     {
         Navigation.NavigateTo($"/exercises/{exerciseId}");
+    }
+
+    private string TruncateDescription(string description)
+    {
+        if (string.IsNullOrWhiteSpace(description))
+            return string.Empty;
+
+        const int maxLength = 50;
+        if (description.Length <= maxLength)
+            return description;
+
+        return description.Substring(0, maxLength) + "...";
     }
 
     public async ValueTask DisposeAsync()
