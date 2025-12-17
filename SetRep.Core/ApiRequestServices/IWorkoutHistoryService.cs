@@ -33,6 +33,16 @@ public interface IWorkoutHistoryService
     TimeSpan GetWorkoutDuration(WorkoutHistory workoutHistory);
 
     /// <summary>
+    /// Получить историю тренировок пользователя
+    /// </summary>
+    Task<List<WorkoutHistory>?> GetWorkoutHistoryByUserIdAsync(Guid userId);
+
+    /// <summary>
+    /// Получить детали истории тренировки
+    /// </summary>
+    Task<WorkoutHistory?> GetWorkoutHistoryDetailsAsync(Guid workoutHistoryId);
+
+    /// <summary>
     /// Событие обновления времени тренировки
     /// </summary>
     event Action<TimeSpan>? DurationUpdated;

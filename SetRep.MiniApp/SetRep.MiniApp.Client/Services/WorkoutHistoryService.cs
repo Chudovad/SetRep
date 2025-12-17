@@ -173,6 +173,47 @@ public class WorkoutHistoryService : IWorkoutHistoryService, IDisposable
         }
     }
 
+    public async Task<List<WorkoutHistory>?> GetWorkoutHistoryByUserIdAsync(Guid userId)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync($"api/workouthistory/user/{userId}");
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadFromJsonAsync<List<WorkoutHistory>>();
+            }
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public async Task<WorkoutHistory?> GetWorkoutHistoryDetailsAsync(Guid workoutHistoryId)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync($"api/workouthistory/{workoutHistoryId}/details");
+            if (response.IsSuccessStatusCode)
+            {
+                var workoutHistory = await response.Content.ReadFromJsonAsync<WorkoutHistory>();
+                if (workoutHistory != null && workoutHistory.EndTime == null)
+                {
+                    _activeWorkout = workoutHistory;
+                    _startTime = workoutHistory.StartTime;
+                    StartTimer();
+                }
+                return workoutHistory;
+            }
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     public TimeSpan GetWorkoutDuration(WorkoutHistory workoutHistory)
     {
         if (workoutHistory.EndTime.HasValue)

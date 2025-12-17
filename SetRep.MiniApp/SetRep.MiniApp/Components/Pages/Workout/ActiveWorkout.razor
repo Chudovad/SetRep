@@ -3,10 +3,11 @@
 @using SetRep.Shared.DTO
 @using SetRep.MiniApp.Client.Services
 @rendermode InteractiveServer
-@inject HttpClient Http
+@inject IWorkoutService WorkoutService
+@inject IWorkoutHistoryService WorkoutHistoryService
+@inject IWorkoutHistorySetService WorkoutHistorySetService
 @inject NavigationManager Navigation
 @inject ITelegramBackButtonService TelegramBackButtonService
-@inject IWorkoutHistoryService WorkoutHistoryService
 @inject ISnackbar Snackbar
 @implements IAsyncDisposable
 
@@ -139,7 +140,7 @@ else if (workout != null && currentExercise != null)
                                    FullWidth="true"
                                    StartIcon="@Icons.Material.Filled.Add"
                                    OnClick="AddSet"
-                                   Disabled="isAddingSet || (newSetReps <= 0 && (!newSetWeight.HasValue || newSetWeight <= 0))"
+                                   Disabled="isAddingSet || newSetReps <= 0"
                                    Size="Size.Small">
                         </MudButton>
                     </MudItem>
@@ -418,15 +419,8 @@ else if (workout != null && currentExercise != null)
         try
         {
             // Загружаем тренировку с деталями
-            var workoutResponse = await Http.GetAsync($"api/workouts/{WorkoutId}/details");
-            if (!workoutResponse.IsSuccessStatusCode)
-            {
-                errorMessage = "Не удалось загрузить тренировку";
-                return;
-            }
-
-            workout = await workoutResponse.Content.ReadFromJsonAsync<Workout>();
-            if (workout?.WorkoutExercises == null || !workout.WorkoutExercises.Any())
+            workout = await WorkoutService.GetWorkoutDetailsAsync(WorkoutId);
+            if (workout == null || workout.WorkoutExercises == null || !workout.WorkoutExercises.Any())
             {
                 errorMessage = "В тренировке нет упражнений";
                 return;
@@ -442,14 +436,10 @@ else if (workout != null && currentExercise != null)
             }
 
             // Загружаем историю тренировки
-            var historyResponse = await Http.GetAsync($"api/workouthistory/{WorkoutHistoryId}/details");
-            if (historyResponse.IsSuccessStatusCode)
+            workoutHistory = await WorkoutHistoryService.GetWorkoutHistoryDetailsAsync(WorkoutHistoryId);
+            if (workoutHistory != null)
             {
-                workoutHistory = await historyResponse.Content.ReadFromJsonAsync<WorkoutHistory>();
-                if (workoutHistory != null)
-                {
-                    workoutDuration = WorkoutHistoryService.GetWorkoutDuration(workoutHistory);
-                }
+                workoutDuration = WorkoutHistoryService.GetWorkoutDuration(workoutHistory);
             }
 
             // Загружаем подходы для текущего упражнения
@@ -474,12 +464,8 @@ else if (workout != null && currentExercise != null)
 
         try
         {
-            var response = await Http.GetAsync($"api/workouthistorysets/workout-history/{WorkoutHistoryId}/exercise/{currentExercise.ExerciseId}");
-            if (response.IsSuccessStatusCode)
-            {
-                var sets = await response.Content.ReadFromJsonAsync<List<WorkoutHistorySet>>();
-                currentSets = sets?.OrderBy(s => s.SetNumber).ToList() ?? new List<WorkoutHistorySet>();
-            }
+            var sets = await WorkoutHistorySetService.GetSetsByWorkoutHistoryAndExerciseAsync(WorkoutHistoryId, currentExercise.ExerciseId);
+            currentSets = sets?.OrderBy(s => s.SetNumber).ToList() ?? new List<WorkoutHistorySet>();
         }
         catch
         {
@@ -519,7 +505,7 @@ else if (workout != null && currentExercise != null)
 
     private async Task AddSet()
     {
-        if (currentExercise == null || (newSetReps <= 0 && (!newSetWeight.HasValue || newSetWeight <= 0)))
+        if (currentExercise == null || newSetReps <= 0)
         {
             return;
         }
@@ -541,13 +527,12 @@ else if (workout != null && currentExercise != null)
                 CompletedAt = DateTime.UtcNow
             };
 
-            var response = await Http.PostAsJsonAsync("api/workouthistorysets", createSetDto);
-            if (response.IsSuccessStatusCode)
+            var createdSet = await WorkoutHistorySetService.CreateSetAsync(createSetDto);
+            if (createdSet != null)
             {
                 await LoadSetsForCurrentExercise();
                 newSetWeight = null;
                 newSetReps = 0;
-                Snackbar.Add("Подход добавлен", Severity.Success);
             }
             else
             {
@@ -617,8 +602,8 @@ else if (workout != null && currentExercise != null)
                 CompletedAt = set.CompletedAt
             };
 
-            var response = await Http.PutAsJsonAsync($"api/workouthistorysets/{setId}", updateDto);
-            if (response.IsSuccessStatusCode)
+            var success = await WorkoutHistorySetService.UpdateSetAsync(setId, updateDto);
+            if (success)
             {
                 await LoadSetsForCurrentExercise();
                 CancelEditing();
@@ -639,12 +624,11 @@ else if (workout != null && currentExercise != null)
     {
         try
         {
-            var response = await Http.DeleteAsync($"api/workouthistorysets/{setId}");
+            var success = await WorkoutHistorySetService.DeleteSetAsync(setId);
             
-            if (response.IsSuccessStatusCode)
+            if (success)
             {
                 await LoadSetsForCurrentExercise();
-                Snackbar.Add("Подход удален", Severity.Success);
             }
             else
             {
@@ -667,7 +651,6 @@ else if (workout != null && currentExercise != null)
             var success = await WorkoutHistoryService.EndWorkoutAsync(WorkoutHistoryId);
             if (success)
             {
-                Snackbar.Add("Тренировка завершена", Severity.Success);
                 Navigation.NavigateTo($"/workouts/{WorkoutId}");
             }
             else

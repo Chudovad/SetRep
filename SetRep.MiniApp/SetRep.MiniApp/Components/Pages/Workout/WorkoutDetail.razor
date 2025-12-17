@@ -2,7 +2,7 @@
 @using SetRep.Core.Entities
 @using SetRep.MiniApp.Client.Services
 @rendermode InteractiveServer
-@inject HttpClient Http
+@inject IWorkoutService WorkoutService
 @inject NavigationManager Navigation
 @inject ITelegramBackButtonService TelegramBackButtonService
 @inject IWorkoutHistoryService WorkoutHistoryService
@@ -312,28 +312,10 @@ else if (workout != null)
         
         try
         {
-            var response = await Http.GetAsync($"api/workouts/{WorkoutId}/details");
-            
-            if (response.IsSuccessStatusCode)
+            workout = await WorkoutService.GetWorkoutDetailsAsync(WorkoutId);
+            if (workout == null)
             {
-                workout = await response.Content.ReadFromJsonAsync<Workout>();
-            }
-            else
-            {
-                var statusCode = (int)response.StatusCode;
-                var statusText = response.StatusCode.ToString();
-                
-                errorMessage = statusCode switch
-                {
-                    404 => "Тренировка не найдена.",
-                    502 => "Сервер API недоступен (Bad Gateway). Убедитесь, что API сервер запущен и доступен.",
-                    503 => "Сервис временно недоступен. Попробуйте позже.",
-                    401 => "Требуется авторизация для доступа к API.",
-                    403 => "Доступ запрещен.",
-                    _ => $"Ошибка при загрузке тренировки: {statusText} (код {statusCode})"
-                };
-                
-                workout = null;
+                errorMessage = "Тренировка не найдена.";
             }
         }
         catch (HttpRequestException ex)
@@ -374,20 +356,16 @@ else if (workout != null)
             }
 
             // Получаем историю тренировок для данного шаблона
-            var response = await Http.GetAsync($"api/workouthistory/workout/{WorkoutId}");
-            if (response.IsSuccessStatusCode)
+            var workoutHistories = await WorkoutService.GetWorkoutHistoryByWorkoutIdAsync(WorkoutId);
+            if (workoutHistories != null)
             {
-                var workoutHistories = await response.Content.ReadFromJsonAsync<List<WorkoutHistory>>();
-                if (workoutHistories != null)
+                // Ищем активную тренировку (без EndTime) для текущего пользователя
+                activeWorkoutHistory = workoutHistories
+                    .FirstOrDefault(wh => wh.UserId == userId && wh.EndTime == null);
+                
+                if (activeWorkoutHistory != null)
                 {
-                    // Ищем активную тренировку (без EndTime) для текущего пользователя
-                    activeWorkoutHistory = workoutHistories
-                        .FirstOrDefault(wh => wh.UserId == userId && wh.EndTime == null);
-                    
-                    if (activeWorkoutHistory != null)
-                    {
-                        StateHasChanged();
-                    }
+                    StateHasChanged();
                 }
             }
         }

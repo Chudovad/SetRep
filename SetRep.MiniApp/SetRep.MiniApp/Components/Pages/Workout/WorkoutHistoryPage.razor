@@ -2,7 +2,7 @@
 @using SetRep.Core.Entities
 @using SetRep.MiniApp.Client.Services
 @rendermode InteractiveServer
-@inject HttpClient Http
+@inject IWorkoutHistoryService WorkoutHistoryService
 @inject NavigationManager Navigation
 @inject ITelegramBackButtonService TelegramBackButtonService
 @inject ITelegramWebAppStateService TelegramWebAppStateService
@@ -203,28 +203,14 @@ else
                 return;
             }
 
-            var response = await Http.GetAsync($"api/workouthistory/user/{userId}");
-
-            if (response.IsSuccessStatusCode)
+            var data = await WorkoutHistoryService.GetWorkoutHistoryByUserIdAsync(userId);
+            if (data != null)
             {
-                var data = await response.Content.ReadFromJsonAsync<List<WorkoutHistory>>();
-                workoutHistoryList = data?.Where(wh => wh.EndTime.HasValue).OrderByDescending(wh => wh.StartTime).ToList() ?? new List<WorkoutHistory>();
+                workoutHistoryList = data.Where(wh => wh.EndTime.HasValue).OrderByDescending(wh => wh.StartTime).ToList();
             }
             else
             {
-                var statusCode = (int)response.StatusCode;
-                var statusText = response.StatusCode.ToString();
-
-                errorMessage = statusCode switch
-                {
-                    404 => "История тренировок не найдена.",
-                    502 => "Сервер API недоступен (Bad Gateway). Убедитесь, что API сервер запущен и доступен.",
-                    503 => "Сервис временно недоступен. Попробуйте позже.",
-                    401 => "Требуется авторизация для доступа к API.",
-                    403 => "Доступ запрещен.",
-                    _ => $"Ошибка при загрузке истории тренировок: {statusText} (код {statusCode})"
-                };
-
+                errorMessage = "Не удалось загрузить историю тренировок. Проверьте подключение к API.";
                 workoutHistoryList = new List<WorkoutHistory>();
             }
         }

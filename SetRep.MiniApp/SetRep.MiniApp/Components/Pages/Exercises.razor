@@ -5,7 +5,7 @@
 @using SetRep.MiniApp.Components.Dialog
 @using SetRep.MiniApp.Client.Services
 @rendermode InteractiveServer
-@inject HttpClient Http
+@inject IExerciseService ExerciseService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
@@ -253,28 +253,14 @@
         
         try
         {
-            var response = await Http.GetAsync("api/exercises");
-            
-            if (response.IsSuccessStatusCode)
+            var data = await ExerciseService.GetExercisesAsync();
+            if (data != null)
             {
-                var data = await response.Content.ReadFromJsonAsync<List<Exercise>>();
-                allExercises = data ?? new List<Exercise>();
+                allExercises = data;
             }
             else
             {
-                var statusCode = (int)response.StatusCode;
-                var statusText = response.StatusCode.ToString();
-                
-                errorMessage = statusCode switch
-                {
-                    502 => "Сервер API недоступен (Bad Gateway). Убедитесь, что API сервер запущен и доступен.",
-                    503 => "Сервис временно недоступен. Попробуйте позже.",
-                    404 => "Эндпоинт API не найден. Проверьте конфигурацию API URL.",
-                    401 => "Требуется авторизация для доступа к API.",
-                    403 => "Доступ запрещен.",
-                    _ => $"Ошибка при загрузке упражнений: {statusText} (код {statusCode})"
-                };
-                
+                errorMessage = "Не удалось загрузить упражнения. Проверьте подключение к API.";
                 allExercises = new List<Exercise>();
             }
         }

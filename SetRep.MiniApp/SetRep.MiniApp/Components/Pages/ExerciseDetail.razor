@@ -4,7 +4,7 @@
 @using SetRep.Core.Extensions
 @using SetRep.MiniApp.Client.Services
 @rendermode InteractiveServer
-@inject HttpClient Http
+@inject IExerciseService ExerciseService
 @inject NavigationManager Navigation
 @inject ITelegramBackButtonService TelegramBackButtonService
 @implements IAsyncDisposable
@@ -196,28 +196,10 @@ else if (exercise != null)
         
         try
         {
-            var response = await Http.GetAsync($"api/exercises/{ExerciseId}");
-            
-            if (response.IsSuccessStatusCode)
+            exercise = await ExerciseService.GetExerciseByIdAsync(ExerciseId);
+            if (exercise == null)
             {
-                exercise = await response.Content.ReadFromJsonAsync<Exercise>();
-            }
-            else
-            {
-                var statusCode = (int)response.StatusCode;
-                var statusText = response.StatusCode.ToString();
-                
-                errorMessage = statusCode switch
-                {
-                    404 => "Упражнение не найдено.",
-                    502 => "Сервер API недоступен (Bad Gateway). Убедитесь, что API сервер запущен и доступен.",
-                    503 => "Сервис временно недоступен. Попробуйте позже.",
-                    401 => "Требуется авторизация для доступа к API.",
-                    403 => "Доступ запрещен.",
-                    _ => $"Ошибка при загрузке упражнения: {statusText} (код {statusCode})"
-                };
-                
-                exercise = null;
+                errorMessage = "Упражнение не найдено.";
             }
         }
         catch (HttpRequestException ex)

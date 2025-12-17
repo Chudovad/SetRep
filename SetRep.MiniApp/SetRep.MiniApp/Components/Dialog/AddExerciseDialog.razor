@@ -5,7 +5,7 @@
 @using System.Linq
 
 @inject ITelegramWebAppStateService TelegramWebAppStateService
-@inject HttpClient Http
+@inject IExerciseService ExerciseService
 
 <MudDialog>
     <TitleContent>
@@ -128,23 +128,14 @@
                 exercise.CreatedByUserId = TelegramWebAppStateService.ValidationResult.Data.User.Id;
             }
 
-            var response = await Http.PostAsJsonAsync("api/exercises", exercise);
-            
-            if (response.IsSuccessStatusCode)
+            var createdExercise = await ExerciseService.CreateExerciseAsync(exercise);
+            if (createdExercise != null)
             {
-                var createdExercise = await response.Content.ReadFromJsonAsync<Exercise>();
                 MudDialog?.Close(DialogResult.Ok(createdExercise));
             }
             else
             {
-                var responseContent = await response.Content.ReadAsStringAsync();
-                var statusCode = (int)response.StatusCode;
-                errorMessage = statusCode switch
-                {
-                    400 => $"Неверные данные. Проверьте заполненные поля. {responseContent}",
-                    500 => "Ошибка сервера при создании упражнения.",
-                    _ => $"Ошибка при создании упражнения: код {statusCode}"
-                };
+                errorMessage = "Ошибка при создании упражнения. Проверьте подключение к API.";
             }
         }
         catch (HttpRequestException ex)

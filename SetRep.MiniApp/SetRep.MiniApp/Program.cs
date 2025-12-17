@@ -50,6 +50,31 @@ builder.Services.AddTransient<IWorkoutHistoryService>(sp =>
     var httpClient = sp.GetRequiredService<HttpClient>();
     return new WorkoutHistoryService(httpClient);
 });
+builder.Services.AddTransient<IWorkoutExerciseService>(sp =>
+{
+    var httpClient = sp.GetRequiredService<HttpClient>();
+    return new WorkoutExerciseService(httpClient);
+});
+builder.Services.AddTransient<IExerciseService>(sp =>
+{
+    var httpClient = sp.GetRequiredService<HttpClient>();
+    return new ExerciseService(httpClient);
+});
+builder.Services.AddTransient<IWorkoutService>(sp =>
+{
+    var httpClient = sp.GetRequiredService<HttpClient>();
+    return new WorkoutService(httpClient);
+});
+builder.Services.AddTransient<IWorkoutHistorySetService>(sp =>
+{
+    var httpClient = sp.GetRequiredService<HttpClient>();
+    return new WorkoutHistorySetService(httpClient);
+});
+builder.Services.AddTransient<IUserService>(sp =>
+{
+    var httpClient = sp.GetRequiredService<HttpClient>();
+    return new UserService(httpClient);
+});
 builder.Services.AddScoped<IAppInitializationService, AppInitializationService>();
 
 var app = builder.Build();

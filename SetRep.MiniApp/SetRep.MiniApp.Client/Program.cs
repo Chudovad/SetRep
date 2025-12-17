@@ -18,6 +18,11 @@ builder.Services.AddTransient<ITelegramWebAppService, TelegramWebAppService>();
 builder.Services.AddScoped<ITelegramWebAppStateService, TelegramWebAppStateService>();
 builder.Services.AddScoped<ITelegramBackButtonService, TelegramBackButtonService>();
 builder.Services.AddTransient<IWorkoutHistoryService, WorkoutHistoryService>();
+builder.Services.AddTransient<IWorkoutExerciseService, WorkoutExerciseService>();
+builder.Services.AddTransient<IExerciseService, ExerciseService>();
+builder.Services.AddTransient<IWorkoutService, WorkoutService>();
+builder.Services.AddTransient<IWorkoutHistorySetService, WorkoutHistorySetService>();
+builder.Services.AddTransient<IUserService, UserService>();
 builder.Services.AddScoped<IAppInitializationService, AppInitializationService>();
 
 await builder.Build().RunAsync();

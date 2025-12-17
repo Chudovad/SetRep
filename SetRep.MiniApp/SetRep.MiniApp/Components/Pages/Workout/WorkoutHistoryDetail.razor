@@ -2,7 +2,7 @@
 @using SetRep.Core.Entities
 @using SetRep.MiniApp.Client.Services
 @rendermode InteractiveServer
-@inject HttpClient Http
+@inject IWorkoutHistoryService WorkoutHistoryService
 @inject NavigationManager Navigation
 @inject ITelegramBackButtonService TelegramBackButtonService
 @implements IAsyncDisposable
@@ -237,28 +237,10 @@ else if (workoutHistory != null)
 
         try
         {
-            var response = await Http.GetAsync($"api/workouthistory/{WorkoutHistoryId}/details");
-
-            if (response.IsSuccessStatusCode)
+            workoutHistory = await WorkoutHistoryService.GetWorkoutHistoryDetailsAsync(WorkoutHistoryId);
+            if (workoutHistory == null)
             {
-                workoutHistory = await response.Content.ReadFromJsonAsync<WorkoutHistory>();
-            }
-            else
-            {
-                var statusCode = (int)response.StatusCode;
-                var statusText = response.StatusCode.ToString();
-
-                errorMessage = statusCode switch
-                {
-                    404 => "Тренировка не найдена.",
-                    502 => "Сервер API недоступен (Bad Gateway). Убедитесь, что API сервер запущен и доступен.",
-                    503 => "Сервис временно недоступен. Попробуйте позже.",
-                    401 => "Требуется авторизация для доступа к API.",
-                    403 => "Доступ запрещен.",
-                    _ => $"Ошибка при загрузке тренировки: {statusText} (код {statusCode})"
-                };
-
-                workoutHistory = null;
+                errorMessage = "Тренировка не найдена.";
             }
         }
         catch (HttpRequestException ex)
