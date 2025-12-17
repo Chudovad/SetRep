@@ -1,11 +1,14 @@
 @page "/workouts/add"
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using SetRep.Core.ApiRequestServices
 @using SetRep.Core.Entities
 @using SetRep.MiniApp.Components.Dialog
 @using SetRep.Shared.DTO
-@using System.Text.Json
-@using System.Text.Json.Serialization
 @rendermode InteractiveServer
-@inject HttpClient Http
+@inject IWorkoutService WorkoutService
+@inject IWorkoutExerciseService WorkoutExerciseService
+@inject IUserService UserService
 @inject NavigationManager Navigation
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
@@ -221,20 +224,11 @@
             if (workoutDto.UserId == Guid.Empty && TelegramWebAppStateService.ValidationResult?.Data?.User != null)
             {
                 var telegramId = TelegramWebAppStateService.ValidationResult.Data.User.TelegramId;
-                var userResponse = await Http.GetAsync($"api/Users/telegram/{telegramId}");
+                var user = await UserService.GetUserByTelegramIdAsync(telegramId);
 
-                if (userResponse.IsSuccessStatusCode)
+                if (user != null)
                 {
-                    var user = await userResponse.Content.ReadFromJsonAsync<UserDto>();
-                    if (user != null)
-                    {
-                        workoutDto.UserId = user.Id;
-                    }
-                    else
-                    {
-                        errorMessage = "Не удалось получить данные пользователя.";
-                        return;
-                    }
+                    workoutDto.UserId = user.Id;
                 }
                 else
                 {
@@ -244,25 +238,10 @@
             }
 
             // Создаем тренировку через DTO
-            var workoutResponse = await Http.PostAsJsonAsync("api/workouts", workoutDto);
-
-            if (!workoutResponse.IsSuccessStatusCode)
-            {
-                var responseContent = await workoutResponse.Content.ReadAsStringAsync();
-                var statusCode = (int)workoutResponse.StatusCode;
-                errorMessage = statusCode switch
-                {
-                    400 => $"Неверные данные. Проверьте заполненные поля. {responseContent}",
-                    500 => "Ошибка сервера при создании тренировки.",
-                    _ => $"Ошибка при создании тренировки: код {statusCode}"
-                };
-                return;
-            }
-
-            var createdWorkout = await workoutResponse.Content.ReadFromJsonAsync<Workout>();
+            var createdWorkout = await WorkoutService.CreateWorkoutAsync(workoutDto);
             if (createdWorkout == null)
             {
-                errorMessage = "Не удалось получить созданную тренировку.";
+                errorMessage = "Ошибка при создании тренировки.";
                 return;
             }
 
@@ -278,8 +257,8 @@
                     Order = order++
                 };
 
-                var exerciseResponse = await Http.PostAsJsonAsync("api/workoutexercises", workoutExerciseDto);
-                if (!exerciseResponse.IsSuccessStatusCode)
+                var createdWorkoutExercise = await WorkoutExerciseService.CreateWorkoutExerciseAsync(workoutExerciseDto);
+                if (createdWorkoutExercise == null)
                 {
                     errorMessage = $"Ошибка при добавлении упражнения '{exercise.Name}' в тренировку.";
                     return;

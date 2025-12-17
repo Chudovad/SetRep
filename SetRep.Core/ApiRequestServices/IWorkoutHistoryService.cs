@@ -1,6 +1,6 @@
 using SetRep.Core.Entities;
 
-namespace SetRep.MiniApp.Client.Services;
+namespace SetRep.Core.ApiRequestServices;
 
 /// <summary>
 /// Сервис для работы с историей тренировок
@@ -31,6 +31,16 @@ public interface IWorkoutHistoryService
     /// Получить текущее время тренировки
     /// </summary>
     TimeSpan GetWorkoutDuration(WorkoutHistory workoutHistory);
+
+    /// <summary>
+    /// Получить историю тренировок пользователя
+    /// </summary>
+    Task<List<WorkoutHistory>?> GetWorkoutHistoryByUserIdAsync(Guid userId);
+
+    /// <summary>
+    /// Получить детали истории тренировки
+    /// </summary>
+    Task<WorkoutHistory?> GetWorkoutHistoryDetailsAsync(Guid workoutHistoryId);
 
     /// <summary>
     /// Событие обновления времени тренировки

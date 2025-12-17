@@ -1,8 +1,9 @@
 @using SetRep.Core.Entities
 @using SetRep.Core.Enums
 @using SetRep.Core.Extensions
+@using SetRep.MiniApp.Client.Services
 
-@inject HttpClient Http
+@inject IExerciseService ExerciseService
 
 <MudDialog>
     <TitleContent>
@@ -172,17 +173,14 @@
 
         try
         {
-            var response = await Http.GetAsync("api/exercises");
-
-            if (response.IsSuccessStatusCode)
+            var data = await ExerciseService.GetExercisesAsync();
+            if (data != null)
             {
-                var data = await response.Content.ReadFromJsonAsync<List<Exercise>>();
-                availableExercises = data ?? new List<Exercise>();
+                availableExercises = data;
             }
             else
             {
-                var statusCode = (int)response.StatusCode;
-                errorMessage = $"Ошибка при загрузке упражнений: код {statusCode}";
+                errorMessage = "Не удалось загрузить упражнения. Проверьте подключение к API.";
             }
         }
         catch (Exception ex)

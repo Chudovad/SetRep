@@ -1,14 +1,14 @@
+@using SetRep.Core.ApiRequestServices
 @using SetRep.MiniApp.Client.Services
 @using SetRep.Shared.DTO
 @using SetRep.Shared.Telegram
-@using System.Net.Http.Json
 @using System.Text.Json
 @using Microsoft.JSInterop
 
 @inject ITelegramWebAppService? TelegramWebAppService
 @inject ITelegramWebAppStateService? TelegramWebAppStateService
 @inject IAppInitializationService? AppInitializationService
-@inject HttpClient HttpClient
+@inject IUserService? UserService
 @inject IJSRuntime JSRuntime
 @inject ILogger<TelegramWebAppInitializer>? Logger
 @implements IAsyncDisposable
@@ -128,18 +128,21 @@
     {
         try
         {
-            UserDto? foundUser = null;
+            if (UserService == null)
+            {
+                Logger?.LogError("IUserService не доступен");
+                return;
+            }
 
             // Сначала ищем по TelegramId
-            var response = await HttpClient.GetAsync($"api/Users/telegram/{telegramUser.TelegramId}");
+            var foundUser = await UserService.GetUserByTelegramIdAsync(telegramUser.TelegramId);
 
-            if (response.IsSuccessStatusCode)
+            if (foundUser != null)
             {
-                foundUser = await response.Content.ReadFromJsonAsync<UserDto>();
                 telegramUser.Id = foundUser.Id;
                 Logger?.LogDebug("Пользователь найден по Telegram ID {TelegramId}", telegramUser.TelegramId);
             }
-            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            else
             {
                 Logger?.LogInformation("Пользователь с Telegram ID {TelegramId} не найден, создаем нового", telegramUser.TelegramId);
 
@@ -154,18 +157,16 @@
                     CreatedAt = DateTime.UtcNow
                 };
 
-                var createResponse = await HttpClient.PostAsJsonAsync("api/Users", newUser);
+                var createdUser = await UserService.CreateUserAsync(newUser);
 
-                if (createResponse.IsSuccessStatusCode)
+                if (createdUser != null)
                 {
-                    telegramUser.Id = newUser.Id;
-                    Logger?.LogInformation("Пользователь успешно создан с ID {UserId} и сохранен в сервис состояния", newUser.Id);
+                    telegramUser.Id = createdUser.Id;
+                    Logger?.LogInformation("Пользователь успешно создан с ID {UserId} и сохранен в сервис состояния", createdUser.Id);
                 }
                 else
                 {
-                    var errorContent = await createResponse.Content.ReadAsStringAsync();
-                    Logger?.LogError("Ошибка при создании пользователя: {StatusCode} - {Error}",
-                        createResponse.StatusCode, errorContent);
+                    Logger?.LogError("Ошибка при создании пользователя через сервис");
                 }
             }
             

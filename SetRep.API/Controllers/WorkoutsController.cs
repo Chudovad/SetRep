@@ -19,12 +19,12 @@ public class WorkoutsController : ControllerBase
     }
 
     /// <summary>
-    /// Получить все тренировки
+    /// Получить все тренировки для конкретного пользователя
     /// </summary>
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Workout>>> GetAll()
+    public async Task<ActionResult<IEnumerable<Workout>>> GetAll([FromQuery] Guid userId)
     {
-        var workouts = await _workoutRepository.GetAllAsync();
+        var workouts = await _workoutRepository.GetByUserIdAsync(userId);
         return Ok(workouts);
     }
 

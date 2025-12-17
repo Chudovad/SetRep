@@ -1,8 +1,10 @@
 @page "/workouts"
 @using SetRep.Core.Entities
+@using SetRep.MiniApp.Client.Services
 
 @rendermode InteractiveServer
-@inject HttpClient Http
+@inject IWorkoutService WorkoutService
+@inject ITelegramWebAppStateService TelegramWebAppStateService
 @inject NavigationManager Navigation
 
 <PageTitle>SetRep - Тренировки</PageTitle>
@@ -174,28 +176,25 @@
         
         try
         {
-            var response = await Http.GetAsync("api/workouts");
+            // Получаем userId из валидированных данных Telegram WebApp
+            var userId = TelegramWebAppStateService.ValidationResult?.Data?.User?.Id;
             
-            if (response.IsSuccessStatusCode)
+            if (userId == null || userId == Guid.Empty)
             {
-                var data = await response.Content.ReadFromJsonAsync<List<Workout>>();
-                workouts = data ?? new List<Workout>();
+                errorMessage = "Не удалось определить пользователя. Пожалуйста, обновите страницу.";
+                workouts = new List<Workout>();
+                isLoading = false;
+                return;
+            }
+
+            var data = await WorkoutService.GetWorkoutsAsync(userId.Value);
+            if (data != null)
+            {
+                workouts = data;
             }
             else
             {
-                var statusCode = (int)response.StatusCode;
-                var statusText = response.StatusCode.ToString();
-                
-                errorMessage = statusCode switch
-                {
-                    502 => "Сервер API недоступен (Bad Gateway). Убедитесь, что API сервер запущен и доступен.",
-                    503 => "Сервис временно недоступен. Попробуйте позже.",
-                    404 => "Эндпоинт API не найден. Проверьте конфигурацию API URL.",
-                    401 => "Требуется авторизация для доступа к API.",
-                    403 => "Доступ запрещен.",
-                    _ => $"Ошибка при загрузке тренировок: {statusText} (код {statusCode})"
-                };
-                
+                errorMessage = "Не удалось загрузить тренировки. Проверьте подключение к API.";
                 workouts = new List<Workout>();
             }
         }
