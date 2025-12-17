@@ -1,8 +1,10 @@
 @page "/workouts"
 @using SetRep.Core.Entities
+@using SetRep.MiniApp.Client.Services
 
 @rendermode InteractiveServer
 @inject IWorkoutService WorkoutService
+@inject ITelegramWebAppStateService TelegramWebAppStateService
 @inject NavigationManager Navigation
 
 <PageTitle>SetRep - Тренировки</PageTitle>
@@ -174,7 +176,18 @@
         
         try
         {
-            var data = await WorkoutService.GetWorkoutsAsync();
+            // Получаем userId из валидированных данных Telegram WebApp
+            var userId = TelegramWebAppStateService.ValidationResult?.Data?.User?.Id;
+            
+            if (userId == null || userId == Guid.Empty)
+            {
+                errorMessage = "Не удалось определить пользователя. Пожалуйста, обновите страницу.";
+                workouts = new List<Workout>();
+                isLoading = false;
+                return;
+            }
+
+            var data = await WorkoutService.GetWorkoutsAsync(userId.Value);
             if (data != null)
             {
                 workouts = data;

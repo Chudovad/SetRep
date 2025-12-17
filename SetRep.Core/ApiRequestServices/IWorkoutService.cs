@@ -9,9 +9,9 @@ namespace SetRep.Core.ApiRequestServices;
 public interface IWorkoutService
 {
     /// <summary>
-    /// Получить все тренировки
+    /// Получить все тренировки для конкретного пользователя
     /// </summary>
-    Task<List<Workout>?> GetWorkoutsAsync();
+    Task<List<Workout>?> GetWorkoutsAsync(Guid userId);
 
     /// <summary>
     /// Получить детали тренировки с упражнениями

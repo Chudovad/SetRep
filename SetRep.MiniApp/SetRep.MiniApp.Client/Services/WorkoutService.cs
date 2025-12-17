@@ -18,13 +18,13 @@ public class WorkoutService : IWorkoutService
     }
 
     /// <summary>
-    /// Получить все тренировки
+    /// Получить все тренировки для конкретного пользователя
     /// </summary>
-    public async Task<List<Workout>?> GetWorkoutsAsync()
+    public async Task<List<Workout>?> GetWorkoutsAsync(Guid userId)
     {
         try
         {
-            var response = await _httpClient.GetAsync("api/workouts");
+            var response = await _httpClient.GetAsync($"api/workouts?userId={userId}");
             if (response.IsSuccessStatusCode)
             {
                 return await response.Content.ReadFromJsonAsync<List<Workout>>();
