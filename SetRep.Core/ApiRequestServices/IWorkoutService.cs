@@ -1,7 +1,7 @@
 using SetRep.Core.Entities;
 using SetRep.Shared.DTO;
 
-namespace SetRep.MiniApp.Client.Services;
+namespace SetRep.Core.ApiRequestServices;
 
 /// <summary>
 /// Сервис для работы с тренировками

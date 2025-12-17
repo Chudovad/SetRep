@@ -1,7 +1,8 @@
 @page "/workouts/{WorkoutId:guid}/exercises/{WorkoutExerciseId:guid}"
+@using SetRep.Core.ApiRequestServices
 @using SetRep.Core.Entities
-@using SetRep.Shared.DTO
 @using SetRep.MiniApp.Client.Services
+@using SetRep.Shared.DTO
 @rendermode InteractiveServer
 @inject IWorkoutExerciseService WorkoutExerciseService
 @inject NavigationManager Navigation

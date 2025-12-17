@@ -1,7 +1,8 @@
 @page "/workouts/{WorkoutId:guid}/active/{WorkoutHistoryId:guid}"
+@using SetRep.Core.ApiRequestServices
 @using SetRep.Core.Entities
-@using SetRep.Shared.DTO
 @using SetRep.MiniApp.Client.Services
+@using SetRep.Shared.DTO
 @rendermode InteractiveServer
 @inject IWorkoutService WorkoutService
 @inject IWorkoutHistoryService WorkoutHistoryService

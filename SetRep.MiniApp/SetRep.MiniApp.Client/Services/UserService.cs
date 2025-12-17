@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using SetRep.Core.ApiRequestServices;
 using SetRep.Shared.DTO;
 
 namespace SetRep.MiniApp.Client.Services;
@@ -23,6 +24,26 @@ public class UserService : IUserService
         try
         {
             var response = await _httpClient.GetAsync($"api/Users/telegram/{telegramId}");
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadFromJsonAsync<UserDto>();
+            }
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Создать нового пользователя
+    /// </summary>
+    public async Task<UserDto?> CreateUserAsync(UserDto user)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync("api/Users", user);
             if (response.IsSuccessStatusCode)
             {
                 return await response.Content.ReadFromJsonAsync<UserDto>();

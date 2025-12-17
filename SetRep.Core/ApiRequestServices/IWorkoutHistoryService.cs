@@ -1,6 +1,6 @@
 using SetRep.Core.Entities;
 
-namespace SetRep.MiniApp.Client.Services;
+namespace SetRep.Core.ApiRequestServices;
 
 /// <summary>
 /// Сервис для работы с историей тренировок

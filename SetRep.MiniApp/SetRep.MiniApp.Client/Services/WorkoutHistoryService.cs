@@ -1,5 +1,6 @@
 using System.Net.Http.Json;
 using System.Timers;
+using SetRep.Core.ApiRequestServices;
 using SetRep.Core.Entities;
 using SetRep.Shared.DTO;
 

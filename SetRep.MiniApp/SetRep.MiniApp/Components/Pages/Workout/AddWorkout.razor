@@ -1,9 +1,10 @@
 @page "/workouts/add"
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using SetRep.Core.ApiRequestServices
 @using SetRep.Core.Entities
 @using SetRep.MiniApp.Components.Dialog
 @using SetRep.Shared.DTO
-@using System.Text.Json
-@using System.Text.Json.Serialization
 @rendermode InteractiveServer
 @inject IWorkoutService WorkoutService
 @inject IWorkoutExerciseService WorkoutExerciseService

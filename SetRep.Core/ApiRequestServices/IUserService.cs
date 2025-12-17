@@ -1,6 +1,6 @@
 using SetRep.Shared.DTO;
 
-namespace SetRep.MiniApp.Client.Services;
+namespace SetRep.Core.ApiRequestServices;
 
 /// <summary>
 /// Сервис для работы с пользователями
@@ -11,5 +11,10 @@ public interface IUserService
     /// Получить пользователя по Telegram ID
     /// </summary>
     Task<UserDto?> GetUserByTelegramIdAsync(long telegramId);
+
+    /// <summary>
+    /// Создать нового пользователя
+    /// </summary>
+    Task<UserDto?> CreateUserAsync(UserDto user);
 }
 

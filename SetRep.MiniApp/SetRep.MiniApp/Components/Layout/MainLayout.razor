@@ -103,8 +103,7 @@
                         var theme = await JSRuntime.InvokeAsync<string>("telegramThemeHelper.getTheme");
                         Logger?.LogInformation("Загружена тема Telegram: {Theme}", theme);
 
-                        //_isDarkMode = theme == "dark";
-                        _isDarkMode = true;//TODO УБРАТЬ ПОТОМ!!!
+                        _isDarkMode = theme == "dark";
                         StateHasChanged();
 
                         await JSRuntime.InvokeVoidAsync("telegramThemeHelper.setThemeCallback", _dotNetRef);

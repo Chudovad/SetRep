@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using SetRep.Core.ApiRequestServices;
 using SetRep.Core.Entities;
 
 namespace SetRep.MiniApp.Client.Services;
