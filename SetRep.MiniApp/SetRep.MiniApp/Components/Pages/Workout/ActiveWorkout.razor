@@ -160,6 +160,7 @@ else if (workout != null && currentExercise != null)
                             <MudTh>№</MudTh>
                             <MudTh>Вес</MudTh>
                             <MudTh>Повторения</MudTh>
+                            <MudTh>Выполнено</MudTh>
                             <MudTh>Действия</MudTh>
                         </HeaderContent>
                         <RowTemplate>
@@ -216,6 +217,16 @@ else if (workout != null && currentExercise != null)
                                             <MudText Typo="Typo.body2" Color="Color.Secondary">-</MudText>
                                         }
                                     </span>
+                                }
+                            </MudTd>
+                            <MudTd DataLabel="Выполнено">
+                                @if (editingSetId != context.Id)
+                                {
+                                    <MudCheckBox T="bool" Color="Color.Success" Value="@context.IsCompleted" ValueChanged="(bool value) => ToggleSetCompletion(context.Id, value)" />
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">-</MudText>
                                 }
                             </MudTd>
                             <MudTd DataLabel="Действия">
@@ -613,6 +624,27 @@ else if (workout != null && currentExercise != null)
             else
             {
                 Snackbar.Add("Ошибка при обновлении подхода", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ToggleSetCompletion(Guid setId, bool isCompleted)
+    {
+        try
+        {
+            var success = await WorkoutHistorySetService.ToggleSetCompletionAsync(setId, isCompleted);
+            
+            if (success)
+            {
+                await LoadSetsForCurrentExercise();
+            }
+            else
+            {
+                Snackbar.Add("Ошибка при обновлении статуса подхода", Severity.Error);
             }
         }
         catch (Exception ex)

@@ -74,6 +74,22 @@ public class WorkoutHistorySetService : IWorkoutHistorySetService
     }
 
     /// <summary>
+    /// Обновить статус выполнения подхода
+    /// </summary>
+    public async Task<bool> ToggleSetCompletionAsync(Guid setId, bool isCompleted)
+    {
+        try
+        {
+            var response = await _httpClient.PatchAsJsonAsync($"api/workouthistorysets/{setId}/complete", isCompleted);
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Удалить подход из истории тренировки
     /// </summary>
     public async Task<bool> DeleteSetAsync(Guid setId)
