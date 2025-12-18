@@ -130,9 +130,13 @@
                 }
                 else
                 {
-                    <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
-                        Нет доступных тренировок
-                    </MudText>
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               FullWidth="true"
+                               StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="AddWorkout">
+                        Добавить тренировку
+                    </MudButton>
                 }
             </MudCardContent>
         </MudCard>
@@ -142,15 +146,6 @@
     <MudText Typo="Typo.h6" Class="mb-3 mt-4">Быстрые действия</MudText>
     
     <div class="quick-actions">
-        <MudButton Variant="Variant.Filled" 
-                   Color="Color.Primary" 
-                   FullWidth="true" 
-                   Class="mb-3 quick-action-btn"
-                   StartIcon="@Icons.Material.Filled.Add"
-                   OnClick="AddWorkout">
-            Добавить тренировку
-        </MudButton>
-        
         <MudButton Variant="Variant.Outlined" 
                    Color="Color.Primary" 
                    FullWidth="true" 
@@ -435,7 +430,7 @@
 
     private void AddWorkout()
     {
-        // TODO: Навигация на страницу добавления тренировки
+        Navigation.NavigateTo("/workouts/add");
     }
 
     private void RecordWeight()
