@@ -40,14 +40,14 @@ else if (errorMessage != null)
                     <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="mb-4">
                         @errorMessage
                     </MudText>
-                    <MudButton Variant="Variant.Filled" 
-                               Color="Color.Primary" 
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
                                StartIcon="@Icons.Material.Filled.Refresh"
                                OnClick="LoadWorkoutExercise">
                         Попробовать снова
                     </MudButton>
-                    <MudButton Variant="Variant.Text" 
-                               Color="Color.Primary" 
+                    <MudButton Variant="Variant.Text"
+                               Color="Color.Primary"
                                Class="mt-2"
                                StartIcon="@Icons.Material.Filled.ArrowBack"
                                OnClick="GoBack">
@@ -84,6 +84,12 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
             </MudCard>
         }
 
+        <MudExpansionPanels Class="mb-4">
+            <MudExpansionPanel Text="@workoutExercise.Exercise.Name" MaxHeight="150">
+                @workoutExercise.Exercise.Description
+            </MudExpansionPanel>
+        </MudExpansionPanels>
+
         <!-- Форма добавления подхода -->
         <AddSetForm WeightLabel="@weightLabel"
                     Weight="@newSetWeight"
@@ -91,8 +97,7 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
                     Reps="@newSetReps"
                     RepsChanged="@((int value) => newSetReps = value)"
                     IsAddingSet="@isAddingSet"
-                    OnAddSet="@AddSet"
-                    ExerciseName="@workoutExercise.Exercise.Name" />
+                    OnAddSet="@AddSet" />
 
         <!-- Таблица подходов -->
         @if (sets != null && sets.Any())
@@ -126,7 +131,8 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
                                     <span @onclick="() => StartEditing(context.Id, weightString, context.Weight)" style="cursor: pointer;">
                                         @if (context.Weight.HasValue)
                                         {
-                                            @context.Weight.Value.ToString("0.##")@(workoutExercise.Exercise.WeightUnit)
+                                            @context.Weight.Value.ToString("0.##")
+                                            @(workoutExercise.Exercise.WeightUnit)
                                         }
                                         else
                                         {
@@ -454,7 +460,7 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
         try
         {
             var success = await WorkoutExerciseService.DeleteSetAsync(setId);
-            
+
             if (success)
             {
                 // Перезагружаем только подходы

@@ -21,5 +21,15 @@ public interface IExerciseService
     /// Создать новое упражнение
     /// </summary>
     Task<Exercise?> CreateExerciseAsync(Exercise exercise);
+
+    /// <summary>
+    /// Обновить упражнение
+    /// </summary>
+    Task<bool> UpdateExerciseAsync(Exercise exercise);
+
+    /// <summary>
+    /// Удалить упражнение
+    /// </summary>
+    Task<bool> DeleteExerciseAsync(Guid exerciseId);
 }
 

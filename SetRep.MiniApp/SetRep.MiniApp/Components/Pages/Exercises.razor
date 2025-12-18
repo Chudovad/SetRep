@@ -11,6 +11,7 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @inject ITelegramBackButtonService TelegramBackButtonService
+@inject ITelegramWebAppStateService TelegramWebAppStateService
 @implements IAsyncDisposable
 
 <PageTitle>SetRep - Упражнения</PageTitle>
@@ -220,11 +221,24 @@
     {
         get
         {
+            Guid? currentUserId = null;
+            if (TelegramWebAppStateService?.ValidationResult?.Data?.User != null)
+            {
+                currentUserId = TelegramWebAppStateService.ValidationResult.Data.User.Id;
+            }
+
+            var availableExercises = allExercises.Where(e =>
+                e.IsSystem || (currentUserId.HasValue && e.CreatedByUserId == currentUserId.Value)
+            );
+
+            var sortedExercises = availableExercises.OrderBy(e => e.IsSystem ? 1 : 0)
+                                                   .ThenBy(e => e.Name);
+
             if (string.IsNullOrWhiteSpace(searchQuery))
-                return allExercises;
+                return sortedExercises;
 
             var query = searchQuery.Trim().ToLowerInvariant();
-            return allExercises.Where(e =>
+            return sortedExercises.Where(e =>
                 e.Name.ToLowerInvariant().Contains(query) ||
                 (!string.IsNullOrWhiteSpace(e.Description) && 
                  e.Description.ToLowerInvariant().Contains(query)) ||

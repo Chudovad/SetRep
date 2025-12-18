@@ -1,12 +1,7 @@
 @using MudBlazor
 
 <MudCard Elevation="2" Class="mb-4 add-set-card">
-    <MudCardContent>
-        @if (!string.IsNullOrWhiteSpace(ExerciseName))
-        {
-            <MudText Typo="Typo.h5" Class="mb-4">@ExerciseName</MudText>
-        }
-        
+    <MudCardContent>        
         <div class="add-set-form">
             <div class="add-set-field">
                 <MudNumericField T="decimal?"
@@ -48,7 +43,6 @@
     [Parameter] public EventCallback<int> RepsChanged { get; set; }
     [Parameter] public bool IsAddingSet { get; set; }
     [Parameter] public EventCallback OnAddSet { get; set; }
-    [Parameter] public string? ExerciseName { get; set; }
 
     private async Task HandleWeightChanged(decimal? value)
     {
