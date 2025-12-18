@@ -1,5 +1,4 @@
 using System.Net.Http.Json;
-using System.Timers;
 using SetRep.Core.ApiRequestServices;
 using SetRep.Core.Entities;
 using SetRep.Shared.DTO;
@@ -7,21 +6,18 @@ using SetRep.Shared.DTO;
 namespace SetRep.MiniApp.Client.Services;
 
 /// <summary>
-/// Сервис для работы с историей тренировок
+/// Сервис для работы с историей тренировок через API
 /// </summary>
-public class WorkoutHistoryService : IWorkoutHistoryService, IDisposable
+public class WorkoutHistoryService : IWorkoutHistoryService
 {
     private readonly HttpClient _httpClient;
-    private System.Timers.Timer? _timer;
-    private WorkoutHistory? _activeWorkout;
-    private DateTime _startTime;
+    private readonly IActiveWorkoutService _activeWorkoutService;
 
-    public WorkoutHistoryService(HttpClient httpClient)
+    public WorkoutHistoryService(HttpClient httpClient, IActiveWorkoutService activeWorkoutService)
     {
         _httpClient = httpClient;
+        _activeWorkoutService = activeWorkoutService;
     }
-
-    public event Action<TimeSpan>? DurationUpdated;
 
     public async Task<WorkoutHistory?> StartWorkoutAsync(Guid workoutId, Guid userId)
     {
@@ -39,13 +35,12 @@ public class WorkoutHistoryService : IWorkoutHistoryService, IDisposable
             
             if (response.IsSuccessStatusCode)
             {
-                _activeWorkout = await response.Content.ReadFromJsonAsync<WorkoutHistory>();
-                if (_activeWorkout != null)
+                var workoutHistory = await response.Content.ReadFromJsonAsync<WorkoutHistory>();
+                if (workoutHistory != null)
                 {
-                    _startTime = _activeWorkout.StartTime;
-                    StartTimer();
+                    _activeWorkoutService.SetActiveWorkout(workoutHistory);
                 }
-                return _activeWorkout;
+                return workoutHistory;
             }
             
             return null;
@@ -60,7 +55,7 @@ public class WorkoutHistoryService : IWorkoutHistoryService, IDisposable
     {
         try
         {
-            StopTimer();
+            _activeWorkoutService.StopTracking();
             
             // Получаем текущую запись
             var getResponse = await _httpClient.GetAsync($"api/workouthistory/{workoutHistoryId}");
@@ -105,9 +100,7 @@ public class WorkoutHistoryService : IWorkoutHistoryService, IDisposable
                 var workoutHistory = await response.Content.ReadFromJsonAsync<WorkoutHistory>();
                 if (workoutHistory != null && workoutHistory.EndTime == null)
                 {
-                    _activeWorkout = workoutHistory;
-                    _startTime = workoutHistory.StartTime;
-                    StartTimer();
+                    _activeWorkoutService.SetActiveWorkout(workoutHistory);
                     return workoutHistory;
                 }
             }
@@ -201,9 +194,7 @@ public class WorkoutHistoryService : IWorkoutHistoryService, IDisposable
                 var workoutHistory = await response.Content.ReadFromJsonAsync<WorkoutHistory>();
                 if (workoutHistory != null && workoutHistory.EndTime == null)
                 {
-                    _activeWorkout = workoutHistory;
-                    _startTime = workoutHistory.StartTime;
-                    StartTimer();
+                    _activeWorkoutService.SetActiveWorkout(workoutHistory);
                 }
                 return workoutHistory;
             }
@@ -215,47 +206,4 @@ public class WorkoutHistoryService : IWorkoutHistoryService, IDisposable
         }
     }
 
-    public TimeSpan GetWorkoutDuration(WorkoutHistory workoutHistory)
-    {
-        if (workoutHistory.EndTime.HasValue)
-        {
-            return workoutHistory.EndTime.Value - workoutHistory.StartTime;
-        }
-        
-        return DateTime.UtcNow - workoutHistory.StartTime;
-    }
-
-    private void StartTimer()
-    {
-        StopTimer();
-        
-        _timer = new System.Timers.Timer(1000); // Обновление каждую секунду
-        _timer.Elapsed += OnTimerElapsed;
-        _timer.AutoReset = true;
-        _timer.Enabled = true;
-    }
-
-    private void StopTimer()
-    {
-        if (_timer != null)
-        {
-            _timer.Stop();
-            _timer.Dispose();
-            _timer = null;
-        }
-    }
-
-    private void OnTimerElapsed(object? sender, ElapsedEventArgs e)
-    {
-        if (_activeWorkout != null)
-        {
-            var duration = GetWorkoutDuration(_activeWorkout);
-            DurationUpdated?.Invoke(duration);
-        }
-    }
-
-    public void Dispose()
-    {
-        StopTimer();
-    }
 }

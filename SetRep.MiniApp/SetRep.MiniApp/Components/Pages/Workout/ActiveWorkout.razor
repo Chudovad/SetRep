@@ -6,6 +6,7 @@
 @rendermode InteractiveServer
 @inject IWorkoutService WorkoutService
 @inject IWorkoutHistoryService WorkoutHistoryService
+@inject IActiveWorkoutService ActiveWorkoutService
 @inject IWorkoutHistorySetService WorkoutHistorySetService
 @inject NavigationManager Navigation
 @inject ITelegramBackButtonService TelegramBackButtonService
@@ -346,7 +347,7 @@ else if (workout != null && currentExercise != null)
 
     protected override async Task OnInitializedAsync()
     {
-        WorkoutHistoryService.DurationUpdated += OnDurationUpdated;
+        ActiveWorkoutService.DurationUpdated += OnDurationUpdated;
         await LoadWorkout();
     }
 
@@ -392,7 +393,7 @@ else if (workout != null && currentExercise != null)
             workoutHistory = await WorkoutHistoryService.GetWorkoutHistoryDetailsAsync(WorkoutHistoryId);
             if (workoutHistory != null)
             {
-                workoutDuration = WorkoutHistoryService.GetWorkoutDuration(workoutHistory);
+                workoutDuration = ActiveWorkoutService.GetWorkoutDuration(workoutHistory);
             }
 
             // Загружаем подходы для текущего упражнения
@@ -648,7 +649,7 @@ else if (workout != null && currentExercise != null)
 
     public async ValueTask DisposeAsync()
     {
-        WorkoutHistoryService.DurationUpdated -= OnDurationUpdated;
+        ActiveWorkoutService.DurationUpdated -= OnDurationUpdated;
         await TelegramBackButtonService.HideAsync();
     }
 }

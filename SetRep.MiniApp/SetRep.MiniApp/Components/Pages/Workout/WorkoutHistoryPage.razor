@@ -244,7 +244,8 @@ else
 
     private string FormatDate(DateTime date)
     {
-        return date.ToString("dd.MM.yyyy HH:mm");
+        var localDate = date.AddHours(3); // UTC+3
+        return localDate.ToString("dd.MM.yyyy HH:mm");
     }
 
     private string FormatDuration(TimeSpan duration)

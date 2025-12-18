@@ -26,6 +26,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITelegramBackButtonService, TelegramBackButtonService>();
         
         // Регистрация бизнес-сервисов
+        services.AddScoped<IActiveWorkoutService, ActiveWorkoutService>();
         services.AddTransient<IWorkoutHistoryService, WorkoutHistoryService>();
         services.AddTransient<IWorkoutExerciseService, WorkoutExerciseService>();
         services.AddTransient<IExerciseService, ExerciseService>();

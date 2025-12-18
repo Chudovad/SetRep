@@ -90,7 +90,7 @@ else if (workoutHistory != null)
         {
             <MudText Typo="Typo.h6" Class="mb-3">Выполненные упражнения</MudText>
             
-            @foreach (var exerciseGroup in workoutHistory.Sets.GroupBy(s => s.ExerciseId).OrderBy(g => g.First().Exercise?.Name ?? ""))
+            @foreach (var exerciseGroup in GetOrderedExerciseGroups(workoutHistory))
             {
                 var firstSet = exerciseGroup.First();
                 var exercise = firstSet.Exercise;
@@ -101,11 +101,11 @@ else if (workoutHistory != null)
                     <MudCardContent>
                         <MudText Typo="Typo.h6" Class="mb-3">@(exercise?.Name ?? "Неизвестное упражнение")</MudText>
                         
-                        <MudTable Items="@sets" Hover="true" Dense="true" Striped="true" Class="compact-table">
+                        <MudTable Items="@sets" Hover="true" Dense="true" Striped="true" Class="compact-table" Breakpoint="Breakpoint.None">
                             <HeaderContent>
                                 <MudTh>№</MudTh>
                                 <MudTh>Вес</MudTh>
-                                <MudTh>Повторения</MudTh>
+                                <MudTh>Повт.</MudTh>
                             </HeaderContent>
                             <RowTemplate>
                                 <MudTd DataLabel="№">@context.SetNumber</MudTd>
@@ -268,7 +268,8 @@ else if (workoutHistory != null)
 
     private string FormatDate(DateTime date)
     {
-        return date.ToString("dd.MM.yyyy HH:mm");
+        var localDate = date.AddHours(3); // UTC+3
+        return localDate.ToString("dd.MM.yyyy HH:mm");
     }
 
     private string FormatDuration(TimeSpan duration)
@@ -278,6 +279,29 @@ else if (workoutHistory != null)
             return $"{(int)duration.TotalHours}ч {duration.Minutes}м";
         }
         return $"{duration.Minutes}м {duration.Seconds}с";
+    }
+
+    private IEnumerable<IGrouping<Guid, WorkoutHistorySet>> GetOrderedExerciseGroups(WorkoutHistory workoutHistory)
+    {
+        if (workoutHistory.Sets == null || !workoutHistory.Sets.Any())
+        {
+            return Enumerable.Empty<IGrouping<Guid, WorkoutHistorySet>>();
+        }
+
+        var groupedSets = workoutHistory.Sets.GroupBy(s => s.ExerciseId).ToList();
+
+        if (workoutHistory.Workout?.WorkoutExercises != null && workoutHistory.Workout.WorkoutExercises.Any())
+        {
+            return groupedSets.OrderBy(g =>
+            {
+                var exerciseId = g.Key;
+                var workoutExercise = workoutHistory.Workout.WorkoutExercises
+                    .FirstOrDefault(we => we.ExerciseId == exerciseId);
+                return workoutExercise?.Order ?? int.MaxValue;
+            }).ThenBy(g => g.Min(s => s.CompletedAt));
+        }
+
+        return groupedSets.OrderBy(g => g.Min(s => s.CompletedAt));
     }
 
     public async ValueTask DisposeAsync()
