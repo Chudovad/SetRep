@@ -11,6 +11,7 @@
 @inject NavigationManager Navigation
 @inject ITelegramBackButtonService TelegramBackButtonService
 @inject ISnackbar Snackbar
+@inject IJSRuntime JSRuntime
 @implements IAsyncDisposable
 
 <PageTitle>SetRep - Тренировка</PageTitle>
@@ -262,6 +263,11 @@ else if (workout != null && currentExercise != null)
 
     .timer-card {
         border-radius: 12px;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background-color: var(--mud-palette-background);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     }
 
     .timer-header {
@@ -366,7 +372,6 @@ else if (workout != null && currentExercise != null)
 
         try
         {
-            // Загружаем тренировку с деталями
             workout = await WorkoutService.GetWorkoutDetailsAsync(WorkoutId);
             if (workout == null || workout.WorkoutExercises == null || !workout.WorkoutExercises.Any())
             {
@@ -375,22 +380,30 @@ else if (workout != null && currentExercise != null)
             }
 
             exercises = workout.WorkoutExercises.OrderBy(we => we.Order).ToList();
-            currentExerciseIndex = 0;
-            currentExercise = exercises.FirstOrDefault();
+            
+            var savedIndex = await LoadSavedExerciseIndex();
+            if (savedIndex.HasValue && savedIndex.Value >= 0 && savedIndex.Value < exercises.Count)
+            {
+                currentExerciseIndex = savedIndex.Value;
+            }
+            else
+            {
+                currentExerciseIndex = 0;
+            }
+            
+            currentExercise = exercises[currentExerciseIndex];
 
             if (currentExercise?.Exercise != null)
             {
                 weightLabel = $"Вес ({currentExercise.Exercise.WeightUnit})";
             }
 
-            // Загружаем историю тренировки
             workoutHistory = await WorkoutHistoryService.GetWorkoutHistoryDetailsAsync(WorkoutHistoryId);
             if (workoutHistory != null)
             {
                 workoutDuration = ActiveWorkoutService.GetWorkoutDuration(workoutHistory);
             }
 
-            // Загружаем подходы для текущего упражнения
             await LoadSetsForCurrentExercise();
         }
         catch (Exception ex)
@@ -431,6 +444,7 @@ else if (workout != null && currentExercise != null)
             {
                 weightLabel = $"Вес ({currentExercise.Exercise.WeightUnit})";
             }
+            await SaveExerciseIndex();
             await LoadSetsForCurrentExercise();
             CancelEditing();
         }
@@ -446,6 +460,7 @@ else if (workout != null && currentExercise != null)
             {
                 weightLabel = $"Вес ({currentExercise.Exercise.WeightUnit})";
             }
+            await SaveExerciseIndex();
             await LoadSetsForCurrentExercise();
             CancelEditing();
         }
@@ -639,6 +654,37 @@ else if (workout != null && currentExercise != null)
     private string FormatDuration(TimeSpan duration)
     {
         return $"{(int)duration.TotalHours:D2}:{duration.Minutes:D2}:{duration.Seconds:D2}";
+    }
+
+    private async Task SaveExerciseIndex()
+    {
+        try
+        {
+            var key = $"activeWorkout_{WorkoutHistoryId}_exerciseIndex";
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", key, currentExerciseIndex.ToString());
+        }
+        catch
+        {
+            // Игнорируем ошибки при сохранении в localStorage
+        }
+    }
+
+    private async Task<int?> LoadSavedExerciseIndex()
+    {
+        try
+        {
+            var key = $"activeWorkout_{WorkoutHistoryId}_exerciseIndex";
+            var savedIndexStr = await JSRuntime.InvokeAsync<string>("localStorage.getItem", key);
+            if (!string.IsNullOrEmpty(savedIndexStr) && int.TryParse(savedIndexStr, out var index))
+            {
+                return index;
+            }
+        }
+        catch
+        {
+            // Игнорируем ошибки при загрузке из localStorage
+        }
+        return null;
     }
 
     public async ValueTask DisposeAsync()
