@@ -2,6 +2,7 @@
 @using SetRep.Core.ApiRequestServices
 @using SetRep.Core.Entities
 @using SetRep.MiniApp.Client.Services
+@using SetRep.MiniApp.Components.Dialog
 @rendermode InteractiveServer
 @inject IWorkoutService WorkoutService
 @inject NavigationManager Navigation
@@ -9,6 +10,7 @@
 @inject IWorkoutHistoryService WorkoutHistoryService
 @inject ITelegramWebAppStateService TelegramWebAppStateService
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 @implements IAsyncDisposable
 
 <PageTitle>SetRep - @(workout?.Name ?? "Тренировка")</PageTitle>
@@ -65,7 +67,15 @@ else if (workout != null)
         <!-- Название и описание тренировки -->
         <MudCard Elevation="2" Class="mb-4 workout-info-card">
             <MudCardContent>
-                <MudText Typo="Typo.h4" Class="mb-3">@workout.Name</MudText>
+                <div class="workout-header">
+                    <MudText Typo="Typo.h4" Class="workout-title">@workout.Name</MudText>
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                   Color="Color.Error" 
+                                   Size="Size.Medium"
+                                   OnClick="ConfirmDeleteWorkout"
+                                   Disabled="isDeleting"
+                                   Class="delete-workout-btn" />
+                </div>
                 
                 @if (!string.IsNullOrWhiteSpace(workout.Notes))
                 {
@@ -179,6 +189,22 @@ else if (workout != null)
         border-radius: 12px;
     }
 
+    .workout-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 12px;
+    }
+
+    .workout-title {
+        flex: 1;
+    }
+
+    .delete-workout-btn {
+        flex-shrink: 0;
+    }
+
     .workout-description {
         white-space: pre-wrap;
         word-wrap: break-word;
@@ -284,6 +310,7 @@ else if (workout != null)
     private WorkoutHistory? activeWorkoutHistory;
     private bool isLoading = true;
     private bool isStartingWorkout = false;
+    private bool isDeleting = false;
     private string? errorMessage;
 
     protected override async Task OnInitializedAsync()
@@ -446,6 +473,70 @@ else if (workout != null)
     private void GoBack()
     {
         Navigation.NavigateTo("/workouts");
+    }
+
+    private async Task ConfirmDeleteWorkout()
+    {
+        if (workout == null || isDeleting)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { nameof(ConfirmDialog.Title), "Подтверждение удаления" },
+            { nameof(ConfirmDialog.ContentText), $"Вы уверены, что хотите удалить тренировку \"{workout.Name}\"? Это действие нельзя отменить." },
+            { nameof(ConfirmDialog.ButtonText), "Удалить" },
+            { nameof(ConfirmDialog.Color), Color.Error }
+        };
+
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true, 
+            MaxWidth = MaxWidth.Small, 
+            FullWidth = true 
+        };
+
+        var dialogReference = await DialogService.ShowAsync<ConfirmDialog>("Подтверждение удаления", parameters, options);
+        var result = await dialogReference.Result;
+
+        if (!result.Canceled)
+        {
+            await DeleteWorkout();
+        }
+    }
+
+    private async Task DeleteWorkout()
+    {
+        if (workout == null || isDeleting)
+        {
+            return;
+        }
+
+        isDeleting = true;
+        StateHasChanged();
+
+        try
+        {
+            var success = await WorkoutService.DeleteWorkoutAsync(WorkoutId);
+            if (success)
+            {
+                Navigation.NavigateTo("/workouts");
+            }
+            else
+            {
+                Snackbar.Add("Ошибка при удалении тренировки", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка при удалении тренировки: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isDeleting = false;
+            StateHasChanged();
+        }
     }
 
     public async ValueTask DisposeAsync()

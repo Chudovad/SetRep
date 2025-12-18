@@ -96,5 +96,21 @@ public class WorkoutService : IWorkoutService
             return null;
         }
     }
+
+    /// <summary>
+    /// Удалить тренировку
+    /// </summary>
+    public async Task<bool> DeleteWorkoutAsync(Guid workoutId)
+    {
+        try
+        {
+            var response = await _httpClient.DeleteAsync($"api/workouts/{workoutId}");
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
+    }
 }
 

@@ -1,37 +1,30 @@
 @using MudBlazor
 
-<MudCard Elevation="2" Class="mb-4 add-set-card">
-    <MudCardContent>        
-        <div class="add-set-form">
-            <div class="add-set-field">
-                <MudNumericField T="decimal?"
-                                 Value="@Weight"
-                                 ValueChanged="@HandleWeightChanged"
-                                 Label="@WeightLabel"
-                                 Variant="Variant.Outlined"
-                                 Min="0"
-                                 Step="@((decimal?)0.5)" />
-            </div>
-            <div class="add-set-field">
-                <MudNumericField T="int"
-                                 Value="@Reps"
-                                 ValueChanged="@HandleRepsChanged"
-                                 Label="Повторения"
-                                 Variant="Variant.Outlined"
-                                 Min="0"
-                                 Step="1" />
-            </div>
-            <div class="add-set-button-wrapper">
-                <MudButton Variant="Variant.Filled"
-                           Color="Color.Primary"
-                           Class="add-set-button"
-                           OnClick="OnAddSet"
-                           Disabled="IsAddingSet || Reps <= 0"
-                           Size="Size.Large">
-                    <MudIcon Icon="@Icons.Material.Filled.Add" />
-                </MudButton>
-            </div>
-        </div>
+<MudCard Elevation="2" Class="mb-4">
+    <MudCardContent>      
+        <MudStack Row="true">
+            <MudNumericField T="decimal?"
+                             Value="@Weight"
+                             ValueChanged="@HandleWeightChanged"
+                             Label="@WeightLabel"
+                             Variant="Variant.Outlined"
+                             Min="0"
+                             Step="@((decimal?)0.5)" />
+            <MudNumericField T="int"
+                             Value="@Reps"
+                             ValueChanged="@HandleRepsChanged"
+                             Label="Повторения"
+                             Variant="Variant.Outlined"
+                             Min="0"
+                             Step="1" />
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       OnClick="OnAddSet"
+                       Disabled="IsAddingSet || Reps <= 0"
+                       Size="Size.Small">
+                <MudIcon Icon="@Icons.Material.Filled.Add" />
+            </MudButton>
+        </MudStack>
     </MudCardContent>
 </MudCard>
 

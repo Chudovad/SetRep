@@ -302,8 +302,13 @@ namespace SetRep.Infrastructure.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("WorkoutId")
+                    b.Property<Guid?>("WorkoutId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("WorkoutName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.HasKey("Id");
 
@@ -444,8 +449,7 @@ namespace SetRep.Infrastructure.Migrations
                     b.HasOne("SetRep.Core.Entities.Workout", "Workout")
                         .WithMany()
                         .HasForeignKey("WorkoutId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("User");
 

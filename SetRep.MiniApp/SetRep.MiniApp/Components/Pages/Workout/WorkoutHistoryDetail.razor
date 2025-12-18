@@ -55,7 +55,7 @@ else if (workoutHistory != null)
         <!-- Информация о тренировке -->
         <MudCard Elevation="2" Class="mb-4 workout-info-card">
             <MudCardContent>
-                <MudText Typo="Typo.h5" Class="mb-3">@(workoutHistory.Workout?.Name ?? "Тренировка")</MudText>
+                <MudText Typo="Typo.h5" Class="mb-3">@(workoutHistory.WorkoutName ?? workoutHistory.Workout?.Name ?? "Тренировка")</MudText>
                 
                 <div class="workout-meta">
                     <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-1">

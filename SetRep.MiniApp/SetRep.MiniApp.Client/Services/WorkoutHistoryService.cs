@@ -73,7 +73,7 @@ public class WorkoutHistoryService : IWorkoutHistoryService
             // Обновляем только EndTime
             var dto = new CreateWorkoutHistoryDto
             {
-                WorkoutId = existing.WorkoutId,
+                WorkoutId = existing.WorkoutId.Value,
                 UserId = existing.UserId,
                 StartTime = existing.StartTime,
                 EndTime = DateTime.UtcNow,
