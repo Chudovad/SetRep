@@ -40,14 +40,14 @@ else if (errorMessage != null)
                     <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="mb-4">
                         @errorMessage
                     </MudText>
-                    <MudButton Variant="Variant.Filled" 
-                               Color="Color.Primary" 
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
                                StartIcon="@Icons.Material.Filled.Refresh"
                                OnClick="LoadWorkoutExercise">
                         Попробовать снова
                     </MudButton>
-                    <MudButton Variant="Variant.Text" 
-                               Color="Color.Primary" 
+                    <MudButton Variant="Variant.Text"
+                               Color="Color.Primary"
                                Class="mt-2"
                                StartIcon="@Icons.Material.Filled.ArrowBack"
                                OnClick="GoBack">
@@ -84,42 +84,20 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
             </MudCard>
         }
 
-        <!-- Название и форма добавления подхода -->
-        <MudCard Elevation="2" Class="mb-4 exercise-form-card">
-            <MudCardContent>
-                <MudText Typo="Typo.h5" Class="mb-4">@workoutExercise.Exercise.Name</MudText>
-                
-                <div class="add-set-form">
-                    <MudGrid>
-                        <MudItem xs="12" sm="4">
-                            <MudNumericField T="decimal?" 
-                                           @bind-Value="newSetWeight" 
-                                           Label="@weightLabel" 
-                                           Variant="Variant.Outlined"
-                                           Min="0"
-                                           Step="@((decimal?)0.5)" />
-                        </MudItem>
-                        <MudItem xs="12" sm="4">
-                            <MudNumericField T="int" 
-                                           @bind-Value="newSetReps" 
-                                           Label="Повторения" 
-                                           Variant="Variant.Outlined"
-                                           Min="0"
-                                           Step="1" />
-                        </MudItem>
-                        <MudItem xs="12" sm="4" Class="d-flex align-center">
-                            <MudButton Variant="Variant.Filled"
-                                       Color="Color.Primary"
-                                       FullWidth="true"
-                                       StartIcon="@Icons.Material.Filled.Add"
-                                       OnClick="AddSet"
-                                       Disabled="isAddingSet || newSetReps <= 0">
-                            </MudButton>
-                        </MudItem>
-                    </MudGrid>
-                </div>
-            </MudCardContent>
-        </MudCard>
+        <MudExpansionPanels Class="mb-4">
+            <MudExpansionPanel Text="@workoutExercise.Exercise.Name" MaxHeight="150">
+                @workoutExercise.Exercise.Description
+            </MudExpansionPanel>
+        </MudExpansionPanels>
+
+        <!-- Форма добавления подхода -->
+        <AddSetForm WeightLabel="@weightLabel"
+                    Weight="@newSetWeight"
+                    WeightChanged="@((decimal? value) => newSetWeight = value)"
+                    Reps="@newSetReps"
+                    RepsChanged="@((int value) => newSetReps = value)"
+                    IsAddingSet="@isAddingSet"
+                    OnAddSet="@AddSet" />
 
         <!-- Таблица подходов -->
         @if (sets != null && sets.Any())
@@ -127,39 +105,87 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
             <MudCard Elevation="2" Class="mb-4 sets-table-card">
                 <MudCardContent>
                     <MudText Typo="Typo.h6" Class="mb-3">Подходы</MudText>
-                    <MudTable Items="@sets" Hover="true" Dense="true" Striped="true" HorizontalScrollbar="true">
+                    <MudTable Items="@sets" Hover="true" Dense="true" Striped="true" Class="compact-table" Breakpoint="Breakpoint.None">
                         <HeaderContent>
                             <MudTh>№</MudTh>
                             <MudTh>Вес</MudTh>
-                            <MudTh>Повторения</MudTh>
+                            <MudTh>Повт.</MudTh>
+                            <MudTh> </MudTh>
                         </HeaderContent>
                         <RowTemplate>
                             <MudTd DataLabel="№">@context.SetNumber</MudTd>
                             <MudTd DataLabel="Вес">
-                                @if (context.Weight.HasValue)
+                                @if (editingSetId == context.Id && editingField == "weight")
                                 {
-                                    <span>@context.Weight.Value.ToString("0.##") @(workoutExercise.Exercise.WeightUnit)</span>
+                                    <MudNumericField T="decimal?"
+                                                     @bind-Value="editingWeight"
+                                                     Variant="Variant.Outlined"
+                                                     Min="0"
+                                                     Step="@((decimal?)0.5)"
+                                                     Immediate="true"
+                                                     Style="width: 80px;"
+                                                     @onblur="() => SaveSet(context.Id)" />
                                 }
                                 else
                                 {
-                                    <MudText Typo="Typo.body2" Color="Color.Secondary">-</MudText>
+                                    <span @onclick="() => StartEditing(context.Id, weightString, context.Weight)" style="cursor: pointer;">
+                                        @if (context.Weight.HasValue)
+                                        {
+                                            @context.Weight.Value.ToString("0.##")
+                                            @(workoutExercise.Exercise.WeightUnit)
+                                        }
+                                        else
+                                        {
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">-</MudText>
+                                        }
+                                    </span>
                                 }
                             </MudTd>
                             <MudTd DataLabel="Повторения">
-                                @if (context.Reps > 0)
+                                @if (editingSetId == context.Id && editingField == "reps")
                                 {
-                                    <span>@context.Reps</span>
+                                    <MudNumericField T="int"
+                                                     @bind-Value="editingReps"
+                                                     Variant="Variant.Outlined"
+                                                     Min="0"
+                                                     Step="1"
+                                                     Immediate="true"
+                                                     Style="width: 80px;"
+                                                     @onblur="() => SaveSet(context.Id)" />
                                 }
                                 else
                                 {
-                                    <MudText Typo="Typo.body2" Color="Color.Secondary">-</MudText>
+                                    <span @onclick="() => StartEditing(context.Id, repsString, context.Reps)" style="cursor: pointer;">
+                                        @if (context.Reps > 0)
+                                        {
+                                            @context.Reps
+                                        }
+                                        else
+                                        {
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">-</MudText>
+                                        }
+                                    </span>
                                 }
                             </MudTd>
                             <MudTd DataLabel="Действия">
-                                <MudIconButton Icon="@Icons.Material.Filled.Delete" 
-                                             Color="Color.Error" 
-                                             Size="Size.Small"
-                                             OnClick="() => DeleteSet(context.Id)" />
+                                @if (editingSetId == context.Id)
+                                {
+                                    <MudIconButton Icon="@Icons.Material.Filled.Check"
+                                                   Color="Color.Success"
+                                                   Size="Size.Small"
+                                                   OnClick="() => SaveSet(context.Id)" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                                   Color="Color.Default"
+                                                   Size="Size.Small"
+                                                   OnClick="CancelEditing" />
+                                }
+                                else
+                                {
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                   Color="Color.Error"
+                                                   Size="Size.Small"
+                                                   OnClick="() => DeleteSet(context.Id)" />
+                                }
                             </MudTd>
                         </RowTemplate>
                     </MudTable>
@@ -215,35 +241,12 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
         border-radius: 12px;
     }
 
-    .exercise-form-card, .sets-table-card {
-        border-radius: 12px;
-    }
-
-    .add-set-form {
-        margin-top: 16px;
-    }
 
     .empty-state-card {
-        border-radius: 12px;
         margin-top: 16px;
     }
 
     .empty-state {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 24px;
-    }
-
-    .loading-card, .error-card {
-        border-radius: 12px;
-        margin-top: 32px;
-    }
-
-    .loading-state, .error-state {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
         padding: 24px;
     }
 </style>
@@ -260,6 +263,14 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
     private decimal? newSetWeight;
     private int newSetReps;
     private string weightLabel = "Вес (кг)";
+    private string weightString = "weight";
+    private string repsString = "reps";
+
+    // Редактирование подхода
+    private Guid? editingSetId;
+    private string? editingField;
+    private decimal? editingWeight;
+    private int editingReps;
 
     protected override async Task OnInitializedAsync()
     {
@@ -369,12 +380,59 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
         }
     }
 
-    private async Task DeleteSet(Guid setId)
+    private void StartEditing(Guid setId, string field, object? value)
     {
+        editingSetId = setId;
+        editingField = field;
+
+        if (field == "weight" && value is decimal weight)
+        {
+            editingWeight = weight;
+        }
+        else if (field == "reps" && value is int reps)
+        {
+            editingReps = reps;
+        }
+    }
+
+    private void CancelEditing()
+    {
+        editingSetId = null;
+        editingField = null;
+        editingWeight = null;
+        editingReps = 0;
+    }
+
+    private async Task SaveSet(Guid setId)
+    {
+        if (workoutExercise == null || editingSetId != setId)
+        {
+            return;
+        }
+
         try
         {
-            var success = await WorkoutExerciseService.DeleteSetAsync(setId);
-            
+            var set = sets.FirstOrDefault(s => s.Id == setId);
+            if (set == null)
+            {
+                return;
+            }
+
+            var updateDto = new CreateSetDto
+            {
+                WorkoutExerciseId = WorkoutExerciseId,
+                SetNumber = set.SetNumber,
+                Reps = editingField == "reps" ? editingReps : set.Reps,
+                Weight = editingField == "weight" ? editingWeight : set.Weight,
+                DurationSeconds = set.DurationSeconds,
+                DistanceMeters = set.DistanceMeters,
+                RestSeconds = set.RestSeconds,
+                IsCompleted = set.IsCompleted,
+                Notes = set.Notes,
+                //CompletedAt = set.CompletedAt ?? DateTime.UtcNow
+            };
+
+            var success = await WorkoutExerciseService.UpdateSetAsync(setId, updateDto);
             if (success)
             {
                 // Перезагружаем только подходы
@@ -383,6 +441,35 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
                 {
                     sets = updatedSets.OrderBy(s => s.SetNumber).ToList();
                 }
+                CancelEditing();
+                StateHasChanged();
+            }
+            else
+            {
+                Snackbar.Add("Ошибка при обновлении подхода", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DeleteSet(Guid setId)
+    {
+        try
+        {
+            var success = await WorkoutExerciseService.DeleteSetAsync(setId);
+
+            if (success)
+            {
+                // Перезагружаем только подходы
+                var updatedSets = await WorkoutExerciseService.GetSetsByWorkoutExerciseIdAsync(WorkoutExerciseId);
+                if (updatedSets != null)
+                {
+                    sets = updatedSets.OrderBy(s => s.SetNumber).ToList();
+                }
+                CancelEditing();
                 StateHasChanged();
             }
             else

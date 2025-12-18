@@ -40,6 +40,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ITelegramWebAppStateService, TelegramWebAppStateService>();
         services.AddScoped<ITelegramBackButtonService, TelegramBackButtonService>();
 
+        services.AddScoped<IActiveWorkoutService, ActiveWorkoutService>();
         services.AddTransient<IWorkoutHistoryService, WorkoutHistoryService>();
         services.AddTransient<IWorkoutExerciseService, WorkoutExerciseService>();
         services.AddTransient<IExerciseService, ExerciseService>();

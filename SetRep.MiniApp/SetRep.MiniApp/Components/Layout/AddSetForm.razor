@@ -1,0 +1,51 @@
+@using MudBlazor
+
+<MudCard Elevation="2" Class="mb-4">
+    <MudCardContent>      
+        <MudStack Row="true">
+            <MudNumericField T="decimal?"
+                             Value="@Weight"
+                             ValueChanged="@HandleWeightChanged"
+                             Label="@WeightLabel"
+                             Variant="Variant.Outlined"
+                             Min="0"
+                             Step="@((decimal?)0.5)" />
+            <MudNumericField T="int"
+                             Value="@Reps"
+                             ValueChanged="@HandleRepsChanged"
+                             Label="Повторения"
+                             Variant="Variant.Outlined"
+                             Min="0"
+                             Step="1" />
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       OnClick="OnAddSet"
+                       Disabled="IsAddingSet || Reps <= 0"
+                       Size="Size.Small">
+                <MudIcon Icon="@Icons.Material.Filled.Add" />
+            </MudButton>
+        </MudStack>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public string WeightLabel { get; set; } = "Вес (кг)";
+    [Parameter] public decimal? Weight { get; set; }
+    [Parameter] public EventCallback<decimal?> WeightChanged { get; set; }
+    [Parameter] public int Reps { get; set; }
+    [Parameter] public EventCallback<int> RepsChanged { get; set; }
+    [Parameter] public bool IsAddingSet { get; set; }
+    [Parameter] public EventCallback OnAddSet { get; set; }
+
+    private async Task HandleWeightChanged(decimal? value)
+    {
+        Weight = value;
+        await WeightChanged.InvokeAsync(value);
+    }
+
+    private async Task HandleRepsChanged(int value)
+    {
+        Reps = value;
+        await RepsChanged.InvokeAsync(value);
+    }
+}

@@ -1,4 +1,4 @@
-﻿@inherits LayoutComponentBase
+@inherits LayoutComponentBase
 @implements IDisposable
 @inject NavigationManager NavigationManager
 @inject IJSRuntime JSRuntime
@@ -11,16 +11,11 @@
 <MudDialogProvider />
 <MudSnackbarProvider />
 <MudLayout Class="mobile-layout">
-    @* <MudAppBar Elevation="1">
-        <MudText Typo="Typo.h5" Class="ml-3" Align="Align.Center" >@PageTitle</MudText>
-    </MudAppBar> *@
-
     <MudMainContent Class="mobile-content">
         <CascadingValue Value="this" Name="MainLayout">
             @Body
         </CascadingValue>
     </MudMainContent>
-
     <NavMenu />
 </MudLayout>
 

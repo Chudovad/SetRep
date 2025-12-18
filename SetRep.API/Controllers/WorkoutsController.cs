@@ -12,7 +12,9 @@ public class WorkoutsController : ControllerBase
     private readonly IWorkoutRepository _workoutRepository;
     private readonly ILogger<WorkoutsController> _logger;
 
-    public WorkoutsController(IWorkoutRepository workoutRepository, ILogger<WorkoutsController> logger)
+    public WorkoutsController(
+        IWorkoutRepository workoutRepository, 
+        ILogger<WorkoutsController> logger)
     {
         _workoutRepository = workoutRepository;
         _logger = logger;
@@ -136,6 +138,8 @@ public class WorkoutsController : ControllerBase
             return NotFound();
         }
 
+        // Удаляем саму тренировку
+        // История тренировок сохранится, но WorkoutId будет установлен в null
         await _workoutRepository.DeleteAsync(workout);
         await _workoutRepository.SaveChangesAsync();
 

@@ -27,6 +27,8 @@
                             @bind-Value="workoutDto.Name"
                             Variant="Variant.Outlined"
                             Placeholder="Например: Тренировка груди"
+                            Required="true"
+                            RequiredError="Название обязательно для заполнения"
                             Class="mb-3" />
                 <MudTextField T="string"
                               Label="Заметки к тренировке"
@@ -51,12 +53,6 @@
                             <div class="exercise-list-item">
                                 <div class="exercise-info">
                                     <MudText Typo="Typo.body1" Class="exercise-name">@exercise.Name</MudText>
-                                    @if (!string.IsNullOrWhiteSpace(exercise.Description))
-                                    {
-                                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1">
-                                            @exercise.Description
-                                        </MudText>
-                                    }
                                 </div>
                                 <MudIconButton Icon="@Icons.Material.Filled.Delete" 
                                              Color="Color.Error" 
@@ -87,29 +83,30 @@
 
     <!-- Кнопки действий -->
     <div class="action-buttons">
-        <MudButton Variant="Variant.Text" 
-                   Color="Color.Default" 
-                   FullWidth="true" 
-                   Class="mb-3"
-                   OnClick="Cancel">
-            Отмена
-        </MudButton>
-        <MudButton Variant="Variant.Filled" 
-                   Color="Color.Primary" 
-                   FullWidth="true" 
-                   Class="save-btn"
-                   OnClick="SaveWorkout"
-                   Disabled="@(!isFormValid || isSaving || !selectedExercises.Any())">
-            @if (isSaving)
-            {
-                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
-                <MudText Class="ms-2">Сохранение...</MudText>
-            }
-            else
-            {
-                <MudText>Сохранить тренировку</MudText>
-            }
-        </MudButton>
+
+        <MudStack Row="true">
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Default"
+                       FullWidth="true"
+                       OnClick="Cancel">
+                Отмена
+            </MudButton>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       FullWidth="true"
+                       OnClick="SaveWorkout"
+                       Disabled="@(!isFormValid || isSaving || !selectedExercises.Any())">
+                @if (isSaving)
+                {
+                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                    <MudText Class="ms-2">Сохранение...</MudText>
+                }
+                else
+                {
+                    <MudText>Сохранить</MudText>
+                }
+            </MudButton>
+        </MudStack>
     </div>
 </div>
 
@@ -145,12 +142,7 @@
         margin-top: 16px;
     }
 
-    .save-btn {
-        height: 48px;
-        border-radius: 12px;
-        text-transform: none;
-        font-weight: 500;
-    }
+
 </style>
 
 @code {
@@ -265,7 +257,6 @@
                 }
             }
 
-            Snackbar.Add("Тренировка успешно создана", Severity.Success);
             Navigation.NavigateTo("/workouts");
         }
         catch (HttpRequestException ex)

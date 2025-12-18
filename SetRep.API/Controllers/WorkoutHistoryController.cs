@@ -10,11 +10,16 @@ namespace SetRep.API.Controllers;
 public class WorkoutHistoryController : ControllerBase
 {
     private readonly IWorkoutHistoryRepository _workoutHistoryRepository;
+    private readonly IWorkoutRepository _workoutRepository;
     private readonly ILogger<WorkoutHistoryController> _logger;
 
-    public WorkoutHistoryController(IWorkoutHistoryRepository workoutHistoryRepository, ILogger<WorkoutHistoryController> logger)
+    public WorkoutHistoryController(
+        IWorkoutHistoryRepository workoutHistoryRepository, 
+        IWorkoutRepository workoutRepository,
+        ILogger<WorkoutHistoryController> logger)
     {
         _workoutHistoryRepository = workoutHistoryRepository;
+        _workoutRepository = workoutRepository;
         _logger = logger;
     }
 
@@ -96,10 +101,21 @@ public class WorkoutHistoryController : ControllerBase
     [HttpPost]
     public async Task<ActionResult<WorkoutHistory>> Create([FromBody] CreateWorkoutHistoryDto dto)
     {
+        string workoutName = "Тренировка";
+        if (dto.WorkoutId != Guid.Empty)
+        {
+            var workout = await _workoutRepository.GetByIdAsync(dto.WorkoutId);
+            if (workout != null)
+            {
+                workoutName = workout.Name;
+            }
+        }
+
         var workoutHistory = new WorkoutHistory
         {
             Id = Guid.NewGuid(),
             WorkoutId = dto.WorkoutId,
+            WorkoutName = workoutName,
             UserId = dto.UserId,
             StartTime = dto.StartTime,
             EndTime = dto.EndTime,
@@ -125,7 +141,19 @@ public class WorkoutHistoryController : ControllerBase
             return NotFound();
         }
 
+        // Обновляем название тренировки, если WorkoutId изменился
+        string workoutName = existing.WorkoutName;
+        if (dto.WorkoutId != Guid.Empty && dto.WorkoutId != existing.WorkoutId)
+        {
+            var workout = await _workoutRepository.GetByIdAsync(dto.WorkoutId);
+            if (workout != null)
+            {
+                workoutName = workout.Name;
+            }
+        }
+
         existing.WorkoutId = dto.WorkoutId;
+        existing.WorkoutName = workoutName;
         existing.UserId = dto.UserId;
         existing.StartTime = dto.StartTime;
         existing.EndTime = dto.EndTime;

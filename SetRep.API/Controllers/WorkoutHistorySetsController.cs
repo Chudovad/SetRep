@@ -123,6 +123,31 @@ public class WorkoutHistorySetsController : ControllerBase
     }
 
     /// <summary>
+    /// Обновить статус выполнения подхода
+    /// </summary>
+    [HttpPatch("{id}/complete")]
+    public async Task<IActionResult> ToggleCompletion(Guid id, [FromBody] bool isCompleted)
+    {
+        var existing = await _workoutHistorySetRepository.GetByIdAsync(id);
+        if (existing == null)
+        {
+            return NotFound();
+        }
+
+        existing.IsCompleted = isCompleted;
+        if (isCompleted && existing.CompletedAt == default)
+        {
+            existing.CompletedAt = DateTime.UtcNow;
+        }
+        existing.UpdatedAt = DateTime.UtcNow;
+
+        await _workoutHistorySetRepository.UpdateAsync(existing);
+        await _workoutHistorySetRepository.SaveChangesAsync();
+
+        return NoContent();
+    }
+
+    /// <summary>
     /// Удалить подход из истории тренировки
     /// </summary>
     [HttpDelete("{id}")]

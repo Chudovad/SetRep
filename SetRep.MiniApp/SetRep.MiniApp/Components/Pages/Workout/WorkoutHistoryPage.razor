@@ -61,7 +61,7 @@ else if (workoutHistoryList.Any())
                         <div class="workout-history-header">
                             <div class="workout-history-info">
                                 <MudText Typo="Typo.h6" Class="mb-1">
-                                    @(workoutHistory.Workout?.Name ?? "Тренировка")
+                                    @(workoutHistory.WorkoutName ?? workoutHistory.Workout?.Name ?? "Тренировка")
                                 </MudText>
                                 <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-1">
                                     @FormatDate(workoutHistory.StartTime)
@@ -244,7 +244,8 @@ else
 
     private string FormatDate(DateTime date)
     {
-        return date.ToString("dd.MM.yyyy HH:mm");
+        var localDate = date.AddHours(3); // UTC+3
+        return localDate.ToString("dd.MM.yyyy HH:mm");
     }
 
     private string FormatDuration(TimeSpan duration)

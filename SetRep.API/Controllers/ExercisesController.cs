@@ -122,8 +122,13 @@ public class ExercisesController : ControllerBase
             return NotFound();
         }
 
-        exercise.UpdatedAt = DateTime.UtcNow;
-        await _exerciseRepository.UpdateAsync(exercise);
+        existingExercise.Name = exercise.Name;
+        existingExercise.Image = exercise.Image ?? string.Empty;
+        existingExercise.Description = exercise.Description;
+        existingExercise.MuscleGroup = exercise.MuscleGroup;
+        existingExercise.WeightUnit = exercise.WeightUnit;
+        existingExercise.UpdatedAt = DateTime.UtcNow;
+
         await _exerciseRepository.SaveChangesAsync();
 
         return NoContent();

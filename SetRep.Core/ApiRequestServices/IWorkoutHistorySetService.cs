@@ -24,6 +24,11 @@ public interface IWorkoutHistorySetService
     Task<bool> UpdateSetAsync(Guid setId, CreateWorkoutHistorySetDto dto);
 
     /// <summary>
+    /// Обновить статус выполнения подхода
+    /// </summary>
+    Task<bool> ToggleSetCompletionAsync(Guid setId, bool isCompleted);
+
+    /// <summary>
     /// Удалить подход из истории тренировки
     /// </summary>
     Task<bool> DeleteSetAsync(Guid setId);

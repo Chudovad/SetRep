@@ -24,6 +24,11 @@ public interface IWorkoutExerciseService
     Task<Set?> CreateSetAsync(CreateSetDto createSetDto);
 
     /// <summary>
+    /// Обновить подход
+    /// </summary>
+    Task<bool> UpdateSetAsync(Guid setId, CreateSetDto dto);
+
+    /// <summary>
     /// Удалить подход
     /// </summary>
     Task<bool> DeleteSetAsync(Guid setId);

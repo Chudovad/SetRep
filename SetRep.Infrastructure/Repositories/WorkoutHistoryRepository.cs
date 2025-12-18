@@ -22,6 +22,7 @@ public class WorkoutHistoryRepository(ApplicationDbContext context) : Repository
     public async Task<WorkoutHistory?> GetLastWorkoutHistoryByUserIdAsync(Guid userId)
     {
         return await _dbSet
+            .Include(wh => wh.Workout)
             .Where(wh => wh.UserId == userId)
             .OrderByDescending(wh => wh.StartTime)
             .FirstOrDefaultAsync();
@@ -31,6 +32,7 @@ public class WorkoutHistoryRepository(ApplicationDbContext context) : Repository
     {
         return await _dbSet
             .Include(wh => wh.Workout)
+                .ThenInclude(w => w.WorkoutExercises)
             .Include(wh => wh.Sets)
                 .ThenInclude(whs => whs.Exercise)
             .FirstOrDefaultAsync(wh => wh.Id == workoutHistoryId);

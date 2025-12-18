@@ -75,5 +75,37 @@ public class ExerciseService : IExerciseService
             return null;
         }
     }
+
+    /// <summary>
+    /// Обновить упражнение
+    /// </summary>
+    public async Task<bool> UpdateExerciseAsync(Exercise exercise)
+    {
+        try
+        {
+            var response = await _httpClient.PutAsJsonAsync($"api/exercises/{exercise.Id}", exercise);
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Удалить упражнение
+    /// </summary>
+    public async Task<bool> DeleteExerciseAsync(Guid exerciseId)
+    {
+        try
+        {
+            var response = await _httpClient.DeleteAsync($"api/exercises/{exerciseId}");
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
+    }
 }
 

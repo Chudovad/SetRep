@@ -11,9 +11,14 @@ public class WorkoutHistory
     public Guid Id { get; set; }
 
     /// <summary>
-    /// Идентификатор шаблона тренировки
+    /// Идентификатор шаблона тренировки (может быть null, если тренировка была удалена)
     /// </summary>
-    public Guid WorkoutId { get; set; }
+    public Guid? WorkoutId { get; set; }
+
+    /// <summary>
+    /// Название тренировки на момент создания (сохраняется для истории, даже если тренировка удалена)
+    /// </summary>
+    public string WorkoutName { get; set; } = string.Empty;
 
     /// <summary>
     /// Идентификатор пользователя
@@ -46,9 +51,9 @@ public class WorkoutHistory
     public DateTime? UpdatedAt { get; set; }
 
     /// <summary>
-    /// Навигационное свойство: шаблон тренировки
+    /// Навигационное свойство: шаблон тренировки (может быть null, если тренировка была удалена)
     /// </summary>
-    public Workout Workout { get; set; } = null!;
+    public Workout? Workout { get; set; }
 
     /// <summary>
     /// Навигационное свойство: пользователь

@@ -27,5 +27,10 @@ public interface IWorkoutService
     /// Получить историю тренировок для шаблона тренировки
     /// </summary>
     Task<List<WorkoutHistory>?> GetWorkoutHistoryByWorkoutIdAsync(Guid workoutId);
+
+    /// <summary>
+    /// Удалить тренировку
+    /// </summary>
+    Task<bool> DeleteWorkoutAsync(Guid workoutId);
 }
 

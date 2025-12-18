@@ -18,8 +18,11 @@ public class WorkoutHistoryConfiguration : IEntityTypeConfiguration<WorkoutHisto
         builder.Property(wh => wh.Id)
             .IsRequired();
 
-        builder.Property(wh => wh.WorkoutId)
-            .IsRequired();
+        builder.Property(wh => wh.WorkoutId);
+
+        builder.Property(wh => wh.WorkoutName)
+            .IsRequired()
+            .HasMaxLength(200);
 
         builder.Property(wh => wh.UserId)
             .IsRequired();
@@ -47,7 +50,7 @@ public class WorkoutHistoryConfiguration : IEntityTypeConfiguration<WorkoutHisto
         builder.HasOne(wh => wh.Workout)
             .WithMany()
             .HasForeignKey(wh => wh.WorkoutId)
-            .OnDelete(DeleteBehavior.Restrict);
+            .OnDelete(DeleteBehavior.SetNull);
 
         builder.HasOne(wh => wh.User)
             .WithMany()
