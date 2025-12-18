@@ -84,6 +84,22 @@ public class WorkoutExerciseService : IWorkoutExerciseService
     }
 
     /// <summary>
+    /// Обновить подход
+    /// </summary>
+    public async Task<bool> UpdateSetAsync(Guid setId, CreateSetDto dto)
+    {
+        try
+        {
+            var response = await _httpClient.PutAsJsonAsync($"api/sets/{setId}", dto);
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Удалить подход
     /// </summary>
     public async Task<bool> DeleteSetAsync(Guid setId)

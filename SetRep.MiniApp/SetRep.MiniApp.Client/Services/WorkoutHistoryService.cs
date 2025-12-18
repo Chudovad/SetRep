@@ -157,7 +157,7 @@ public class WorkoutHistoryService : IWorkoutHistoryService, IDisposable
                         DurationSeconds = set.DurationSeconds,
                         DistanceMeters = set.DistanceMeters,
                         RestSeconds = set.RestSeconds,
-                        IsCompleted = set.IsCompleted,
+                        IsCompleted = false,
                         Notes = set.Notes,
                         CompletedAt = DateTime.UtcNow
                     };
