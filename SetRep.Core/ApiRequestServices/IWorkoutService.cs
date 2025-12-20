@@ -32,5 +32,10 @@ public interface IWorkoutService
     /// Удалить тренировку
     /// </summary>
     Task<bool> DeleteWorkoutAsync(Guid workoutId);
+
+    /// <summary>
+    /// Обновить порядок упражнения в тренировке
+    /// </summary>
+    Task<bool> UpdateWorkoutExerciseOrderAsync(Guid workoutExerciseId, int newOrder);
 }
 

@@ -112,5 +112,43 @@ public class WorkoutService : IWorkoutService
             return false;
         }
     }
+
+    /// <summary>
+    /// Обновить порядок упражнения в тренировке
+    /// </summary>
+    public async Task<bool> UpdateWorkoutExerciseOrderAsync(Guid workoutExerciseId, int newOrder)
+    {
+        try
+        {
+            // Сначала получаем текущее упражнение
+            var getResponse = await _httpClient.GetAsync($"api/workoutexercises/{workoutExerciseId}");
+            if (!getResponse.IsSuccessStatusCode)
+            {
+                return false;
+            }
+
+            var workoutExercise = await getResponse.Content.ReadFromJsonAsync<WorkoutExercise>();
+            if (workoutExercise == null)
+            {
+                return false;
+            }
+
+            // Обновляем только Order
+            var dto = new CreateWorkoutExerciseDto
+            {
+                WorkoutId = workoutExercise.WorkoutId,
+                ExerciseId = workoutExercise.ExerciseId,
+                Order = newOrder,
+                Notes = workoutExercise.Notes
+            };
+
+            var response = await _httpClient.PutAsJsonAsync($"api/workoutexercises/{workoutExerciseId}", dto);
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
+    }
 }
 
