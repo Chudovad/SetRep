@@ -2,6 +2,7 @@ using System.Net.Http.Json;
 using SetRep.Core.ApiRequestServices;
 using SetRep.Core.Entities;
 using SetRep.Shared.DTO;
+using SetRep.MiniApp.Client.Extensions;
 
 namespace SetRep.MiniApp.Client.Services;
 
@@ -11,10 +12,12 @@ namespace SetRep.MiniApp.Client.Services;
 public class WorkoutHistorySetService : IWorkoutHistorySetService
 {
     private readonly HttpClient _httpClient;
+    private readonly ITelegramWebAppStateService _telegramWebAppStateService;
 
-    public WorkoutHistorySetService(HttpClient httpClient)
+    public WorkoutHistorySetService(HttpClient httpClient, ITelegramWebAppStateService telegramWebAppStateService)
     {
         _httpClient = httpClient;
+        _telegramWebAppStateService = telegramWebAppStateService;
     }
 
     /// <summary>
@@ -24,7 +27,9 @@ public class WorkoutHistorySetService : IWorkoutHistorySetService
     {
         try
         {
-            var response = await _httpClient.GetAsync($"api/workouthistorysets/workout-history/{workoutHistoryId}/exercise/{exerciseId}");
+            var request = new HttpRequestMessage(HttpMethod.Get, $"api/workouthistorysets/workout-history/{workoutHistoryId}/exercise/{exerciseId}");
+            request.AddBearerToken(_telegramWebAppStateService);
+            var response = await _httpClient.SendAsync(request);
             if (response.IsSuccessStatusCode)
             {
                 return await response.Content.ReadFromJsonAsync<List<WorkoutHistorySet>>();
@@ -44,7 +49,12 @@ public class WorkoutHistorySetService : IWorkoutHistorySetService
     {
         try
         {
-            var response = await _httpClient.PostAsJsonAsync("api/workouthistorysets", dto);
+            var request = new HttpRequestMessage(HttpMethod.Post, "api/workouthistorysets")
+            {
+                Content = JsonContent.Create(dto)
+            };
+            request.AddBearerToken(_telegramWebAppStateService);
+            var response = await _httpClient.SendAsync(request);
             if (response.IsSuccessStatusCode)
             {
                 return await response.Content.ReadFromJsonAsync<WorkoutHistorySet>();
@@ -64,7 +74,12 @@ public class WorkoutHistorySetService : IWorkoutHistorySetService
     {
         try
         {
-            var response = await _httpClient.PutAsJsonAsync($"api/workouthistorysets/{setId}", dto);
+            var request = new HttpRequestMessage(HttpMethod.Put, $"api/workouthistorysets/{setId}")
+            {
+                Content = JsonContent.Create(dto)
+            };
+            request.AddBearerToken(_telegramWebAppStateService);
+            var response = await _httpClient.SendAsync(request);
             return response.IsSuccessStatusCode;
         }
         catch
@@ -80,7 +95,12 @@ public class WorkoutHistorySetService : IWorkoutHistorySetService
     {
         try
         {
-            var response = await _httpClient.PatchAsJsonAsync($"api/workouthistorysets/{setId}/complete", isCompleted);
+            var request = new HttpRequestMessage(HttpMethod.Patch, $"api/workouthistorysets/{setId}/complete")
+            {
+                Content = JsonContent.Create(isCompleted)
+            };
+            request.AddBearerToken(_telegramWebAppStateService);
+            var response = await _httpClient.SendAsync(request);
             return response.IsSuccessStatusCode;
         }
         catch
@@ -96,7 +116,9 @@ public class WorkoutHistorySetService : IWorkoutHistorySetService
     {
         try
         {
-            var response = await _httpClient.DeleteAsync($"api/workouthistorysets/{setId}");
+            var request = new HttpRequestMessage(HttpMethod.Delete, $"api/workouthistorysets/{setId}");
+            request.AddBearerToken(_telegramWebAppStateService);
+            var response = await _httpClient.SendAsync(request);
             return response.IsSuccessStatusCode;
         }
         catch
