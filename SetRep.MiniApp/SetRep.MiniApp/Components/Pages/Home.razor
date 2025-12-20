@@ -2,7 +2,10 @@
 @using SetRep.Core.ApiRequestServices
 @using SetRep.Core.Entities
 @using SetRep.MiniApp.Client.Services
+@using static SetRep.MiniApp.Client.Services.InitializationHelper
+
 @rendermode InteractiveServer
+
 @inject IWorkoutHistoryService WorkoutHistoryService
 @inject IWorkoutService WorkoutService
 @inject ITelegramWebAppStateService TelegramWebAppStateService
@@ -245,32 +248,10 @@
     {
         if (firstRender && !_isDataLoaded)
         {
-            await WaitForInitializationAsync();
+            await WaitForInitializationAsync(AppInitializationService);
             await LoadWorkoutData();
             _isDataLoaded = true;
             StateHasChanged();
-        }
-    }
-
-    private async Task WaitForInitializationAsync()
-    {
-        if (!AppInitializationService.IsInitializing)
-        {
-            return;
-        }
-
-        var timeout = TimeSpan.FromSeconds(10);
-        var startTime = DateTime.UtcNow;
-        var checkInterval = TimeSpan.FromMilliseconds(100);
-
-        while (AppInitializationService.IsInitializing)
-        {
-            if (DateTime.UtcNow - startTime > timeout)
-            {
-                break;
-            }
-
-            await Task.Delay(checkInterval);
         }
     }
 

@@ -3,12 +3,14 @@
 @using SetRep.Core.Entities
 @using SetRep.MiniApp.Client.Services
 @using SetRep.MiniApp.Components.Dialog
+@using static SetRep.MiniApp.Client.Services.InitializationHelper
 @rendermode InteractiveServer
 @inject IWorkoutService WorkoutService
 @inject NavigationManager Navigation
 @inject ITelegramBackButtonService TelegramBackButtonService
 @inject IWorkoutHistoryService WorkoutHistoryService
 @inject ITelegramWebAppStateService TelegramWebAppStateService
+@inject IAppInitializationService AppInitializationService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @implements IAsyncDisposable
@@ -368,17 +370,14 @@ else if (workout != null)
         public string Zone { get; set; } = "exercises-zone";
     }
 
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadWorkout();
-        await CheckActiveWorkout();
-    }
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
+            await WaitForInitializationAsync(AppInitializationService);
             await TelegramBackButtonService.ShowAsync();
+            await LoadWorkout();
+            await CheckActiveWorkout();
         }
     }
 

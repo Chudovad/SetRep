@@ -5,6 +5,7 @@
 @using SetRep.Core.Extensions
 @using SetRep.MiniApp.Client.Services
 @using SetRep.MiniApp.Components.Dialog
+@using static SetRep.MiniApp.Client.Services.InitializationHelper
 @rendermode InteractiveServer
 @inject IExerciseService ExerciseService
 @inject IDialogService DialogService
@@ -12,6 +13,7 @@
 @inject NavigationManager Navigation
 @inject ITelegramBackButtonService TelegramBackButtonService
 @inject ITelegramWebAppStateService TelegramWebAppStateService
+@inject IAppInitializationService AppInitializationService
 @implements IAsyncDisposable
 
 <PageTitle>SetRep - Упражнения</PageTitle>
@@ -248,16 +250,14 @@
         }
     }
 
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadExercises();
-    }
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
+            await WaitForInitializationAsync(AppInitializationService);
             await TelegramBackButtonService.ShowAsync();
+            await LoadExercises();
+            StateHasChanged();
         }
     }
 
