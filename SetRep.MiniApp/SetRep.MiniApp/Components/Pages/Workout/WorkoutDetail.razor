@@ -378,6 +378,7 @@ else if (workout != null)
             await TelegramBackButtonService.ShowAsync();
             await LoadWorkout();
             await CheckActiveWorkout();
+            StateHasChanged();
         }
     }
 
@@ -596,6 +597,18 @@ else if (workout != null)
 
         try
         {
+            if (activeWorkoutHistory != null)
+            {
+                var endSuccess = await WorkoutHistoryService.EndWorkoutAsync(activeWorkoutHistory.Id);
+                if (!endSuccess)
+                {
+                    Snackbar.Add("Не удалось завершить активную тренировку. Удаление отменено.", Severity.Error);
+                    return;
+                }
+
+                activeWorkoutHistory = null;
+            }
+
             var success = await WorkoutService.DeleteWorkoutAsync(WorkoutId);
             if (success)
             {
