@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using SetRep.Core.ApiRequestServices;
 using SetRep.Shared.DTO;
+using SetRep.MiniApp.Client.Extensions;
 
 namespace SetRep.MiniApp.Client.Services;
 
@@ -10,10 +11,14 @@ namespace SetRep.MiniApp.Client.Services;
 public class UserService : IUserService
 {
     private readonly HttpClient _httpClient;
+    private readonly ITelegramWebAppStateService _telegramWebAppStateService;
+    private readonly ILogger<UserService>? _logger;
 
-    public UserService(HttpClient httpClient)
+    public UserService(HttpClient httpClient, ITelegramWebAppStateService telegramWebAppStateService, ILogger<UserService>? logger = null)
     {
         _httpClient = httpClient;
+        _telegramWebAppStateService = telegramWebAppStateService;
+        _logger = logger;
     }
 
     /// <summary>
@@ -23,7 +28,9 @@ public class UserService : IUserService
     {
         try
         {
-            var response = await _httpClient.GetAsync($"api/Users/telegram/{telegramId}");
+            var request = new HttpRequestMessage(HttpMethod.Get, $"api/Users/telegram/{telegramId}");
+            request.AddBearerToken(_telegramWebAppStateService);
+            var response = await _httpClient.SendAsync(request);
             if (response.IsSuccessStatusCode)
             {
                 return await response.Content.ReadFromJsonAsync<UserDto>();
@@ -43,7 +50,12 @@ public class UserService : IUserService
     {
         try
         {
-            var response = await _httpClient.PostAsJsonAsync("api/Users", user);
+            var request = new HttpRequestMessage(HttpMethod.Post, "api/Users")
+            {
+                Content = JsonContent.Create(user)
+            };
+            request.AddBearerToken(_telegramWebAppStateService);
+            var response = await _httpClient.SendAsync(request);
             if (response.IsSuccessStatusCode)
             {
                 return await response.Content.ReadFromJsonAsync<UserDto>();

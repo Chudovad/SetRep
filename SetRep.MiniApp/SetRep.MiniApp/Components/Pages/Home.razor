@@ -2,7 +2,10 @@
 @using SetRep.Core.ApiRequestServices
 @using SetRep.Core.Entities
 @using SetRep.MiniApp.Client.Services
+@using static SetRep.MiniApp.Client.Services.InitializationHelper
+
 @rendermode InteractiveServer
+
 @inject IWorkoutHistoryService WorkoutHistoryService
 @inject IWorkoutService WorkoutService
 @inject ITelegramWebAppStateService TelegramWebAppStateService
@@ -130,9 +133,13 @@
                 }
                 else
                 {
-                    <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
-                        Нет доступных тренировок
-                    </MudText>
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               FullWidth="true"
+                               StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="AddWorkout">
+                        Добавить тренировку
+                    </MudButton>
                 }
             </MudCardContent>
         </MudCard>
@@ -142,15 +149,6 @@
     <MudText Typo="Typo.h6" Class="mb-3 mt-4">Быстрые действия</MudText>
     
     <div class="quick-actions">
-        <MudButton Variant="Variant.Filled" 
-                   Color="Color.Primary" 
-                   FullWidth="true" 
-                   Class="mb-3 quick-action-btn"
-                   StartIcon="@Icons.Material.Filled.Add"
-                   OnClick="AddWorkout">
-            Добавить тренировку
-        </MudButton>
-        
         <MudButton Variant="Variant.Outlined" 
                    Color="Color.Primary" 
                    FullWidth="true" 
@@ -250,32 +248,10 @@
     {
         if (firstRender && !_isDataLoaded)
         {
-            await WaitForInitializationAsync();
+            await WaitForInitializationAsync(AppInitializationService);
             await LoadWorkoutData();
             _isDataLoaded = true;
             StateHasChanged();
-        }
-    }
-
-    private async Task WaitForInitializationAsync()
-    {
-        if (!AppInitializationService.IsInitializing)
-        {
-            return;
-        }
-
-        var timeout = TimeSpan.FromSeconds(10);
-        var startTime = DateTime.UtcNow;
-        var checkInterval = TimeSpan.FromMilliseconds(100);
-
-        while (AppInitializationService.IsInitializing)
-        {
-            if (DateTime.UtcNow - startTime > timeout)
-            {
-                break;
-            }
-
-            await Task.Delay(checkInterval);
         }
     }
 
@@ -435,7 +411,7 @@
 
     private void AddWorkout()
     {
-        // TODO: Навигация на страницу добавления тренировки
+        Navigation.NavigateTo("/workouts/add");
     }
 
     private void RecordWeight()

@@ -32,40 +32,8 @@
             AppInitializationService?.SetInitializing(true);
             Logger?.LogInformation("Начало валидации Telegram WebApp данных");
 
-
-#if DEBUG
-
-            var validationResult = new TelegramWebAppValidationResult
-            {
-                ErrorMessage = null,
-                Data = new TelegramWebAppData
-                {
-                    AuthDate = 1766046860,
-                    ChatInstance = 2456908206494059863,
-                    ChatType = "private",
-                    Hash = "0f8a12d0439c1a947d8e633ee03f9541063fe651ad94d0a29c8bf0ef1d2ee809",
-                    QueryId	= "",
-                    User = new TelegramUser
-                    {
-    		            FirstName =	"Vadim"	,
-		                Id = new Guid("6494262f-69e4-46f6-a0ca-4e9ee50702f9"),
-		                IsPremium = false,
-		                LanguageCode = "ru",
-		                LastName = "Chudinovich",
-		                PhotoUrl = "https://t.me/i/userpic/320/cGRYyGXlS1yM3t0_Bvf9qAFkRSp_NuEj5YwTacp1Z24.svg",
-		                TelegramId = 381127795,
-		                Username = "Chud0vad",
-                    }
-                },
-                IsValid = true
-            };
-
-#else
-
             // Валидация Telegram WebApp
             var validationResult = await TelegramWebAppService.GetAndValidateAsync();
-
-#endif
 
             if (!validationResult.IsValid)
             {
@@ -92,15 +60,14 @@
             Logger?.LogInformation("Telegram WebApp данные успешно валидированы. User ID: {UserId}",
                 validationResult.Data.User.TelegramId);
 
+            // Сохраняем успешный результат в сервисе состояния
+            TelegramWebAppStateService.SetValidationResult(validationResult);
+
             // Валидация пользователя
             await EnsureUserExistsAsync(validationResult.Data.User);
 
             // Настройка темы и включение кнопки назад параллельно
             var themeTask = InitializeThemeAsync();
-
-            // Сохраняем успешный результат в сервисе состояния
-            TelegramWebAppStateService.SetValidationResult(validationResult);
-
             // Завершаем инициализацию
             AppInitializationService?.SetInitializing(false);
             Logger?.LogInformation("Инициализация приложения завершена успешно");

@@ -2,11 +2,13 @@
 @using SetRep.Core.ApiRequestServices
 @using SetRep.Core.Entities
 @using SetRep.MiniApp.Client.Services
+@using static SetRep.MiniApp.Client.Services.InitializationHelper
 @rendermode InteractiveServer
 @inject IWorkoutHistoryService WorkoutHistoryService
 @inject NavigationManager Navigation
 @inject ITelegramBackButtonService TelegramBackButtonService
 @inject ITelegramWebAppStateService TelegramWebAppStateService
+@inject IAppInitializationService AppInitializationService
 @implements IAsyncDisposable
 
 <PageTitle>SetRep - История тренировок</PageTitle>
@@ -61,7 +63,7 @@ else if (workoutHistoryList.Any())
                         <div class="workout-history-header">
                             <div class="workout-history-info">
                                 <MudText Typo="Typo.h6" Class="mb-1">
-                                    @(workoutHistory.WorkoutName ?? workoutHistory.Workout?.Name ?? "Тренировка")
+                                    @(workoutHistory.Workout?.Name ?? workoutHistory.WorkoutName ?? "Тренировка")
                                 </MudText>
                                 <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-1">
                                     @FormatDate(workoutHistory.StartTime)
@@ -172,16 +174,14 @@ else
     private bool isLoading = true;
     private string? errorMessage;
 
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadWorkoutHistory();
-    }
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
+            await WaitForInitializationAsync(AppInitializationService);
             await TelegramBackButtonService.ShowAsync();
+            await LoadWorkoutHistory();
+            StateHasChanged();
         }
     }
 
