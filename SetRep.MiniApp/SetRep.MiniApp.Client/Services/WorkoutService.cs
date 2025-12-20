@@ -114,6 +114,22 @@ public class WorkoutService : IWorkoutService
     }
 
     /// <summary>
+    /// Обновить тренировку
+    /// </summary>
+    public async Task<bool> UpdateWorkoutAsync(Guid workoutId, CreateWorkoutDto dto)
+    {
+        try
+        {
+            var response = await _httpClient.PutAsJsonAsync($"api/workouts/{workoutId}", dto);
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Обновить порядок упражнения в тренировке
     /// </summary>
     public async Task<bool> UpdateWorkoutExerciseOrderAsync(Guid workoutExerciseId, int newOrder)

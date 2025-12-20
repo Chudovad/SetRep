@@ -69,12 +69,20 @@ else if (workout != null)
             <MudCardContent>
                 <div class="workout-header">
                     <MudText Typo="Typo.h4" Class="workout-title">@workout.Name</MudText>
-                    <MudIconButton Icon="@Icons.Material.Filled.Delete" 
-                                   Color="Color.Error" 
-                                   Size="Size.Medium"
-                                   OnClick="ConfirmDeleteWorkout"
-                                   Disabled="isDeleting"
-                                   Class="delete-workout-btn" />
+                    <div class="workout-actions">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                       Color="Color.Primary"
+                                       Size="Size.Medium"
+                                       OnClick="OpenEditDialog"
+                                       Disabled="isDeleting"
+                                       Class="edit-workout-btn" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                       Color="Color.Error" 
+                                       Size="Size.Medium"
+                                       OnClick="ConfirmDeleteWorkout"
+                                       Disabled="isDeleting"
+                                       Class="delete-workout-btn" />
+                    </div>
                 </div>
                 
                 @if (!string.IsNullOrWhiteSpace(workout.Notes))
@@ -215,8 +223,15 @@ else if (workout != null)
         flex: 1;
     }
 
-    .delete-workout-btn {
+    .workout-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
         flex-shrink: 0;
+    }
+
+    .edit-workout-btn, .delete-workout-btn {
+        min-width: 40px;
     }
 
     .workout-description {
@@ -510,6 +525,33 @@ else if (workout != null)
     private void GoBack()
     {
         Navigation.NavigateTo("/workouts");
+    }
+
+    private async Task OpenEditDialog()
+    {
+        if (workout == null || isDeleting)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<EditWorkoutDialog>
+        {
+            { nameof(EditWorkoutDialog.Workout), workout }
+        };
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true, 
+            MaxWidth = MaxWidth.Small, 
+            FullWidth = true 
+        };
+        
+        var dialogReference = await DialogService.ShowAsync<EditWorkoutDialog>("Редактировать тренировку", parameters, options);
+        var result = await dialogReference.Result;
+        
+        if (!result.Canceled)
+        {
+            await LoadWorkout();
+        }
     }
 
     private async Task ConfirmDeleteWorkout()

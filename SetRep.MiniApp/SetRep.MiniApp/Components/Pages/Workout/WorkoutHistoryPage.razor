@@ -61,7 +61,7 @@ else if (workoutHistoryList.Any())
                         <div class="workout-history-header">
                             <div class="workout-history-info">
                                 <MudText Typo="Typo.h6" Class="mb-1">
-                                    @(workoutHistory.WorkoutName ?? workoutHistory.Workout?.Name ?? "Тренировка")
+                                    @(workoutHistory.Workout?.Name ?? workoutHistory.WorkoutName ?? "Тренировка")
                                 </MudText>
                                 <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-1">
                                     @FormatDate(workoutHistory.StartTime)
