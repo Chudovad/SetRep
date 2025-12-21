@@ -104,15 +104,6 @@ else if (exercise != null)
             </MudCard>
         }
 
-        @if (!string.IsNullOrEmpty(exercise.VideoUrl))
-        {
-            <MudExpansionPanels Class="mb-4">
-                <MudExpansionPanel Text="Как делать упражнение" MaxHeight="150">
-                    @exercise.VideoUrl
-                </MudExpansionPanel>
-            </MudExpansionPanels>
-        }
-
         <!-- Название и описание -->
         <MudCard Elevation="2" Class="mb-4 exercise-info-card">
             <MudCardContent>
@@ -168,6 +159,22 @@ else if (exercise != null)
                 }
             </MudCardContent>
         </MudCard>
+
+        @if (!string.IsNullOrEmpty(exercise.VideoUrl))
+        {
+            <MudExpansionPanels Class="mb-4">
+                <MudExpansionPanel Text="Как делать упражнение">
+                    <video src="@exercise.VideoUrl"
+                           autoplay
+                           loop
+                           playsinline
+                           muted
+                           controls
+                           class="exercise-video"
+                           title="@exercise.Name"></video>
+                </MudExpansionPanel>
+            </MudExpansionPanels>
+        }
     </div>
 }
 
