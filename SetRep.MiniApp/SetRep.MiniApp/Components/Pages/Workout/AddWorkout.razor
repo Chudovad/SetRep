@@ -5,6 +5,8 @@
 @using SetRep.Core.Entities
 @using SetRep.MiniApp.Components.Dialog
 @using SetRep.Shared.DTO
+@using SetRep.MiniApp.Client.Services
+@using static SetRep.MiniApp.Client.Services.InitializationHelper
 @rendermode InteractiveServer
 @inject IWorkoutService WorkoutService
 @inject IWorkoutExerciseService WorkoutExerciseService
@@ -14,6 +16,7 @@
 @inject ISnackbar Snackbar
 @inject ITelegramBackButtonService TelegramBackButtonService
 @inject ITelegramWebAppStateService TelegramWebAppStateService
+@inject IAppInitializationService AppInitializationService
 @implements IAsyncDisposable
 
 <PageTitle>SetRep - Добавить тренировку</PageTitle>
@@ -159,9 +162,14 @@
 
     private List<Exercise> selectedExercises = new();
 
-    protected override async Task OnInitializedAsync()
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await TelegramBackButtonService.ShowAsync();
+        if (firstRender)
+        {
+            await WaitForInitializationAsync(AppInitializationService);
+            await TelegramBackButtonService.ShowAsync();
+        }
     }
 
     private async Task OpenSelectExercisesDialog()

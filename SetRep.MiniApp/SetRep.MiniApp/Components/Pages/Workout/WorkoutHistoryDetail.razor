@@ -2,10 +2,12 @@
 @using SetRep.Core.ApiRequestServices
 @using SetRep.Core.Entities
 @using SetRep.MiniApp.Client.Services
+@using static SetRep.MiniApp.Client.Services.InitializationHelper
 @rendermode InteractiveServer
 @inject IWorkoutHistoryService WorkoutHistoryService
 @inject NavigationManager Navigation
 @inject ITelegramBackButtonService TelegramBackButtonService
+@inject IAppInitializationService AppInitializationService
 @implements IAsyncDisposable
 
 <PageTitle>SetRep - Детали тренировки</PageTitle>
@@ -55,7 +57,7 @@ else if (workoutHistory != null)
         <!-- Информация о тренировке -->
         <MudCard Elevation="2" Class="mb-4 workout-info-card">
             <MudCardContent>
-                <MudText Typo="Typo.h5" Class="mb-3">@(workoutHistory.WorkoutName ?? workoutHistory.Workout?.Name ?? "Тренировка")</MudText>
+                <MudText Typo="Typo.h5" Class="mb-3">@(workoutHistory.Workout?.Name ?? workoutHistory.WorkoutName ?? "Тренировка")</MudText>
                 
                 <div class="workout-meta">
                     <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-1">
@@ -218,16 +220,14 @@ else if (workoutHistory != null)
     private bool isLoading = true;
     private string? errorMessage;
 
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadWorkoutHistory();
-    }
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
+            await WaitForInitializationAsync(AppInitializationService);
             await TelegramBackButtonService.ShowAsync();
+            await LoadWorkoutHistory();
+            StateHasChanged();
         }
     }
 

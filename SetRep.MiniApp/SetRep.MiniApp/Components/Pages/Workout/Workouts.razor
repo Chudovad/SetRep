@@ -2,11 +2,13 @@
 @using SetRep.Core.ApiRequestServices
 @using SetRep.Core.Entities
 @using SetRep.MiniApp.Client.Services
+@using static SetRep.MiniApp.Client.Services.InitializationHelper
 
 @rendermode InteractiveServer
 @inject IWorkoutService WorkoutService
 @inject IWorkoutHistoryService WorkoutHistoryService
 @inject ITelegramWebAppStateService TelegramWebAppStateService
+@inject IAppInitializationService AppInitializationService
 @inject NavigationManager Navigation
 
 <PageTitle>SetRep - Тренировки</PageTitle>
@@ -208,10 +210,15 @@
     private bool isLoading = true;
     private string? errorMessage;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await LoadWorkouts();
-        await LoadActiveWorkout();
+        if (firstRender)
+        {
+            await WaitForInitializationAsync(AppInitializationService);
+            await LoadWorkouts();
+            await LoadActiveWorkout();
+            StateHasChanged();
+        }
     }
 
     private async Task LoadWorkouts()

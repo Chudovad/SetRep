@@ -1,5 +1,8 @@
 @page "/statistics"
 @rendermode InteractiveServer
+@using SetRep.MiniApp.Client.Services
+@using static SetRep.MiniApp.Client.Services.InitializationHelper
+@inject IAppInitializationService AppInitializationService
 
 <PageTitle>SetRep - Статистика</PageTitle>
 
@@ -186,6 +189,14 @@
     {
         public string Week { get; set; } = string.Empty;
         public double Value { get; set; }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await WaitForInitializationAsync(AppInitializationService);
+        }
     }
 }
 

@@ -3,12 +3,14 @@
 @using SetRep.Core.Entities
 @using SetRep.MiniApp.Client.Services
 @using SetRep.MiniApp.Components.Dialog
+@using static SetRep.MiniApp.Client.Services.InitializationHelper
 @rendermode InteractiveServer
 @inject IWorkoutService WorkoutService
 @inject NavigationManager Navigation
 @inject ITelegramBackButtonService TelegramBackButtonService
 @inject IWorkoutHistoryService WorkoutHistoryService
 @inject ITelegramWebAppStateService TelegramWebAppStateService
+@inject IAppInitializationService AppInitializationService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @implements IAsyncDisposable
@@ -69,12 +71,20 @@ else if (workout != null)
             <MudCardContent>
                 <div class="workout-header">
                     <MudText Typo="Typo.h4" Class="workout-title">@workout.Name</MudText>
-                    <MudIconButton Icon="@Icons.Material.Filled.Delete" 
-                                   Color="Color.Error" 
-                                   Size="Size.Medium"
-                                   OnClick="ConfirmDeleteWorkout"
-                                   Disabled="isDeleting"
-                                   Class="delete-workout-btn" />
+                    <div class="workout-actions">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                       Color="Color.Primary"
+                                       Size="Size.Medium"
+                                       OnClick="OpenEditDialog"
+                                       Disabled="isDeleting"
+                                       Class="edit-workout-btn" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                       Color="Color.Error" 
+                                       Size="Size.Medium"
+                                       OnClick="ConfirmDeleteWorkout"
+                                       Disabled="isDeleting"
+                                       Class="delete-workout-btn" />
+                    </div>
                 </div>
                 
                 @if (!string.IsNullOrWhiteSpace(workout.Notes))
@@ -134,32 +144,46 @@ else if (workout != null)
         {
             <MudText Typo="Typo.h6" Class="mb-3">Упражнения</MudText>
             
-            @foreach (var workoutExercise in workout.WorkoutExercises.OrderBy(we => we.Order))
-            {
-                <div @onclick="() => ViewWorkoutExercise(workoutExercise.Id)" class="exercise-card-wrapper">
-                    <MudCard Elevation="2" Class="mb-3 exercise-card">
-                        <MudCardContent>
-                            <div class="exercise-header">
-                                <div class="exercise-header-content">
-                                    <MudText Typo="Typo.h6" Class="mb-2">
-                                        @(workoutExercise.Exercise?.Name ?? "Неизвестное упражнение")
-                                    </MudText>
-                            
-                                    @if (!string.IsNullOrWhiteSpace(workoutExercise.Notes))
-                                    {
-                                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
-                                            @workoutExercise.Notes
+            <MudDropContainer T="WorkoutExerciseItem" 
+                             Items="@exerciseItems" 
+                             ItemsSelector="@((item, dropzone) => item.Zone == dropzone)"
+                             ItemDropped="OnExerciseDropped" 
+                             Class="exercise-drop-container">
+                <ChildContent>
+                    <MudDropZone T="WorkoutExerciseItem" 
+                                 Identifier="exercises-zone" 
+                                 AllowReorder="true" 
+                                 Class="exercise-drop-zone" />
+                </ChildContent>
+                <ItemRenderer>
+                    <div @onclick="() => ViewWorkoutExercise(context.WorkoutExercise.Id)" class="exercise-card-wrapper">
+                        <MudCard Elevation="2" Class="mb-3 exercise-card">
+                            <MudCardContent>
+                                <div class="exercise-header">
+                                    <MudIcon Icon="@Icons.Material.Filled.Menu" 
+                                             Color="Color.Secondary" 
+                                             Class="drag-handle-icon" />
+                                    <div class="exercise-header-content">
+                                        <MudText Typo="Typo.h6" Class="mb-2">
+                                            @(context.WorkoutExercise.Exercise?.Name ?? "Неизвестное упражнение")
                                         </MudText>
-                                    }
+                                
+                                        @if (!string.IsNullOrWhiteSpace(context.WorkoutExercise.Notes))
+                                        {
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+                                                @context.WorkoutExercise.Notes
+                                            </MudText>
+                                        }
+                                    </div>
+                                    <MudIcon Icon="@Icons.Material.Filled.ChevronRight" 
+                                             Color="Color.Secondary" 
+                                             Class="exercise-arrow-icon" />
                                 </div>
-                                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" 
-                                         Color="Color.Secondary" 
-                                         Class="exercise-arrow-icon" />
-                            </div>
-                        </MudCardContent>
-                    </MudCard>
-                </div>
-            }
+                            </MudCardContent>
+                        </MudCard>
+                    </div>
+                </ItemRenderer>
+            </MudDropContainer>
         }
         else
         {
@@ -201,8 +225,15 @@ else if (workout != null)
         flex: 1;
     }
 
-    .delete-workout-btn {
+    .workout-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
         flex-shrink: 0;
+    }
+
+    .edit-workout-btn, .delete-workout-btn {
+        min-width: 40px;
     }
 
     .workout-description {
@@ -216,8 +247,26 @@ else if (workout != null)
         gap: 4px;
     }
 
+    .exercise-drop-container {
+        width: 100%;
+    }
+
+    .exercise-drop-zone {
+        min-height: 50px;
+    }
+
     .exercise-card-wrapper {
         cursor: pointer;
+    }
+
+    .drag-handle-icon {
+        cursor: grab;
+        margin-right: 8px;
+        user-select: none;
+    }
+
+    .drag-handle-icon:active {
+        cursor: grabbing;
     }
 
     .exercise-card {
@@ -311,25 +360,30 @@ else if (workout != null)
     private bool isLoading = true;
     private bool isStartingWorkout = false;
     private bool isDeleting = false;
+    private bool isReordering = false;
     private string? errorMessage;
+    private List<WorkoutExerciseItem> exerciseItems = new();
 
-    protected override async Task OnInitializedAsync()
+    private class WorkoutExerciseItem
     {
-        await LoadWorkout();
-        await CheckActiveWorkout();
+        public WorkoutExercise WorkoutExercise { get; set; } = null!;
+        public string Zone { get; set; } = "exercises-zone";
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
+            await WaitForInitializationAsync(AppInitializationService);
             await TelegramBackButtonService.ShowAsync();
+            await LoadWorkout();
+            await CheckActiveWorkout();
+            StateHasChanged();
         }
     }
 
     protected override async Task OnParametersSetAsync()
     {
-        // Обновляем проверку активной тренировки при изменении параметров
         await CheckActiveWorkout();
     }
 
@@ -344,6 +398,10 @@ else if (workout != null)
             if (workout == null)
             {
                 errorMessage = "Тренировка не найдена.";
+            }
+            else
+            {
+                UpdateExerciseItems();
             }
         }
         catch (HttpRequestException ex)
@@ -383,11 +441,9 @@ else if (workout != null)
                 return;
             }
 
-            // Получаем историю тренировок для данного шаблона
             var workoutHistories = await WorkoutService.GetWorkoutHistoryByWorkoutIdAsync(WorkoutId);
             if (workoutHistories != null)
             {
-                // Ищем активную тренировку (без EndTime) для текущего пользователя
                 activeWorkoutHistory = workoutHistories
                     .FirstOrDefault(wh => wh.UserId == userId && wh.EndTime == null);
                 
@@ -427,18 +483,14 @@ else if (workout != null)
                 return;
             }
 
-            // Создаем запись истории тренировки
             var workoutHistory = await WorkoutHistoryService.StartWorkoutAsync(WorkoutId, userId);
             
             if (workoutHistory != null)
             {
-                // Копируем подходы из тренировки
                 await WorkoutHistoryService.CopySetsFromWorkoutAsync(workoutHistory.Id, WorkoutId);
                 
-                // Обновляем активную тренировку
                 activeWorkoutHistory = workoutHistory;
                 
-                // Переходим на страницу активной тренировки
                 Navigation.NavigateTo($"/workouts/{WorkoutId}/active/{workoutHistory.Id}");
             }
             else
@@ -473,6 +525,33 @@ else if (workout != null)
     private void GoBack()
     {
         Navigation.NavigateTo("/workouts");
+    }
+
+    private async Task OpenEditDialog()
+    {
+        if (workout == null || isDeleting)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<EditWorkoutDialog>
+        {
+            { nameof(EditWorkoutDialog.Workout), workout }
+        };
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true, 
+            MaxWidth = MaxWidth.Small, 
+            FullWidth = true 
+        };
+        
+        var dialogReference = await DialogService.ShowAsync<EditWorkoutDialog>("Редактировать тренировку", parameters, options);
+        var result = await dialogReference.Result;
+        
+        if (!result.Canceled)
+        {
+            await LoadWorkout();
+        }
     }
 
     private async Task ConfirmDeleteWorkout()
@@ -518,6 +597,18 @@ else if (workout != null)
 
         try
         {
+            if (activeWorkoutHistory != null)
+            {
+                var endSuccess = await WorkoutHistoryService.EndWorkoutAsync(activeWorkoutHistory.Id);
+                if (!endSuccess)
+                {
+                    Snackbar.Add("Не удалось завершить активную тренировку. Удаление отменено.", Severity.Error);
+                    return;
+                }
+
+                activeWorkoutHistory = null;
+            }
+
             var success = await WorkoutService.DeleteWorkoutAsync(WorkoutId);
             if (success)
             {
@@ -535,6 +626,90 @@ else if (workout != null)
         finally
         {
             isDeleting = false;
+            StateHasChanged();
+        }
+    }
+
+    private void UpdateExerciseItems()
+    {
+        if (workout?.WorkoutExercises == null)
+        {
+            exerciseItems = new List<WorkoutExerciseItem>();
+            return;
+        }
+
+        exerciseItems = workout.WorkoutExercises
+            .OrderBy(we => we.Order)
+            .Select(we => new WorkoutExerciseItem
+            {
+                WorkoutExercise = we,
+                Zone = "exercises-zone"
+            })
+            .ToList();
+    }
+
+    private async Task OnExerciseDropped(MudItemDropInfo<WorkoutExerciseItem> dropInfo)
+    {
+        if (isReordering || workout?.WorkoutExercises == null || dropInfo.Item == null)
+        {
+            return;
+        }
+
+        isReordering = true;
+        StateHasChanged();
+
+        try
+        {
+            var newIndex = dropInfo.IndexInZone;
+            var item = dropInfo.Item;
+            var oldIndex = exerciseItems.IndexOf(item);
+
+            if (oldIndex == newIndex)
+            {
+                return;
+            }
+
+            var orderedExercises = exerciseItems.Select(ei => ei.WorkoutExercise).ToList();
+            
+            var movedExercise = orderedExercises[oldIndex];
+            orderedExercises.RemoveAt(oldIndex);
+
+            orderedExercises.Insert(newIndex, movedExercise);
+
+            var updateTasks = new List<Task<bool>>();
+            for (int i = 0; i < orderedExercises.Count; i++)
+            {
+                var exercise = orderedExercises[i];
+                if (exercise.Order != i)
+                {
+                    updateTasks.Add(WorkoutService.UpdateWorkoutExerciseOrderAsync(exercise.Id, i));
+                }
+            }
+
+            var results = await Task.WhenAll(updateTasks);
+            if (results.All(r => r))
+            {
+                for (int i = 0; i < orderedExercises.Count; i++)
+                {
+                    orderedExercises[i].Order = i;
+                }
+
+                await LoadWorkout();
+            }
+            else
+            {
+                Snackbar.Add("Не удалось обновить порядок упражнений", Severity.Error);
+                UpdateExerciseItems();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка при изменении порядка: {ex.Message}", Severity.Error);
+            UpdateExerciseItems();
+        }
+        finally
+        {
+            isReordering = false;
             StateHasChanged();
         }
     }

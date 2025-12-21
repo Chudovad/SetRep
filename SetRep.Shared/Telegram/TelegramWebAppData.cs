@@ -9,6 +9,7 @@ public class TelegramWebAppData
     public string? StartParam { get; set; }
     public string? ChatType { get; set; }
     public long? ChatInstance { get; set; }
+    public string? Token { get; set; }
 }
 
 public class TelegramWebAppValidationResult

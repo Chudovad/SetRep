@@ -1,0 +1,118 @@
+@using SetRep.Core.ApiRequestServices
+@using SetRep.Core.Entities
+@using SetRep.Shared.DTO
+@using MudBlazor
+
+@inject IWorkoutService WorkoutService
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Редактировать тренировку</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="@isFormValid">
+            <MudTextField T="string"
+                          Label="Название тренировки"
+                          @bind-Value="workoutName"
+                          Variant="Variant.Outlined"
+                          Required="true"
+                          RequiredError="Название обязательно для заполнения"
+                          Class="mb-3" />
+            
+            <MudTextField T="string" 
+                         Label="Описание" 
+                         @bind-Value="workoutNotes"
+                         Variant="Variant.Outlined"
+                         Lines="3"
+                         Class="mb-3" />
+        </MudForm>
+        
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <MudAlert Severity="Severity.Error" Class="mt-3">@errorMessage</MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Отмена</MudButton>
+        <MudButton Color="Color.Primary" 
+                   Variant="Variant.Filled" 
+                   OnClick="Save"
+                   Disabled="@(!isFormValid || isSaving)">
+            @if (isSaving)
+            {
+                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                <MudText Class="ms-2">Сохранение...</MudText>
+            }
+            else
+            {
+                <MudText>Сохранить</MudText>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance? MudDialog { get; set; }
+    [Parameter] public Workout Workout { get; set; } = null!;
+
+    private MudForm? form;
+    private bool isFormValid;
+    private bool isSaving = false;
+    private string? errorMessage;
+    private string workoutName = string.Empty;
+    private string? workoutNotes;
+
+    protected override void OnInitialized()
+    {
+        workoutName = Workout.Name;
+        workoutNotes = Workout.Notes;
+    }
+
+    private void Cancel()
+    {
+        MudDialog?.Cancel();
+    }
+
+    private async Task Save()
+    {
+        await form!.Validate();
+
+        if (!isFormValid || isSaving)
+            return;
+
+        isSaving = true;
+        errorMessage = null;
+
+        try
+        {
+            var dto = new CreateWorkoutDto
+            {
+                UserId = Workout.UserId,
+                Name = workoutName,
+                Notes = workoutNotes
+            };
+
+            var success = await WorkoutService.UpdateWorkoutAsync(Workout.Id, dto);
+            if (success)
+            {
+                MudDialog?.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                errorMessage = "Ошибка при обновлении тренировки. Проверьте подключение к API.";
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = $"Ошибка сети: {ex.Message}";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Не удалось обновить тренировку: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+}

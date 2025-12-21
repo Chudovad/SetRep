@@ -3,6 +3,7 @@
 @using SetRep.Core.Entities
 @using SetRep.MiniApp.Client.Services
 @using SetRep.Shared.DTO
+@using static SetRep.MiniApp.Client.Services.InitializationHelper
 @rendermode InteractiveServer
 @inject IWorkoutService WorkoutService
 @inject IWorkoutHistoryService WorkoutHistoryService
@@ -10,6 +11,7 @@
 @inject IWorkoutHistorySetService WorkoutHistorySetService
 @inject NavigationManager Navigation
 @inject ITelegramBackButtonService TelegramBackButtonService
+@inject IAppInitializationService AppInitializationService
 @inject ISnackbar Snackbar
 @inject IJSRuntime JSRuntime
 @implements IAsyncDisposable
@@ -345,17 +347,15 @@ else if (workout != null && currentExercise != null)
     private decimal? editingWeight;
     private int editingReps;
 
-    protected override async Task OnInitializedAsync()
-    {
-        ActiveWorkoutService.DurationUpdated += OnDurationUpdated;
-        await LoadWorkout();
-    }
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
+            await WaitForInitializationAsync(AppInitializationService);
             await TelegramBackButtonService.ShowAsync();
+            ActiveWorkoutService.DurationUpdated += OnDurationUpdated;
+            await LoadWorkout();
+            StateHasChanged();
         }
     }
 

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SetRep.Core.Entities;
 using SetRep.Core.Enums;
@@ -56,6 +57,7 @@ public class ExercisesController : ControllerBase
     /// Получить упражнения пользователя
     /// </summary>
     [HttpGet("user/{userId}")]
+    [Authorize]
     public async Task<ActionResult<IEnumerable<Exercise>>> GetUserExercises(Guid userId)
     {
         var exercises = await _exerciseRepository.GetUserExercisesAsync(userId);
@@ -91,6 +93,7 @@ public class ExercisesController : ControllerBase
     /// Создать новое упражнение
     /// </summary>
     [HttpPost]
+    [Authorize]
     public async Task<ActionResult<Exercise>> Create([FromBody] Exercise exercise)
     {
         if (exercise.Id == Guid.Empty)
@@ -109,6 +112,7 @@ public class ExercisesController : ControllerBase
     /// Обновить упражнение
     /// </summary>
     [HttpPut("{id}")]
+    [Authorize]
     public async Task<IActionResult> Update(Guid id, [FromBody] Exercise exercise)
     {
         if (id != exercise.Id)
@@ -138,6 +142,7 @@ public class ExercisesController : ControllerBase
     /// Удалить упражнение
     /// </summary>
     [HttpDelete("{id}")]
+    [Authorize]
     public async Task<IActionResult> Delete(Guid id)
     {
         var exercise = await _exerciseRepository.GetByIdAsync(id);
