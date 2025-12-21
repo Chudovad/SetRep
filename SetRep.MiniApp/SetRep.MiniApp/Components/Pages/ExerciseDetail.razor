@@ -47,14 +47,14 @@ else if (errorMessage != null)
                     <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="mb-4">
                         @errorMessage
                     </MudText>
-                    <MudButton Variant="Variant.Filled" 
-                               Color="Color.Primary" 
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
                                StartIcon="@Icons.Material.Filled.Refresh"
                                OnClick="LoadExercise">
                         Попробовать снова
                     </MudButton>
-                    <MudButton Variant="Variant.Text" 
-                               Color="Color.Primary" 
+                    <MudButton Variant="Variant.Text"
+                               Color="Color.Primary"
                                Class="mt-2"
                                StartIcon="@Icons.Material.Filled.ArrowBack"
                                OnClick="GoBack">
@@ -73,8 +73,20 @@ else if (exercise != null)
         {
             <MudCard Elevation="2" Class="mb-4 exercise-image-card">
                 <MudCardContent Class="pa-0">
-                    <img src="@exercise.Image" alt="@exercise.Name" class="exercise-image" />
-                    @* <video src="https://storage.yandexcloud.net/img/SetRep/Day%2082.mp4" autoplay loop playsinline title="@exercise.Name"></video> *@
+                    @if (exercise.Image.EndsWith(".mp4"))
+                    {
+                        <video src="@exercise.Image"
+                               autoplay
+                               loop
+                               playsinline
+                               muted
+                               class="exercise-video"
+                               title="@exercise.Name"></video>
+                    }
+                    else
+                    {
+                        <img src="@exercise.Image" alt="@exercise.Name" class="exercise-image" />
+                    }
                 </MudCardContent>
             </MudCard>
         }
@@ -92,26 +104,35 @@ else if (exercise != null)
             </MudCard>
         }
 
+        @if (string.IsNullOrEmpty(exercise.VideoUrl))
+        {
+            <MudExpansionPanels Class="mb-4">
+                <MudExpansionPanel Text="Как делать упражнение" MaxHeight="150">
+                    @exercise.VideoUrl
+                </MudExpansionPanel>
+            </MudExpansionPanels>
+        }
+
         <!-- Название и описание -->
         <MudCard Elevation="2" Class="mb-4 exercise-info-card">
             <MudCardContent>
                 <div class="exercise-header">
-                    <MudText Typo="Typo.h4" Class="exercise-title">@exercise.Name</MudText>
+                    <MudText Typo="Typo.h5" Class="exercise-title">@exercise.Name</MudText>
                     @if (CanEditExercise)
                     {
                         <div class="exercise-actions">
                             <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                                          Color="Color.Primary"
-                                          Size="Size.Medium"
-                                          OnClick="OpenEditDialog"
-                                          Disabled="isDeleting"
-                                          Class="exercise-action-btn" />
+                                           Color="Color.Primary"
+                                           Size="Size.Medium"
+                                           OnClick="OpenEditDialog"
+                                           Disabled="isDeleting"
+                                           Class="exercise-action-btn" />
                             <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                          Color="Color.Error"
-                                          Size="Size.Medium"
-                                          OnClick="OpenDeleteDialog"
-                                          Disabled="isDeleting"
-                                          Class="exercise-action-btn">
+                                           Color="Color.Error"
+                                           Size="Size.Medium"
+                                           OnClick="OpenDeleteDialog"
+                                           Disabled="isDeleting"
+                                           Class="exercise-action-btn">
                                 @if (isDeleting)
                                 {
                                     <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
@@ -120,7 +141,7 @@ else if (exercise != null)
                         </div>
                     }
                 </div>
-                
+
                 @if (!string.IsNullOrWhiteSpace(exercise.Description))
                 {
                     <MudText Typo="Typo.body2" Color="Color.Secondary" Class="exercise-description">
@@ -161,6 +182,15 @@ else if (exercise != null)
     }
 
     .exercise-image {
+        width: 100%;
+        height: auto;
+        display: block;
+        max-height: 400px;
+        object-fit: contain;
+        background-color: #f5f5f5;
+    }
+
+    .exercise-video {
         width: 100%;
         height: auto;
         display: block;
@@ -265,7 +295,7 @@ else if (exercise != null)
     {
         isLoading = true;
         errorMessage = null;
-        
+
         try
         {
             exercise = await ExerciseService.GetExerciseByIdAsync(ExerciseId);
@@ -310,16 +340,16 @@ else if (exercise != null)
         {
             { nameof(EditExerciseDialog.Exercise), exercise }
         };
-        var options = new DialogOptions 
-        { 
-            CloseOnEscapeKey = true, 
-            MaxWidth = MaxWidth.Small, 
-            FullWidth = true 
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
         };
-        
+
         var dialogReference = await DialogService.ShowAsync<EditExerciseDialog>("Редактировать упражнение", parameters, options);
         var result = await dialogReference.Result;
-        
+
         if (!result.Canceled)
         {
             await LoadExercise();
@@ -338,16 +368,16 @@ else if (exercise != null)
             { nameof(ConfirmDialog.ButtonText), "Удалить" },
             { nameof(ConfirmDialog.Color), Color.Error }
         };
-        var options = new DialogOptions 
-        { 
-            CloseOnEscapeKey = true, 
-            MaxWidth = MaxWidth.Small, 
-            FullWidth = true 
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
         };
-        
+
         var dialogReference = await DialogService.ShowAsync<ConfirmDialog>("Подтверждение удаления", parameters, options);
         var result = await dialogReference.Result;
-        
+
         if (!result.Canceled)
         {
             await DeleteExercise();
