@@ -104,7 +104,7 @@ else if (exercise != null)
             </MudCard>
         }
 
-        @if (string.IsNullOrEmpty(exercise.VideoUrl))
+        @if (!string.IsNullOrEmpty(exercise.VideoUrl))
         {
             <MudExpansionPanels Class="mb-4">
                 <MudExpansionPanel Text="Как делать упражнение" MaxHeight="150">
