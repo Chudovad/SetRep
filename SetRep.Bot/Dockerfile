@@ -12,8 +12,15 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
+
+# Копируем файлы проектов для восстановления зависимостей
 COPY ["SetRep.Bot/SetRep.Bot.csproj", "SetRep.Bot/"]
-RUN dotnet restore "./SetRep.Bot/SetRep.Bot.csproj"
+
+# Восстанавливаем зависимости с кэшированием NuGet пакетов
+RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
+    --mount=type=cache,id=nuget-http,target=/root/.local/share/NuGet \
+    dotnet restore "./SetRep.Bot/SetRep.Bot.csproj" --verbosity normal
+
 COPY . .
 WORKDIR "/src/SetRep.Bot"
 RUN dotnet build "./SetRep.Bot.csproj" -c $BUILD_CONFIGURATION -o /app/build
