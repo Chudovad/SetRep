@@ -40,6 +40,8 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no ${USER}@${HOST} bash -s -- <<EOF
             set -e
+            export DOCKER_BUILDKIT=1
+            export COMPOSE_DOCKER_CLI_BUILD=1
             cd "${{ secrets.DEPLOY_PATH }}"
             echo "[INFO] Current directory: \$(pwd)"
             echo "[INFO] Fetching code..."
