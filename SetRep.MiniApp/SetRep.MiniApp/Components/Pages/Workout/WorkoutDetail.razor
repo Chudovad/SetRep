@@ -3,9 +3,11 @@
 @using SetRep.Core.Entities
 @using SetRep.MiniApp.Client.Services
 @using SetRep.MiniApp.Components.Dialog
+@using SetRep.Shared.DTO
 @using static SetRep.MiniApp.Client.Services.InitializationHelper
 @rendermode InteractiveServer
 @inject IWorkoutService WorkoutService
+@inject IWorkoutExerciseService WorkoutExerciseService
 @inject NavigationManager Navigation
 @inject ITelegramBackButtonService TelegramBackButtonService
 @inject IWorkoutHistoryService WorkoutHistoryService
@@ -138,6 +140,16 @@ else if (workout != null)
                 </MudButton>
             }
         }
+
+        <!-- Кнопка добавления упражнений -->
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   FullWidth="true" 
+                   Class="mb-4 add-exercise-btn"
+                   StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="OpenSelectExercisesDialog">
+            Добавить упражнение
+        </MudButton>
 
         <!-- Список упражнений -->
         @if (workout.WorkoutExercises != null && workout.WorkoutExercises.Any())
@@ -350,6 +362,13 @@ else if (workout != null)
         align-items: center;
         padding: 24px;
     }
+
+    .add-exercise-btn {
+        height: 48px;
+        border-radius: 12px;
+        text-transform: none;
+        font-weight: 500;
+    }
 </style>
 
 @code {
@@ -391,7 +410,7 @@ else if (workout != null)
     {
         isLoading = true;
         errorMessage = null;
-        
+
         try
         {
             workout = await WorkoutService.GetWorkoutDetailsAsync(WorkoutId);
@@ -446,7 +465,7 @@ else if (workout != null)
             {
                 activeWorkoutHistory = workoutHistories
                     .FirstOrDefault(wh => wh.UserId == userId && wh.EndTime == null);
-                
+
                 if (activeWorkoutHistory != null)
                 {
                     StateHasChanged();
@@ -484,13 +503,13 @@ else if (workout != null)
             }
 
             var workoutHistory = await WorkoutHistoryService.StartWorkoutAsync(WorkoutId, userId);
-            
+
             if (workoutHistory != null)
             {
                 await WorkoutHistoryService.CopySetsFromWorkoutAsync(workoutHistory.Id, WorkoutId);
-                
+
                 activeWorkoutHistory = workoutHistory;
-                
+
                 Navigation.NavigateTo($"/workouts/{WorkoutId}/active/{workoutHistory.Id}");
             }
             else
@@ -544,10 +563,10 @@ else if (workout != null)
             MaxWidth = MaxWidth.Small, 
             FullWidth = true 
         };
-        
+
         var dialogReference = await DialogService.ShowAsync<EditWorkoutDialog>("Редактировать тренировку", parameters, options);
         var result = await dialogReference.Result;
-        
+
         if (!result.Canceled)
         {
             await LoadWorkout();
@@ -646,6 +665,79 @@ else if (workout != null)
                 Zone = "exercises-zone"
             })
             .ToList();
+    }
+
+    private async Task OpenSelectExercisesDialog()
+    {
+        if (workout == null)
+            return;
+
+        var parameters = new DialogParameters<SelectExercisesDialog>();
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true, 
+            MaxWidth = MaxWidth.Medium, 
+            FullWidth = true 
+        };
+
+        var dialogReference = await DialogService.ShowAsync<SelectExercisesDialog>("Выберите упражнения", parameters, options);
+        var result = await dialogReference.Result;
+
+        if (!result.Canceled && result.Data is List<Exercise> exercises)
+        {
+            await AddExercisesToWorkout(exercises);
+        }
+    }
+
+    private async Task AddExercisesToWorkout(List<Exercise> exercises)
+    {
+        if (workout == null || exercises == null || !exercises.Any())
+            return;
+
+        try
+        {
+            int maxOrder = workout.WorkoutExercises?.Any() == true 
+                ? workout.WorkoutExercises.Max(we => we.Order) + 1 
+                : 0;
+
+            var existingExerciseIds = workout.WorkoutExercises?
+                .Select(we => we.ExerciseId)
+                .ToHashSet() ?? new HashSet<Guid>();
+
+            var exercisesToAdd = exercises
+                .Where(e => !existingExerciseIds.Contains(e.Id))
+                .ToList();
+
+            if (!exercisesToAdd.Any())
+            {
+                Snackbar.Add("Все выбранные упражнения уже добавлены в тренировку", Severity.Info);
+                return;
+            }
+
+            int order = maxOrder;
+            foreach (var exercise in exercisesToAdd)
+            {
+                var workoutExerciseDto = new CreateWorkoutExerciseDto
+                {
+                    WorkoutId = workout.Id,
+                    ExerciseId = exercise.Id,
+                    Order = order++
+                };
+
+                var createdWorkoutExercise = await WorkoutExerciseService.CreateWorkoutExerciseAsync(workoutExerciseDto);
+                if (createdWorkoutExercise == null)
+                {
+                    Snackbar.Add($"Ошибка при добавлении упражнения '{exercise.Name}' в тренировку", Severity.Error);
+                }
+            }
+
+            await LoadWorkout();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка при добавлении упражнений: {ex.Message}", Severity.Error);
+        }
     }
 
     private async Task OnExerciseDropped(MudItemDropInfo<WorkoutExerciseItem> dropInfo)

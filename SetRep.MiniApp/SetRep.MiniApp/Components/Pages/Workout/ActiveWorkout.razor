@@ -89,7 +89,20 @@ else if (workout != null && currentExercise != null)
         {
             <MudCard Elevation="2" Class="mb-4 exercise-image-card">
                 <MudCardContent Class="pa-0">
-                    <img src="@currentExercise.Exercise.Image" alt="@currentExercise.Exercise.Name" class="exercise-image" />
+                    @if (currentExercise.Exercise.Image.EndsWith(".mp4"))
+                    {
+                        <video src="@currentExercise.Exercise.Image"
+                               autoplay
+                               loop
+                               playsinline
+                               muted
+                               class="exercise-video"
+                               title="@currentExercise.Exercise.Name"></video>
+                    }
+                    else
+                    {
+                        <img src="@currentExercise.Exercise.Image" alt="@currentExercise.Exercise.Name" class="exercise-image" />
+                    }
                 </MudCardContent>
             </MudCard>
         }
@@ -102,6 +115,21 @@ else if (workout != null && currentExercise != null)
                     </div>
                 </MudCardContent>
             </MudCard>
+        }
+
+        @if (!string.IsNullOrEmpty(currentExercise.Exercise.VideoUrl))
+        {
+            <MudExpansionPanels Class="mb-4">
+                <MudExpansionPanel Text="Как делать упражнение">
+                    <video src="@currentExercise.Exercise.VideoUrl"
+                           loop
+                           playsinline
+                           muted
+                           controls
+                           class="exercise-video"
+                           title="@currentExercise.Exercise.Name"></video>
+                </MudExpansionPanel>
+            </MudExpansionPanels>
         }
 
         <!-- Название и описание упражнения -->
@@ -284,29 +312,17 @@ else if (workout != null && currentExercise != null)
         text-align: center;
     }
 
-    .exercise-image-card {
-        border-radius: 12px;
-        overflow: hidden;
+    .exercise-image {
+        max-height: 250px;
     }
 
-    .exercise-image {
-        width: 100%;
-        height: auto;
-        display: block;
+    .exercise-video {
         max-height: 250px;
-        object-fit: contain;
-        background-color: #f5f5f5;
     }
 
     .exercise-image-placeholder {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
         padding: 32px 24px;
         min-height: 150px;
-        background-color: #f5f5f5;
-        border-radius: 12px;
     }
 
     .exercise-info-card {
