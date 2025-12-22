@@ -56,3 +56,23 @@ window.telegramBackButtonHelper = {
         }
     }
 };
+
+window.telegramSwipeHelper = {
+    isReady: function () {
+        return typeof window.Telegram !== 'undefined'
+            && typeof window.Telegram.WebApp !== 'undefined'
+            && typeof window.Telegram.WebApp.disableVerticalSwipes === 'function';
+    },
+
+    disableVerticalSwipes: function () {
+        if (this.isReady()) {
+            window.Telegram.WebApp.disableVerticalSwipes();
+        }
+    },
+
+    enableVerticalSwipes: function () {
+        if (this.isReady() && typeof window.Telegram.WebApp.enableVerticalSwipes === 'function') {
+            window.Telegram.WebApp.enableVerticalSwipes();
+        }
+    }
+};
