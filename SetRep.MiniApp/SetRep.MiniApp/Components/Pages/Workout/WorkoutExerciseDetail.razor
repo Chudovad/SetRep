@@ -2,6 +2,7 @@
 @using SetRep.Core.ApiRequestServices
 @using SetRep.Core.Entities
 @using SetRep.MiniApp.Client.Services
+@using SetRep.MiniApp.Components.Dialog
 @using SetRep.Shared.DTO
 @using static SetRep.MiniApp.Client.Services.InitializationHelper
 @rendermode InteractiveServer
@@ -10,6 +11,7 @@
 @inject ITelegramBackButtonService TelegramBackButtonService
 @inject IAppInitializationService AppInitializationService
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 @implements IAsyncDisposable
 
 <PageTitle>SetRep - @(workoutExercise?.Exercise?.Name ?? "Упражнение")</PageTitle>
@@ -104,6 +106,20 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
                 @workoutExercise.Exercise.Description
             </MudExpansionPanel>
         </MudExpansionPanels>
+
+        <!-- Кнопка удаления упражнения из тренировки -->
+        <MudCard Elevation="2" Class="mb-4">
+            <MudCardContent>
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Error"
+                           FullWidth="true"
+                           StartIcon="@Icons.Material.Filled.Delete"
+                           OnClick="ConfirmDeleteWorkoutExercise"
+                           Disabled="isDeleting">
+                    Удалить упражнение из тренировки
+                </MudButton>
+            </MudCardContent>
+        </MudCard>
 
         <!-- Форма добавления подхода -->
         <AddSetForm WeightLabel="@weightLabel"
@@ -253,6 +269,7 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
     private List<Set> sets = new();
     private bool isLoading = true;
     private bool isAddingSet = false;
+    private bool isDeleting = false;
     private string? errorMessage;
     private decimal? newSetWeight;
     private int newSetReps;
@@ -478,6 +495,70 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
     private void GoBack()
     {
         Navigation.NavigateTo($"/workouts/{WorkoutId}");
+    }
+
+    private async Task ConfirmDeleteWorkoutExercise()
+    {
+        if (workoutExercise == null || workoutExercise.Exercise == null || isDeleting)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { nameof(ConfirmDialog.Title), "Подтверждение удаления" },
+            { nameof(ConfirmDialog.ContentText), $"Вы уверены, что хотите удалить упражнение \"{workoutExercise.Exercise.Name}\" из тренировки? Это действие нельзя отменить." },
+            { nameof(ConfirmDialog.ButtonText), "Удалить" },
+            { nameof(ConfirmDialog.Color), Color.Error }
+        };
+
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true, 
+            MaxWidth = MaxWidth.Small, 
+            FullWidth = true 
+        };
+
+        var dialogReference = await DialogService.ShowAsync<ConfirmDialog>("Подтверждение удаления", parameters, options);
+        var result = await dialogReference.Result;
+
+        if (!result.Canceled)
+        {
+            await DeleteWorkoutExercise();
+        }
+    }
+
+    private async Task DeleteWorkoutExercise()
+    {
+        if (workoutExercise == null || isDeleting)
+        {
+            return;
+        }
+
+        isDeleting = true;
+        StateHasChanged();
+
+        try
+        {
+            var success = await WorkoutExerciseService.DeleteWorkoutExerciseAsync(WorkoutExerciseId);
+            if (success)
+            {
+                Navigation.NavigateTo($"/workouts/{WorkoutId}");
+            }
+            else
+            {
+                Snackbar.Add("Ошибка при удалении упражнения из тренировки", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка при удалении упражнения: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isDeleting = false;
+            StateHasChanged();
+        }
     }
 
     public async ValueTask DisposeAsync()

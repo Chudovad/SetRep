@@ -158,5 +158,23 @@ public class WorkoutExerciseService : IWorkoutExerciseService
             return null;
         }
     }
+
+    /// <summary>
+    /// Удалить связь тренировки и упражнения
+    /// </summary>
+    public async Task<bool> DeleteWorkoutExerciseAsync(Guid workoutExerciseId)
+    {
+        try
+        {
+            var request = new HttpRequestMessage(HttpMethod.Delete, $"api/workoutexercises/{workoutExerciseId}");
+            request.AddBearerToken(_telegramWebAppStateService);
+            var response = await _httpClient.SendAsync(request);
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
+    }
 }
 

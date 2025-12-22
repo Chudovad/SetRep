@@ -157,10 +157,11 @@ else if (workout != null)
             <MudText Typo="Typo.h6" Class="mb-3">Упражнения</MudText>
             
             <MudDropContainer T="WorkoutExerciseItem" 
-                             Items="@exerciseItems" 
-                             ItemsSelector="@((item, dropzone) => item.Zone == dropzone)"
-                             ItemDropped="OnExerciseDropped" 
-                             Class="exercise-drop-container">
+                              Items="@exerciseItems" 
+                              ItemsSelector="@((item, dropzone) => item.Zone == dropzone)"
+                              ItemDropped="OnExerciseDropped" 
+                              Class="exercise-drop-container"
+                              @key="@($"exercises-{exerciseItems.Count}")">
                 <ChildContent>
                     <MudDropZone T="WorkoutExerciseItem" 
                                  Identifier="exercises-zone" 
@@ -715,6 +716,9 @@ else if (workout != null)
             }
 
             int order = maxOrder;
+            int successCount = 0;
+            var createdWorkoutExercises = new List<WorkoutExercise>();
+            
             foreach (var exercise in exercisesToAdd)
             {
                 var workoutExerciseDto = new CreateWorkoutExerciseDto
@@ -725,14 +729,47 @@ else if (workout != null)
                 };
 
                 var createdWorkoutExercise = await WorkoutExerciseService.CreateWorkoutExerciseAsync(workoutExerciseDto);
-                if (createdWorkoutExercise == null)
+                if (createdWorkoutExercise != null)
+                {
+                    createdWorkoutExercise.Exercise = exercise;
+                    createdWorkoutExercises.Add(createdWorkoutExercise);
+                    successCount++;
+                }
+                else
                 {
                     Snackbar.Add($"Ошибка при добавлении упражнения '{exercise.Name}' в тренировку", Severity.Error);
                 }
             }
 
-            await LoadWorkout();
-            StateHasChanged();
+            if (successCount > 0)
+            {
+                await Task.Delay(200);
+                
+                var reloadedWorkout = await WorkoutService.GetWorkoutDetailsAsync(workout.Id);
+                if (reloadedWorkout != null)
+                {
+                    workout = reloadedWorkout;
+                    
+                    exerciseItems = new List<WorkoutExerciseItem>();
+                    UpdateExerciseItems();
+
+                    StateHasChanged();
+
+                    await InvokeAsync(StateHasChanged);
+                    
+                }
+                else
+                {
+                    var existingExercises = workout.WorkoutExercises?.ToList() ?? new List<WorkoutExercise>();
+                    var updatedExercises = existingExercises.Concat(createdWorkoutExercises).ToList();
+                    workout.WorkoutExercises = updatedExercises;
+                    
+                    exerciseItems = new List<WorkoutExerciseItem>();
+                    UpdateExerciseItems();
+                    StateHasChanged();
+                    await InvokeAsync(StateHasChanged);
+                }
+            }
         }
         catch (Exception ex)
         {
