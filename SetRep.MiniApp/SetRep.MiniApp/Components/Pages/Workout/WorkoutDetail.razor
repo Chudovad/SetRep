@@ -177,16 +177,9 @@ else if (workout != null)
                                              Color="Color.Secondary" 
                                              Class="drag-handle-icon" />
                                     <div class="exercise-header-content">
-                                        <MudText Typo="Typo.h6" Class="mb-2">
+                                        <MudText Typo="Typo.h6">
                                             @(context.WorkoutExercise.Exercise?.Name ?? "Неизвестное упражнение")
                                         </MudText>
-                                
-                                        @if (!string.IsNullOrWhiteSpace(context.WorkoutExercise.Notes))
-                                        {
-                                            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
-                                                @context.WorkoutExercise.Notes
-                                            </MudText>
-                                        }
                                     </div>
                                     <MudIcon Icon="@Icons.Material.Filled.ChevronRight" 
                                              Color="Color.Secondary" 
@@ -296,7 +289,6 @@ else if (workout != null)
         justify-content: space-between;
         align-items: flex-start;
         gap: 16px;
-        margin-bottom: 12px;
     }
 
     .exercise-header-content {

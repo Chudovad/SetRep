@@ -117,6 +117,13 @@ else if (workout != null && currentExercise != null)
             </MudCard>
         }
 
+        <!-- Название и описание упражнения -->
+        <MudExpansionPanels Class="mb-4">
+            <MudExpansionPanel Text="@currentExercise.Exercise.Name" MaxHeight="150">
+                @currentExercise.Exercise.Description
+            </MudExpansionPanel>
+        </MudExpansionPanels>
+
         @if (!string.IsNullOrEmpty(currentExercise.Exercise.VideoUrl))
         {
             <MudExpansionPanels Class="mb-4">
@@ -131,13 +138,6 @@ else if (workout != null && currentExercise != null)
                 </MudExpansionPanel>
             </MudExpansionPanels>
         }
-
-        <!-- Название и описание упражнения -->
-        <MudExpansionPanels Class="mb-4">
-            <MudExpansionPanel Text="@currentExercise.Exercise.Name" MaxHeight="150">
-                @currentExercise.Exercise.Description
-            </MudExpansionPanel>
-        </MudExpansionPanels>
 
         <!-- Форма добавления подхода -->
         <AddSetForm WeightLabel="@weightLabel"

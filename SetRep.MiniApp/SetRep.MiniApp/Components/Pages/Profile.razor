@@ -5,6 +5,8 @@
 @using static SetRep.MiniApp.Client.Services.InitializationHelper
 @inject IAppInitializationService AppInitializationService
 @inject ITelegramWebAppStateService TelegramWebAppStateService
+@inject ITelegramBackButtonService TelegramBackButtonService
+@implements IAsyncDisposable
 
 <PageTitle>SetRep - Профиль</PageTitle>
 
@@ -138,7 +140,13 @@
         if (firstRender)
         {
             await WaitForInitializationAsync(AppInitializationService);
+            await TelegramBackButtonService.ShowAsync();
         }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await TelegramBackButtonService.HideAsync();
     }
 }
 
