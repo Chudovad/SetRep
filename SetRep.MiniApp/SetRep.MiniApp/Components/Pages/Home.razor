@@ -17,7 +17,7 @@
 
 <div class="home-container">
     <!-- Карточка текущего веса -->
-    <MudCard Elevation="2" Class="mb-4 stat-card">
+    @* <MudCard Elevation="2" Class="mb-4 stat-card">
         <MudCardContent>
             <div class="stat-header">
                 <MudIcon Icon="@Icons.Material.Filled.MonitorWeight" Size="Size.Large" Color="Color.Primary" />
@@ -27,7 +27,7 @@
                 </div>
             </div>
         </MudCardContent>
-    </MudCard>
+    </MudCard> *@
 
     <!-- Карточка тренировок за неделю -->
     <MudCard Elevation="2" Class="mb-4 stat-card">
@@ -146,7 +146,7 @@
     }
 
     <!-- Быстрые действия -->
-    <MudText Typo="Typo.h6" Class="mb-3 mt-4">Быстрые действия</MudText>
+    @* <MudText Typo="Typo.h6" Class="mb-3 mt-4">Быстрые действия</MudText>
     
     <div class="quick-actions">
         <MudButton Variant="Variant.Outlined" 
@@ -157,7 +157,7 @@
                    OnClick="RecordWeight">
             Записать вес
         </MudButton>
-    </div>
+    </div> *@
 </div>
 
 <style>
@@ -227,7 +227,7 @@
 
 @code {
     private double? CurrentWeight { get; set; } = 75.5;
-    private int WeeklyWorkouts { get; set; } = 3;
+    private int WeeklyWorkouts { get; set; } = 0;
     private WorkoutInfo? NextWorkout { get; set; } = new WorkoutInfo 
     { 
         Date = DateTime.Now.AddDays(1), 
@@ -275,11 +275,26 @@
 
             var activeWorkoutTask = WorkoutHistoryService.GetActiveWorkoutAsync(userId);
             var workoutsTask = WorkoutService.GetWorkoutsAsync(userId);
+            var workoutHistoryTask = WorkoutHistoryService.GetWorkoutHistoryByUserIdAsync(userId);
 
-            await Task.WhenAll(activeWorkoutTask, workoutsTask);
+            await Task.WhenAll(activeWorkoutTask, workoutsTask, workoutHistoryTask);
 
             activeWorkoutHistory = await activeWorkoutTask;
             workouts = await workoutsTask;
+            var workoutHistory = await workoutHistoryTask;
+
+            // Подсчет тренировок за последние 7 дней
+            if (workoutHistory != null)
+            {
+                var weekAgo = DateTime.UtcNow.AddDays(-7);
+                WeeklyWorkouts = workoutHistory
+                    .Where(wh => wh.EndTime.HasValue && wh.EndTime.Value >= weekAgo)
+                    .Count();
+            }
+            else
+            {
+                WeeklyWorkouts = 0;
+            }
 
             if (activeWorkoutHistory == null && workouts != null && workouts.Any())
             {
@@ -290,6 +305,7 @@
         catch
         {
             // Игнорируем ошибки загрузки
+            WeeklyWorkouts = 0;
         }
         finally
         {

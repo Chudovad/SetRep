@@ -77,6 +77,7 @@
         {
             _dotNetRef = DotNetObjectReference.Create(this);
             await InitializeTelegramTheme();
+            await DisableVerticalSwipes();
         }
     }
 
@@ -132,6 +133,42 @@
         Logger?.LogInformation("Тема изменена на: {Theme}", theme);
         _isDarkMode = theme == "dark";
         StateHasChanged();
+    }
+
+    private async Task DisableVerticalSwipes()
+    {
+        try
+        {
+            var startTime = DateTime.UtcNow;
+            var timeout = TimeSpan.FromSeconds(3);
+
+            while (DateTime.UtcNow - startTime < timeout)
+            {
+                try
+                {
+                    var isReady = await JSRuntime.InvokeAsync<bool>("telegramSwipeHelper.isReady");
+
+                    if (isReady)
+                    {
+                        await JSRuntime.InvokeVoidAsync("telegramSwipeHelper.disableVerticalSwipes");
+                        Logger?.LogInformation("Вертикальные свайпы отключены");
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogDebug(ex, "Ожидание загрузки веб-приложения Telegram для отключения свайпов...");
+                }
+
+                await Task.Delay(100);
+            }
+
+            Logger?.LogWarning("Не удалось отключить вертикальные свайпы: веб-приложение Telegram не загрузилось вовремя");
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogError(ex, "Ошибка при отключении вертикальных свайпов");
+        }
     }
 
     public void Dispose()

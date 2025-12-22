@@ -11,16 +11,22 @@
             <MudText Typo="Typo.caption" Class="nav-label">Тренировки</MudText>
         </div>
     </MudNavLink>
-    <MudNavLink Href="/statistics" Match="NavLinkMatch.Prefix" Class="nav-item" ActiveClass="nav-item-active">
+    <MudNavLink Href="/exercises" Match="NavLinkMatch.Prefix" Class="nav-item" ActiveClass="nav-item-active">
+        <div class="nav-content">
+            <MudIcon Icon="@Icons.Material.Filled.List" Size="Size.Medium" Class="nav-icon" />
+            <MudText Typo="Typo.caption" Class="nav-label">Упражнения</MudText>
+        </div>
+    </MudNavLink>
+    @* <MudNavLink Href="/statistics" Match="NavLinkMatch.Prefix" Class="nav-item" ActiveClass="nav-item-active">
         <div class="nav-content">
             <MudIcon Icon="@Icons.Material.Filled.BarChart" Size="Size.Medium" Class="nav-icon" />
             <MudText Typo="Typo.caption" Class="nav-label">Статистика</MudText>
         </div>
-    </MudNavLink>
-    <MudNavLink Href="/profile" Match="NavLinkMatch.Prefix" Class="nav-item" ActiveClass="nav-item-active">
+    </MudNavLink> *@
+    <MudNavLink Href="/more" Match="NavLinkMatch.Prefix" Class="nav-item" ActiveClass="nav-item-active">
         <div class="nav-content">
-            <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Medium" Class="nav-icon" />
-            <MudText Typo="Typo.caption" Class="nav-label">Профиль</MudText>
+            <MudIcon Icon="@Icons.Material.Filled.MoreVert" Size="Size.Medium" Class="nav-icon" />
+            <MudText Typo="Typo.caption" Class="nav-label">Ещё</MudText>
         </div>
     </MudNavLink>
 </MudPaper>

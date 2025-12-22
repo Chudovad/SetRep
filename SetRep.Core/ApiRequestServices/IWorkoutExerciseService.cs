@@ -37,5 +37,10 @@ public interface IWorkoutExerciseService
     /// Создать связь тренировки и упражнения
     /// </summary>
     Task<WorkoutExercise?> CreateWorkoutExerciseAsync(CreateWorkoutExerciseDto dto);
+
+    /// <summary>
+    /// Удалить связь тренировки и упражнения
+    /// </summary>
+    Task<bool> DeleteWorkoutExerciseAsync(Guid workoutExerciseId);
 }
 
