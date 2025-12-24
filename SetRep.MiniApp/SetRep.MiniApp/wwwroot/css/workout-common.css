@@ -102,7 +102,7 @@
     height: auto;
     display: block;
     object-fit: contain;
-    background-color: #f5f5f5;
+    background-color: #292929;
 }
 
 .exercise-video {
@@ -110,7 +110,7 @@
     height: auto;
     display: block;
     object-fit: contain;
-    background-color: #f5f5f5;
+    background-color: #292929;
 }
 
 .exercise-image-placeholder {

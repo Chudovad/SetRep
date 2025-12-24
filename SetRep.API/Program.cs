@@ -79,6 +79,9 @@ builder.Services.AddScoped<ITelegramWebAppValidationService, TelegramWebAppValid
 // Регистрируем сервис JWT токенов
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 
+// Регистрируем фоновый сервис для автоматического завершения тренировок
+builder.Services.AddHostedService<WorkoutAutoCompletionService>();
+
 // Настройка JWT аутентификации
 var jwtSecretKey = builder.Configuration["Jwt:SecretKey"] 
     ?? throw new InvalidOperationException("Jwt:SecretKey is not configured");
