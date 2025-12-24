@@ -6,19 +6,24 @@
 @inject ITelegramBackButtonService TelegramBackButtonService
 @inject NavigationManager Navigation
 @implements IAsyncDisposable
+@inject IJSRuntime JSRuntime
 
 <PageTitle>SetRep - Ещё</PageTitle>
 
 <MudCard Elevation="2" Class="mb-4 settings-card">
     <MudCardContent>
         <MudText Typo="Typo.h6" GutterBottom="true">Дополнительно</MudText>
-        <MudListItem T="string" Href="profile" Icon="@Icons.Material.Filled.Person" Text="Профиль" />
+        <MudButton Variant="Variant.Text" FullWidth="true" StartIcon="@Icons.Material.Filled.Person" OnClick="NavigateToProfile" Class="nav-button">
+            Профиль
+        </MudButton>
         <MudDivider Class="my-2" />
-        <MudListItem T="string" Href="/workout/history" Icon="@Icons.Material.Filled.History" Text="История тренировок" />
+        <MudButton Variant="Variant.Text" FullWidth="true" StartIcon="@Icons.Material.Filled.History" OnClick="NavigateToWorkoutHistory" Class="nav-button">
+            История тренировок
+        </MudButton>
         <MudDivider Class="my-2" />
-        <MudListItem T="string" Href="https://t.me/Chud0vad" Icon="@Icons.Material.Filled.Help" Text="Помощь" />
-        <MudDivider Class="my-2" />
-        <MudListItem T="string" Href="#" Icon="@Icons.Material.Filled.Info" Text="О приложении" />
+        <MudButton Variant="Variant.Text" FullWidth="true" StartIcon="@Icons.Material.Filled.Help" OnClick="NavigateToHelp" Class="nav-button">
+            Помощь
+        </MudButton>
     </MudCardContent>
 </MudCard>
 
@@ -40,8 +45,10 @@
         transition: background-color 0.2s ease;
     }
 
-    .nav-item-wrapper:hover .nav-list-item {
-        background-color: var(--mud-palette-action-hover);
+    .nav-button {
+        justify-content: flex-start;
+        text-transform: none;
+        padding: 12px 16px;
     }
 </style>
 
@@ -63,6 +70,11 @@
     private void NavigateToWorkoutHistory()
     {
         Navigation.NavigateTo("/workout/history");
+    }
+
+    private async void NavigateToHelp()
+    {
+        await JSRuntime.InvokeVoidAsync("openTelegramLinkHelper.openTelegramLink", "https://t.me/Chud0vad");
     }
 
     public async ValueTask DisposeAsync()

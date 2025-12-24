@@ -45,4 +45,11 @@ public class WorkoutHistoryRepository(ApplicationDbContext context) : Repository
             .OrderByDescending(wh => wh.StartTime)
             .ToListAsync();
     }
+
+    public async Task<IEnumerable<WorkoutHistory>> GetActiveWorkoutsStartedBeforeAsync(DateTime date)
+    {
+        return await _dbSet
+            .Where(wh => wh.EndTime == null && wh.StartTime.Date < date.Date)
+            .ToListAsync();
+    }
 }
