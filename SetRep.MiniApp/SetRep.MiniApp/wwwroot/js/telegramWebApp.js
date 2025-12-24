@@ -76,3 +76,18 @@ window.telegramSwipeHelper = {
         }
     }
 };
+
+window.openTelegramLinkHelper = {
+    isReady: function () {
+        return typeof window.Telegram !== 'undefined'
+            && typeof window.Telegram.WebApp !== 'undefined'
+            && typeof window.Telegram.WebApp.disableVerticalSwipes === 'function';
+    },
+
+    openTelegramLink: function (link) {
+        if (this.isReady()) {
+            window.Telegram.WebApp.openTelegramLink(link);
+        }
+    },
+
+};
