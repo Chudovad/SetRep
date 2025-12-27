@@ -706,6 +706,5 @@ else if (workout != null && currentExercise != null)
     public async ValueTask DisposeAsync()
     {
         ActiveWorkoutService.DurationUpdated -= OnDurationUpdated;
-        await TelegramBackButtonService.HideAsync();
     }
 }

@@ -255,7 +255,7 @@
         if (firstRender)
         {
             await WaitForInitializationAsync(AppInitializationService);
-            await TelegramBackButtonService.ShowAsync();
+            await TelegramBackButtonService.HideAsync();
             await LoadExercises();
             StateHasChanged();
         }
@@ -265,7 +265,7 @@
     {
         isLoading = true;
         errorMessage = null;
-        
+
         try
         {
             var data = await ExerciseService.GetExercisesAsync();
@@ -310,10 +310,10 @@
             MaxWidth = MaxWidth.Small, 
             FullWidth = true 
         };
-        
+
         var dialogReference = await DialogService.ShowAsync<AddExerciseDialog>("Добавить упражнение", parameters, options);
         var result = await dialogReference.Result;
-        
+
         if (!result.Canceled && result.Data is Exercise createdExercise)
         {
             allExercises.Insert(0, createdExercise);
@@ -340,7 +340,7 @@
 
     public async ValueTask DisposeAsync()
     {
-        await TelegramBackButtonService.HideAsync();
+        
     }
 }
 

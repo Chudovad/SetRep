@@ -24,7 +24,6 @@ public class TelegramBackButtonService : ITelegramBackButtonService, IDisposable
     {
         try
         {
-            // Инициализируем обработчик клика только один раз
             if (!_isInitialized)
             {
                 await InitializeOnClickHandler();
@@ -78,10 +77,7 @@ public class TelegramBackButtonService : ITelegramBackButtonService, IDisposable
 
                     if (isReady)
                     {
-                        if (_dotNetRef == null)
-                        {
-                            _dotNetRef = DotNetObjectReference.Create(this);
-                        }
+                        _dotNetRef ??= DotNetObjectReference.Create(this);
 
                         await _jsRuntime.InvokeVoidAsync("telegramBackButtonHelper.onClick", _dotNetRef);
                         _logger?.LogDebug("Обработчик клика на кнопку 'Назад' установлен");
