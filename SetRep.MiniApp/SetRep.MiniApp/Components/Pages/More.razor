@@ -58,7 +58,7 @@
         if (firstRender)
         {
             await WaitForInitializationAsync(AppInitializationService);
-            await TelegramBackButtonService.ShowAsync();
+            await TelegramBackButtonService.HideAsync();
         }
     }
 
@@ -79,7 +79,7 @@
 
     public async ValueTask DisposeAsync()
     {
-        await TelegramBackButtonService.HideAsync();
+
     }
 }
 

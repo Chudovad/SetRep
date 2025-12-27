@@ -3,6 +3,7 @@
 @using SetRep.MiniApp.Client.Services
 @using static SetRep.MiniApp.Client.Services.InitializationHelper
 @inject IAppInitializationService AppInitializationService
+@inject ITelegramBackButtonService TelegramBackButtonService
 
 <PageTitle>SetRep - Статистика</PageTitle>
 
@@ -196,6 +197,7 @@
         if (firstRender)
         {
             await WaitForInitializationAsync(AppInitializationService);
+            await TelegramBackButtonService.HideAsync();
         }
     }
 }

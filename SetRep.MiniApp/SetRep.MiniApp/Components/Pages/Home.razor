@@ -9,6 +9,7 @@
 @inject IWorkoutHistoryService WorkoutHistoryService
 @inject IWorkoutService WorkoutService
 @inject ITelegramWebAppStateService TelegramWebAppStateService
+@inject ITelegramBackButtonService TelegramBackButtonService
 @inject IAppInitializationService AppInitializationService
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
@@ -226,6 +227,7 @@
 </style>
 
 @code {
+
     private double? CurrentWeight { get; set; } = 75.5;
     private int WeeklyWorkouts { get; set; } = 0;
     private WorkoutInfo? NextWorkout { get; set; } = new WorkoutInfo 
@@ -251,6 +253,7 @@
             await WaitForInitializationAsync(AppInitializationService);
             await LoadWorkoutData();
             _isDataLoaded = true;
+            await TelegramBackButtonService.HideAsync();
             StateHasChanged();
         }
     }
