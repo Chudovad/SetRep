@@ -8,6 +8,7 @@
 @inject IWorkoutService WorkoutService
 @inject IWorkoutHistoryService WorkoutHistoryService
 @inject ITelegramWebAppStateService TelegramWebAppStateService
+@inject ITelegramBackButtonService TelegramBackButtonService
 @inject IAppInitializationService AppInitializationService
 @inject NavigationManager Navigation
 
@@ -217,6 +218,7 @@
             await WaitForInitializationAsync(AppInitializationService);
             await LoadWorkouts();
             await LoadActiveWorkout();
+            await TelegramBackButtonService.HideAsync();
             StateHasChanged();
         }
     }
