@@ -288,7 +288,7 @@ else if (workoutHistory != null)
             return Enumerable.Empty<IGrouping<Guid, WorkoutHistorySet>>();
         }
 
-        var groupedSets = workoutHistory.Sets.GroupBy(s => s.ExerciseId).ToList();
+        var groupedSets = workoutHistory.Sets.Where(s => s.IsCompleted).GroupBy(s => s.ExerciseId).ToList();
 
         if (workoutHistory.Workout?.WorkoutExercises != null && workoutHistory.Workout.WorkoutExercises.Any())
         {
