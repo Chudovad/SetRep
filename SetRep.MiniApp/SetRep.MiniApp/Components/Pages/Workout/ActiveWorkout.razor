@@ -146,7 +146,8 @@ else if (workout != null && currentExercise != null)
                     Reps="@newSetReps"
                     RepsChanged="@((int value) => newSetReps = value)"
                     IsAddingSet="@isAddingSet"
-                    OnAddSet="@AddSet" />
+                    OnAddSet="@AddSet"
+                    WeightStep="@GetWeightStep()" />
 
         <!-- Таблица подходов -->
         @if (currentSets != null && currentSets.Any())
@@ -181,7 +182,7 @@ else if (workout != null && currentExercise != null)
                                                      @bind-Value="editingWeight"
                                                      Variant="Variant.Outlined"
                                                      Min="0"
-                                                     Step="@((decimal?)0.5)"
+                                                     Step="@((decimal?)GetWeightStep())"
                                                      Immediate="true"
                                                      Style="width: 80px;"
                                                      Margin="Margin.Dense"
@@ -703,6 +704,11 @@ else if (workout != null && currentExercise != null)
             // Игнорируем ошибки при загрузке из localStorage
         }
         return null;
+    }
+
+    private decimal GetWeightStep()
+    {
+        return ExerciseStepHelper.GetWeightStep(currentExercise?.Exercise?.MuscleGroup);
     }
 
     public async ValueTask DisposeAsync()
