@@ -2,6 +2,8 @@
 @using SetRep.Core.ApiRequestServices
 @using SetRep.Core.Entities
 @using SetRep.MiniApp.Client.Services
+@using SetRep.MiniApp.Components.Dialog
+@using SetRep.Shared.DTO
 @using static SetRep.MiniApp.Client.Services.InitializationHelper
 
 @rendermode InteractiveServer
@@ -11,6 +13,8 @@
 @inject ITelegramBackButtonService TelegramBackButtonService
 @inject IAppInitializationService AppInitializationService
 @inject NavigationManager Navigation
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
 
 <PageTitle>SetRep - Тренировки</PageTitle>
 
@@ -72,20 +76,32 @@
                     <MudCardContent>
                         <div class="workout-item-header">
                             <div class="workout-item-info">
-                                <MudText Typo="Typo.h6" Class="mb-1">
+                                <MudText Typo="Typo.h6">
                                     @workout.Name
                                 </MudText>
                             </div>
-                            <div class="workout-item-right">
+                            <div class="workout-item-right" @onclick:stopPropagation="true">
                                 @if (isActive)
                                 {
                                     <MudIcon Icon="@Icons.Material.Filled.Circle"
                                              Color="Color.Info"
                                              Class="active-indicator" />
                                 }
-                                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" 
-                                         Color="Color.Secondary" 
-                                         Class="workout-arrow-icon" />
+                                <MudMenu Icon="@Icons.Material.Filled.MoreVert"
+                                         Color="Color.Default"
+                                         AnchorOrigin="Origin.BottomRight"
+                                         TransformOrigin="Origin.TopRight"
+                                         Variant="Variant.Text"
+                                         Size="Size.Medium"
+                                         Class="workout-menu-button"
+                                         StopPropagation="true">
+                                    <MudMenuItem OnClick="@(() => OpenEditDialog(workout))" Icon="@Icons.Material.Filled.Edit">
+                                        Редактировать
+                                    </MudMenuItem>
+                                    <MudMenuItem OnClick="@(() => ConfirmDeleteWorkout(workout))" Icon="@Icons.Material.Filled.Delete" Color="Color.Error">
+                                        Удалить
+                                    </MudMenuItem>
+                                </MudMenu>
                             </div>
                         </div>
                     </MudCardContent>
@@ -156,7 +172,7 @@
     .workout-item-header {
         display: flex;
         justify-content: space-between;
-        align-items: flex-start;
+        align-items: center;
         gap: 16px;
     }
 
@@ -171,9 +187,6 @@
         flex-shrink: 0;
     }
 
-    .workout-arrow-icon {
-        margin-top: 4px;
-    }
 
     .active-indicator {
         width: 12px;
@@ -209,6 +222,7 @@
     private List<Workout> workouts = new();
     private WorkoutHistory? activeWorkoutHistory;
     private bool isLoading = true;
+    private bool isDeleting = false;
     private string? errorMessage;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -309,6 +323,116 @@
     private void AddWorkout()
     {
         Navigation.NavigateTo("/workouts/add");
+    }
+
+    private async Task OpenEditDialog(Workout workout)
+    {
+        if (workout == null || isDeleting)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<EditWorkoutDialog>
+        {
+            { nameof(EditWorkoutDialog.Workout), workout }
+        };
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true, 
+            MaxWidth = MaxWidth.Small, 
+            FullWidth = true 
+        };
+
+        var dialogReference = await DialogService.ShowAsync<EditWorkoutDialog>("Редактировать тренировку", parameters, options);
+        var result = await dialogReference.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadWorkouts();
+        }
+    }
+
+    private async Task ConfirmDeleteWorkout(Workout workout)
+    {
+        if (workout == null || isDeleting)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { nameof(ConfirmDialog.Title), "Подтверждение удаления" },
+            { nameof(ConfirmDialog.ContentText), $"Вы уверены, что хотите удалить тренировку \"{workout.Name}\"? Это действие нельзя отменить." },
+            { nameof(ConfirmDialog.ButtonText), "Удалить" },
+            { nameof(ConfirmDialog.Color), Color.Error }
+        };
+
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true, 
+            MaxWidth = MaxWidth.Small, 
+            FullWidth = true 
+        };
+
+        var dialogReference = await DialogService.ShowAsync<ConfirmDialog>("Подтверждение удаления", parameters, options);
+        var result = await dialogReference.Result;
+
+        if (!result.Canceled)
+        {
+            await DeleteWorkout(workout.Id);
+        }
+    }
+
+    private async Task DeleteWorkout(Guid workoutId)
+    {
+        if (isDeleting)
+        {
+            return;
+        }
+
+        isDeleting = true;
+        StateHasChanged();
+
+        try
+        {
+            var workout = workouts.FirstOrDefault(w => w.Id == workoutId);
+            if (workout == null)
+            {
+                return;
+            }
+
+            if (activeWorkoutHistory != null && activeWorkoutHistory.WorkoutId == workoutId)
+            {
+                var endSuccess = await WorkoutHistoryService.EndWorkoutAsync(activeWorkoutHistory.Id);
+                if (!endSuccess)
+                {
+                    Snackbar.Add("Не удалось завершить активную тренировку. Удаление отменено.", Severity.Error);
+                    return;
+                }
+
+                activeWorkoutHistory = null;
+            }
+
+            var success = await WorkoutService.DeleteWorkoutAsync(workoutId);
+            if (success)
+            {
+                await LoadWorkouts();
+                await LoadActiveWorkout();
+            }
+            else
+            {
+                Snackbar.Add("Ошибка при удалении тренировки", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка при удалении тренировки: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isDeleting = false;
+            StateHasChanged();
+        }
     }
 }
 
