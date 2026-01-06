@@ -73,20 +73,6 @@ else if (workout != null)
             <MudCardContent>
                 <div class="workout-header">
                     <MudText Typo="Typo.h4" Class="workout-title">@workout.Name</MudText>
-                    <div class="workout-actions">
-                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                                       Color="Color.Primary"
-                                       Size="Size.Medium"
-                                       OnClick="OpenEditDialog"
-                                       Disabled="isDeleting"
-                                       Class="edit-workout-btn" />
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete" 
-                                       Color="Color.Error" 
-                                       Size="Size.Medium"
-                                       OnClick="ConfirmDeleteWorkout"
-                                       Disabled="isDeleting"
-                                       Class="delete-workout-btn" />
-                    </div>
                 </div>
                 
                 @if (!string.IsNullOrWhiteSpace(workout.Notes))
@@ -231,17 +217,6 @@ else if (workout != null)
         flex: 1;
     }
 
-    .workout-actions {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-        flex-shrink: 0;
-    }
-
-    .edit-workout-btn, .delete-workout-btn {
-        min-width: 40px;
-    }
-
     .workout-description {
         white-space: pre-wrap;
         word-wrap: break-word;
@@ -371,7 +346,6 @@ else if (workout != null)
     private WorkoutHistory? activeWorkoutHistory;
     private bool isLoading = true;
     private bool isStartingWorkout = false;
-    private bool isDeleting = false;
     private bool isReordering = false;
     private string? errorMessage;
     private List<WorkoutExerciseItem> exerciseItems = new();
@@ -537,109 +511,6 @@ else if (workout != null)
     private void GoBack()
     {
         Navigation.NavigateTo("/workouts");
-    }
-
-    private async Task OpenEditDialog()
-    {
-        if (workout == null || isDeleting)
-        {
-            return;
-        }
-
-        var parameters = new DialogParameters<EditWorkoutDialog>
-        {
-            { nameof(EditWorkoutDialog.Workout), workout }
-        };
-        var options = new DialogOptions 
-        { 
-            CloseOnEscapeKey = true, 
-            MaxWidth = MaxWidth.Small, 
-            FullWidth = true 
-        };
-
-        var dialogReference = await DialogService.ShowAsync<EditWorkoutDialog>("Редактировать тренировку", parameters, options);
-        var result = await dialogReference.Result;
-
-        if (!result.Canceled)
-        {
-            await LoadWorkout();
-        }
-    }
-
-    private async Task ConfirmDeleteWorkout()
-    {
-        if (workout == null || isDeleting)
-        {
-            return;
-        }
-
-        var parameters = new DialogParameters<ConfirmDialog>
-        {
-            { nameof(ConfirmDialog.Title), "Подтверждение удаления" },
-            { nameof(ConfirmDialog.ContentText), $"Вы уверены, что хотите удалить тренировку \"{workout.Name}\"? Это действие нельзя отменить." },
-            { nameof(ConfirmDialog.ButtonText), "Удалить" },
-            { nameof(ConfirmDialog.Color), Color.Error }
-        };
-
-        var options = new DialogOptions 
-        { 
-            CloseOnEscapeKey = true, 
-            MaxWidth = MaxWidth.Small, 
-            FullWidth = true 
-        };
-
-        var dialogReference = await DialogService.ShowAsync<ConfirmDialog>("Подтверждение удаления", parameters, options);
-        var result = await dialogReference.Result;
-
-        if (!result.Canceled)
-        {
-            await DeleteWorkout();
-        }
-    }
-
-    private async Task DeleteWorkout()
-    {
-        if (workout == null || isDeleting)
-        {
-            return;
-        }
-
-        isDeleting = true;
-        StateHasChanged();
-
-        try
-        {
-            if (activeWorkoutHistory != null)
-            {
-                var endSuccess = await WorkoutHistoryService.EndWorkoutAsync(activeWorkoutHistory.Id);
-                if (!endSuccess)
-                {
-                    Snackbar.Add("Не удалось завершить активную тренировку. Удаление отменено.", Severity.Error);
-                    return;
-                }
-
-                activeWorkoutHistory = null;
-            }
-
-            var success = await WorkoutService.DeleteWorkoutAsync(WorkoutId);
-            if (success)
-            {
-                Navigation.NavigateTo("/workouts");
-            }
-            else
-            {
-                Snackbar.Add("Ошибка при удалении тренировки", Severity.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Ошибка при удалении тренировки: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            isDeleting = false;
-            StateHasChanged();
-        }
     }
 
     private void UpdateExerciseItems()

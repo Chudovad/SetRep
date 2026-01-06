@@ -2,15 +2,20 @@
 @using SetRep.Core.ApiRequestServices
 @using SetRep.Core.Entities
 @using SetRep.MiniApp.Client.Services
+@using SetRep.MiniApp.Components.Dialog
+@using SetRep.Shared.DTO
 @using static SetRep.MiniApp.Client.Services.InitializationHelper
 
 @rendermode InteractiveServer
 @inject IWorkoutService WorkoutService
+@inject IWorkoutExerciseService WorkoutExerciseService
 @inject IWorkoutHistoryService WorkoutHistoryService
 @inject ITelegramWebAppStateService TelegramWebAppStateService
 @inject ITelegramBackButtonService TelegramBackButtonService
 @inject IAppInitializationService AppInitializationService
 @inject NavigationManager Navigation
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
 
 <PageTitle>SetRep - Тренировки</PageTitle>
 
@@ -60,6 +65,21 @@
                    OnClick="AddWorkout">
             Добавить тренировку
         </MudButton>
+        @if (isDuplicating)
+        {
+            <MudCard Elevation="2" Class="mb-3 workout-item-card">
+                <MudCardContent>
+                    <div class="workout-item-header">
+                        <div class="workout-item-info">
+                            <MudSkeleton Typo="Typo.h6" Width="60%" Height="24px" />
+                        </div>
+                        <div class="workout-item-right">
+                            <MudSkeleton Width="24px" Height="24px" Variant="SkeletonVariant.Circular" />
+                        </div>
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        }
         @foreach (var workout in workouts.OrderByDescending(w => w.CreatedAt))
         {
             var isActive = activeWorkoutHistory != null && activeWorkoutHistory.WorkoutId == workout.Id;
@@ -72,20 +92,36 @@
                     <MudCardContent>
                         <div class="workout-item-header">
                             <div class="workout-item-info">
-                                <MudText Typo="Typo.h6" Class="mb-1">
+                                <MudText Typo="Typo.h6">
                                     @workout.Name
                                 </MudText>
                             </div>
-                            <div class="workout-item-right">
+                            <div class="workout-item-right" @onclick:stopPropagation="true">
                                 @if (isActive)
                                 {
                                     <MudIcon Icon="@Icons.Material.Filled.Circle"
                                              Color="Color.Info"
                                              Class="active-indicator" />
                                 }
-                                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" 
-                                         Color="Color.Secondary" 
-                                         Class="workout-arrow-icon" />
+                                <MudMenu Icon="@Icons.Material.Filled.MoreVert"
+                                         Color="Color.Default"
+                                         AnchorOrigin="Origin.BottomRight"
+                                         TransformOrigin="Origin.TopRight"
+                                         Variant="Variant.Text"
+                                         Size="Size.Medium"
+                                         Class="workout-menu-button"
+                                         StopPropagation="true">
+                                    <MudMenuItem OnClick="@(() => OpenEditDialog(workout))" Icon="@Icons.Material.Filled.Edit">
+                                        Редактировать
+                                    </MudMenuItem>
+                                    <MudMenuItem OnClick="@(() => DuplicateWorkout(workout))" Icon="@Icons.Material.Filled.ContentCopy">
+                                        Дублировать
+                                    </MudMenuItem>
+                                    <MudDivider />
+                                    <MudMenuItem OnClick="@(() => ConfirmDeleteWorkout(workout))" Icon="@Icons.Material.Filled.Delete" Color="Color.Error">
+                                        Удалить
+                                    </MudMenuItem>
+                                </MudMenu>
                             </div>
                         </div>
                     </MudCardContent>
@@ -156,7 +192,7 @@
     .workout-item-header {
         display: flex;
         justify-content: space-between;
-        align-items: flex-start;
+        align-items: center;
         gap: 16px;
     }
 
@@ -171,9 +207,6 @@
         flex-shrink: 0;
     }
 
-    .workout-arrow-icon {
-        margin-top: 4px;
-    }
 
     .active-indicator {
         width: 12px;
@@ -209,6 +242,8 @@
     private List<Workout> workouts = new();
     private WorkoutHistory? activeWorkoutHistory;
     private bool isLoading = true;
+    private bool isDeleting = false;
+    private bool isDuplicating = false;
     private string? errorMessage;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -309,6 +344,230 @@
     private void AddWorkout()
     {
         Navigation.NavigateTo("/workouts/add");
+    }
+
+    private async Task OpenEditDialog(Workout workout)
+    {
+        if (workout == null || isDeleting)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<EditWorkoutDialog>
+        {
+            { nameof(EditWorkoutDialog.Workout), workout }
+        };
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true, 
+            MaxWidth = MaxWidth.Small, 
+            FullWidth = true 
+        };
+
+        var dialogReference = await DialogService.ShowAsync<EditWorkoutDialog>("Редактировать тренировку", parameters, options);
+        var result = await dialogReference.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadWorkouts();
+        }
+    }
+
+    private async Task ConfirmDeleteWorkout(Workout workout)
+    {
+        if (workout == null || isDeleting)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { nameof(ConfirmDialog.Title), "Подтверждение удаления" },
+            { nameof(ConfirmDialog.ContentText), $"Вы уверены, что хотите удалить тренировку \"{workout.Name}\"? Это действие нельзя отменить." },
+            { nameof(ConfirmDialog.ButtonText), "Удалить" },
+            { nameof(ConfirmDialog.Color), Color.Error }
+        };
+
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true, 
+            MaxWidth = MaxWidth.Small, 
+            FullWidth = true 
+        };
+
+        var dialogReference = await DialogService.ShowAsync<ConfirmDialog>("Подтверждение удаления", parameters, options);
+        var result = await dialogReference.Result;
+
+        if (!result.Canceled)
+        {
+            await DeleteWorkout(workout.Id);
+        }
+    }
+
+    private async Task DeleteWorkout(Guid workoutId)
+    {
+        if (isDeleting)
+        {
+            return;
+        }
+
+        isDeleting = true;
+        StateHasChanged();
+
+        try
+        {
+            var workout = workouts.FirstOrDefault(w => w.Id == workoutId);
+            if (workout == null)
+            {
+                return;
+            }
+
+            if (activeWorkoutHistory != null && activeWorkoutHistory.WorkoutId == workoutId)
+            {
+                var endSuccess = await WorkoutHistoryService.EndWorkoutAsync(activeWorkoutHistory.Id);
+                if (!endSuccess)
+                {
+                    Snackbar.Add("Не удалось завершить активную тренировку. Удаление отменено.", Severity.Error);
+                    return;
+                }
+
+                activeWorkoutHistory = null;
+            }
+
+            var success = await WorkoutService.DeleteWorkoutAsync(workoutId);
+            if (success)
+            {
+                await LoadWorkouts();
+                await LoadActiveWorkout();
+            }
+            else
+            {
+                Snackbar.Add("Ошибка при удалении тренировки", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка при удалении тренировки: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isDeleting = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DuplicateWorkout(Workout workout)
+    {
+        if (workout == null || isDuplicating || isDeleting)
+        {
+            return;
+        }
+
+        isDuplicating = true;
+        StateHasChanged();
+
+        try
+        {
+            var userId = TelegramWebAppStateService.ValidationResult?.Data?.User?.Id;
+            if (userId == null || userId == Guid.Empty)
+            {
+                Snackbar.Add("Не удалось определить пользователя", Severity.Error);
+                return;
+            }
+
+            // Загружаем полную информацию о тренировке с упражнениями
+            var sourceWorkout = await WorkoutService.GetWorkoutDetailsAsync(workout.Id);
+            if (sourceWorkout == null)
+            {
+                Snackbar.Add("Не удалось загрузить информацию о тренировке", Severity.Error);
+                return;
+            }
+
+            // Создаем новую тренировку
+            var newWorkoutDto = new CreateWorkoutDto
+            {
+                UserId = userId.Value,
+                Name = $"Копия {sourceWorkout.Name}",
+                Notes = sourceWorkout.Notes
+            };
+
+            var newWorkout = await WorkoutService.CreateWorkoutAsync(newWorkoutDto);
+            if (newWorkout == null)
+            {
+                Snackbar.Add("Не удалось создать копию тренировки", Severity.Error);
+                return;
+            }
+
+            // Копируем упражнения и подходы
+            if (sourceWorkout.WorkoutExercises != null && sourceWorkout.WorkoutExercises.Any())
+            {
+                // Сортируем упражнения по порядку
+                var orderedExercises = sourceWorkout.WorkoutExercises.OrderBy(we => we.Order).ToList();
+
+                foreach (var sourceExercise in orderedExercises)
+                {
+                    // Создаем новую связь тренировки и упражнения
+                    var newWorkoutExerciseDto = new CreateWorkoutExerciseDto
+                    {
+                        WorkoutId = newWorkout.Id,
+                        ExerciseId = sourceExercise.ExerciseId,
+                        Order = sourceExercise.Order,
+                        Notes = sourceExercise.Notes
+                    };
+
+                    var newWorkoutExercise = await WorkoutExerciseService.CreateWorkoutExerciseAsync(newWorkoutExerciseDto);
+                    if (newWorkoutExercise == null)
+                    {
+                        Snackbar.Add($"Не удалось скопировать упражнение", Severity.Warning);
+                        continue;
+                    }
+
+                    // Загружаем подходы для исходного упражнения
+                    var sets = await WorkoutExerciseService.GetSetsByWorkoutExerciseIdAsync(sourceExercise.Id);
+                    if (sets != null && sets.Any())
+                    {
+                        // Сортируем подходы по номеру
+                        var orderedSets = sets.OrderBy(s => s.SetNumber).ToList();
+
+                        foreach (var sourceSet in orderedSets)
+                        {
+                            // Создаем новый подход
+                            var newSetDto = new CreateSetDto
+                            {
+                                WorkoutExerciseId = newWorkoutExercise.Id,
+                                SetNumber = sourceSet.SetNumber,
+                                Reps = sourceSet.Reps,
+                                Weight = sourceSet.Weight,
+                                DurationSeconds = sourceSet.DurationSeconds,
+                                DistanceMeters = sourceSet.DistanceMeters,
+                                RestSeconds = sourceSet.RestSeconds,
+                                IsCompleted = sourceSet.IsCompleted,
+                                Notes = sourceSet.Notes,
+                                CompletedAt = sourceSet.CompletedAt
+                            };
+
+                            var newSet = await WorkoutExerciseService.CreateSetAsync(newSetDto);
+                            if (newSet == null)
+                            {
+                                Snackbar.Add($"Не удалось скопировать подход {sourceSet.SetNumber}", Severity.Warning);
+                            }
+                        }
+                    }
+                }
+            }
+
+            Snackbar.Add($"Тренировка \"{sourceWorkout.Name}\" успешно скопирована", Severity.Success);
+            await LoadWorkouts();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка при дублировании тренировки: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isDuplicating = false;
+            StateHasChanged();
+        }
     }
 }
 

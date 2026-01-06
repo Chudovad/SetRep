@@ -1,0 +1,359 @@
+@page "/exercises/group/{SelectedMuscleGroup:int}"
+@using SetRep.Core.ApiRequestServices
+@using SetRep.Core.Entities
+@using SetRep.Core.Enums
+@using SetRep.Core.Extensions
+@using SetRep.MiniApp.Client.Services
+@using SetRep.MiniApp.Components.Dialog
+@using static SetRep.MiniApp.Client.Services.InitializationHelper
+@rendermode InteractiveServer
+@inject IExerciseService ExerciseService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@inject ITelegramBackButtonService TelegramBackButtonService
+@inject ITelegramWebAppStateService TelegramWebAppStateService
+@inject IAppInitializationService AppInitializationService
+@implements IAsyncDisposable
+
+<PageTitle>SetRep - @GetMuscleGroupName(SelectedMuscleGroup)</PageTitle>
+
+<div class="exercises-container">
+    <!-- Заголовок с кнопкой добавления -->
+    <div class="d-flex align-center mb-4 header-with-action">
+        <MudText Typo="Typo.h5" Class="flex-grow-1 mb-0">
+            @GetMuscleGroupName(SelectedMuscleGroup)
+        </MudText>
+        <MudIconButton Icon="@Icons.Material.Filled.Add" 
+                       Color="Color.Primary" 
+                       Variant="Variant.Text"
+                       OnClick="OpenAddExerciseDialog"
+                       Class="add-exercise-icon-btn" />
+    </div>
+    
+    <!-- Поле поиска -->
+    <MudTextField @bind-Value="searchQuery"
+                  Variant="Variant.Outlined"
+                  Placeholder="Поиск упражнений..."
+                  Adornment="Adornment.Start"
+                  AdornmentIcon="@Icons.Material.Filled.Search"
+                  IconSize="Size.Medium"
+                  Class="mb-4 search-field"
+                  Immediate="true">
+    </MudTextField>
+    
+    @if (isLoading)
+    {
+        <MudCard Elevation="2" Class="loading-card">
+            <MudCardContent>
+                <div class="loading-state">
+                    <MudProgressCircular Indeterminate="true" Size="Size.Large" Class="mb-4" />
+                    <MudText Typo="Typo.body1" Color="Color.Secondary" Align="Align.Center">
+                        Загрузка упражнений...
+                    </MudText>
+                </div>
+            </MudCardContent>
+        </MudCard>
+    }
+    else if (errorMessage != null)
+    {
+        <MudCard Elevation="2" Class="error-card">
+            <MudCardContent>
+                <div class="error-state">
+                    <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Large" Color="Color.Error" Class="mb-4" />
+                    <MudText Typo="Typo.h6" Align="Align.Center" Class="mb-2">
+                        Ошибка загрузки
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="mb-4">
+                        @errorMessage
+                    </MudText>
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               StartIcon="@Icons.Material.Filled.Refresh"
+                               OnClick="LoadExercises">
+                        Попробовать снова
+                    </MudButton>
+                </div>
+            </MudCardContent>
+        </MudCard>
+    }
+    else if (filteredExercises.Any())
+    {
+        @foreach (var exercise in filteredExercises)
+        {
+            <div @onclick="() => ViewExercise(exercise.Id)" class="exercise-card-wrapper">
+                <MudCard Elevation="2" Class="mb-3 exercise-item-card">
+                    <MudCardContent>
+                        <div class="exercise-item-header">
+                            <div class="exercise-item-info">
+                                <MudText Typo="Typo.h6" Class="mb-1">@exercise.Name</MudText>
+                                @if (!string.IsNullOrWhiteSpace(exercise.Description))
+                                {
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
+                                        @TruncateDescription(exercise.Description)
+                                    </MudText>
+                                }
+                                <div class="exercise-item-meta">
+                                    @if (exercise.IsSystem)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text">
+                                            Системное
+                                        </MudChip>
+                                    }
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        Ед. изм.: @exercise.WeightUnit
+                                    </MudText>
+                                </div>
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" 
+                                     Color="Color.Secondary" 
+                                     Class="exercise-arrow-icon" />
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </div>
+        }
+    }
+    else
+    {
+        <MudCard Elevation="2" Class="empty-state-card">
+            <MudCardContent>
+                <div class="empty-state">
+                    <MudIcon Icon="@Icons.Material.Filled.FitnessCenter" Size="Size.Large" Color="Color.Secondary" Class="mb-4" />
+                    <MudText Typo="Typo.h6" Align="Align.Center" Class="mb-2">
+                        @(string.IsNullOrWhiteSpace(searchQuery) ? "Нет упражнений" : "Ничего не найдено")
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
+                        @(string.IsNullOrWhiteSpace(searchQuery) ? "В этой группе мышц пока нет упражнений" : "Попробуйте изменить запрос")
+                    </MudText>
+                </div>
+            </MudCardContent>
+        </MudCard>
+    }
+</div>
+
+<style>
+    .exercises-container {
+        max-width: 100%;
+    }
+
+    .exercise-card-wrapper {
+        cursor: pointer;
+    }
+
+    .exercise-item-card {
+        border-radius: 12px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .exercise-card-wrapper:hover .exercise-item-card {
+        transform: translateY(-2px);
+    }
+
+    .exercise-item-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .exercise-item-info {
+        flex: 1;
+    }
+
+    .exercise-arrow-icon {
+        flex-shrink: 0;
+        margin-top: 4px;
+    }
+
+    .exercise-item-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        margin-top: 8px;
+    }
+
+    .empty-state-card {
+        border-radius: 12px;
+        margin-top: 32px;
+    }
+
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px;
+    }
+
+    .loading-card, .error-card {
+        border-radius: 12px;
+        margin-top: 32px;
+    }
+
+    .loading-state, .error-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px;
+    }
+
+    .header-with-action {
+        gap: 8px;
+    }
+
+    .add-exercise-icon-btn {
+        flex-shrink: 0;
+    }
+
+    .search-field {
+        border-radius: 12px;
+    }
+</style>
+
+@code {
+    [Parameter] public int SelectedMuscleGroup { get; set; }
+    
+    private List<Exercise> allExercises = new();
+    private string searchQuery = string.Empty;
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    private IEnumerable<Exercise> filteredExercises
+    {
+        get
+        {
+            Guid? currentUserId = null;
+            if (TelegramWebAppStateService?.ValidationResult?.Data?.User != null)
+            {
+                currentUserId = TelegramWebAppStateService.ValidationResult.Data.User.Id;
+            }
+
+            var muscleGroup = (MuscleGroup)SelectedMuscleGroup;
+            var availableExercises = allExercises.Where(e =>
+                (e.IsSystem || (currentUserId.HasValue && e.CreatedByUserId == currentUserId.Value)) &&
+                e.MuscleGroup.HasValue &&
+                e.MuscleGroup.Value == muscleGroup
+            );
+
+            var sortedExercises = availableExercises.OrderBy(e => e.IsSystem ? 1 : 0)
+                                                   .ThenBy(e => e.Name);
+
+            if (string.IsNullOrWhiteSpace(searchQuery))
+                return sortedExercises;
+
+            var query = searchQuery.Trim().ToLowerInvariant();
+            return sortedExercises.Where(e =>
+                e.Name.ToLowerInvariant().Contains(query) ||
+                (!string.IsNullOrWhiteSpace(e.Description) && 
+                 e.Description.ToLowerInvariant().Contains(query))
+            );
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await WaitForInitializationAsync(AppInitializationService);
+            await TelegramBackButtonService.ShowAsync();
+            await LoadExercises();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadExercises()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var data = await ExerciseService.GetExercisesAsync();
+            if (data != null)
+            {
+                allExercises = data;
+            }
+            else
+            {
+                errorMessage = "Не удалось загрузить упражнения. Проверьте подключение к API.";
+                allExercises = new List<Exercise>();
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = $"Ошибка сети при подключении к API: {ex.Message}. " +
+                          "Убедитесь, что API сервер запущен и доступен.";
+            allExercises = new List<Exercise>();
+        }
+        catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
+        {
+            errorMessage = "Превышено время ожидания ответа от API. Сервер может быть перегружен или недоступен.";
+            allExercises = new List<Exercise>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Не удалось загрузить упражнения: {ex.Message}";
+            allExercises = new List<Exercise>();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task OpenAddExerciseDialog()
+    {
+        var parameters = new DialogParameters<AddExerciseDialog>();
+        parameters.Add(x => x.PreselectedMuscleGroup, (MuscleGroup)SelectedMuscleGroup);
+        
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true, 
+            MaxWidth = MaxWidth.Small, 
+            FullWidth = true 
+        };
+
+        var dialogReference = await DialogService.ShowAsync<AddExerciseDialog>("Добавить упражнение", parameters, options);
+        var result = await dialogReference.Result;
+
+        if (!result.Canceled && result.Data is Exercise createdExercise)
+        {
+            allExercises.Insert(0, createdExercise);
+            StateHasChanged();
+        }
+    }
+
+    private void ViewExercise(Guid exerciseId)
+    {
+        Navigation.NavigateTo($"/exercises/{exerciseId}");
+    }
+
+    private string TruncateDescription(string description)
+    {
+        if (string.IsNullOrWhiteSpace(description))
+            return string.Empty;
+
+        const int maxLength = 50;
+        if (description.Length <= maxLength)
+            return description;
+
+        return description.Substring(0, maxLength) + "...";
+    }
+
+    private string GetMuscleGroupName(int muscleGroupId)
+    {
+        if (Enum.IsDefined(typeof(MuscleGroup), muscleGroupId))
+        {
+            var muscleGroup = (MuscleGroup)muscleGroupId;
+            return muscleGroup.GetDescription();
+        }
+        return "Неизвестная группа";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        
+    }
+}
+
