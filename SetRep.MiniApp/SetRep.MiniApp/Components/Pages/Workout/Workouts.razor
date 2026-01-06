@@ -1,8 +1,15 @@
 @page "/workouts"
+@using SetRep.Core.ApiRequestServices
 @using SetRep.Core.Entities
+@using SetRep.MiniApp.Client.Services
+@using static SetRep.MiniApp.Client.Services.InitializationHelper
 
 @rendermode InteractiveServer
-@inject HttpClient Http
+@inject IWorkoutService WorkoutService
+@inject IWorkoutHistoryService WorkoutHistoryService
+@inject ITelegramWebAppStateService TelegramWebAppStateService
+@inject ITelegramBackButtonService TelegramBackButtonService
+@inject IAppInitializationService AppInitializationService
 @inject NavigationManager Navigation
 
 <PageTitle>SetRep - Тренировки</PageTitle>
@@ -55,8 +62,13 @@
         </MudButton>
         @foreach (var workout in workouts.OrderByDescending(w => w.CreatedAt))
         {
-            <div @onclick="() => ViewWorkout(workout.Id)" class="workout-card-wrapper">
-                <MudCard Elevation="2" Class="mb-3 workout-item-card">
+            var isActive = activeWorkoutHistory != null && activeWorkoutHistory.WorkoutId == workout.Id;
+            var hasActiveWorkout = activeWorkoutHistory != null;
+            var wrapperClass = isActive ? "workout-card-wrapper active-workout-wrapper" : (hasActiveWorkout ? "workout-card-wrapper disabled-workout-wrapper" : "workout-card-wrapper");
+            var cardClass = isActive ? "mb-3 workout-item-card active-workout-card" : "mb-3 workout-item-card";
+            <div @onclick="@(hasActiveWorkout && !isActive ? null : (() => ViewWorkout(workout.Id)))" 
+                 class="@wrapperClass">
+                <MudCard Elevation="2" Class="@cardClass">
                     <MudCardContent>
                         <div class="workout-item-header">
                             <div class="workout-item-info">
@@ -64,9 +76,17 @@
                                     @workout.Name
                                 </MudText>
                             </div>
-                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" 
-                                     Color="Color.Secondary" 
-                                     Class="workout-arrow-icon" />
+                            <div class="workout-item-right">
+                                @if (isActive)
+                                {
+                                    <MudIcon Icon="@Icons.Material.Filled.Circle"
+                                             Color="Color.Info"
+                                             Class="active-indicator" />
+                                }
+                                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" 
+                                         Color="Color.Secondary" 
+                                         Class="workout-arrow-icon" />
+                            </div>
                         </div>
                     </MudCardContent>
                 </MudCard>
@@ -107,12 +127,29 @@
         cursor: pointer;
     }
 
+    .disabled-workout-wrapper {
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+
+    .disabled-workout-wrapper:hover .workout-item-card {
+        transform: none;
+    }
+
     .workout-item-card {
         border-radius: 12px;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
 
-    .workout-card-wrapper:hover .workout-item-card {
+    .active-workout-card {
+        border: 2px solid var(--mud-palette-primary);
+    }
+
+    .workout-card-wrapper:hover .workout-item-card:not(.active-workout-card) {
+        transform: translateY(-2px);
+    }
+
+    .active-workout-wrapper:hover .active-workout-card {
         transform: translateY(-2px);
     }
 
@@ -127,9 +164,20 @@
         flex: 1;
     }
 
-    .workout-arrow-icon {
+    .workout-item-right {
+        display: flex;
+        align-items: center;
+        gap: 8px;
         flex-shrink: 0;
+    }
+
+    .workout-arrow-icon {
         margin-top: 4px;
+    }
+
+    .active-indicator {
+        width: 12px;
+        height: 12px;
     }
 
     .empty-state-card {
@@ -159,12 +207,20 @@
 
 @code {
     private List<Workout> workouts = new();
+    private WorkoutHistory? activeWorkoutHistory;
     private bool isLoading = true;
     private string? errorMessage;
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await LoadWorkouts();
+        if (firstRender)
+        {
+            await WaitForInitializationAsync(AppInitializationService);
+            await LoadWorkouts();
+            await LoadActiveWorkout();
+            await TelegramBackButtonService.HideAsync();
+            StateHasChanged();
+        }
     }
 
     private async Task LoadWorkouts()
@@ -174,28 +230,25 @@
         
         try
         {
-            var response = await Http.GetAsync("api/workouts");
+            // Получаем userId из валидированных данных Telegram WebApp
+            var userId = TelegramWebAppStateService.ValidationResult?.Data?.User?.Id;
             
-            if (response.IsSuccessStatusCode)
+            if (userId == null || userId == Guid.Empty)
             {
-                var data = await response.Content.ReadFromJsonAsync<List<Workout>>();
-                workouts = data ?? new List<Workout>();
+                errorMessage = "Не удалось определить пользователя. Пожалуйста, обновите страницу.";
+                workouts = new List<Workout>();
+                isLoading = false;
+                return;
+            }
+
+            var data = await WorkoutService.GetWorkoutsAsync(userId.Value);
+            if (data != null)
+            {
+                workouts = data;
             }
             else
             {
-                var statusCode = (int)response.StatusCode;
-                var statusText = response.StatusCode.ToString();
-                
-                errorMessage = statusCode switch
-                {
-                    502 => "Сервер API недоступен (Bad Gateway). Убедитесь, что API сервер запущен и доступен.",
-                    503 => "Сервис временно недоступен. Попробуйте позже.",
-                    404 => "Эндпоинт API не найден. Проверьте конфигурацию API URL.",
-                    401 => "Требуется авторизация для доступа к API.",
-                    403 => "Доступ запрещен.",
-                    _ => $"Ошибка при загрузке тренировок: {statusText} (код {statusCode})"
-                };
-                
+                errorMessage = "Не удалось загрузить тренировки. Проверьте подключение к API.";
                 workouts = new List<Workout>();
             }
         }
@@ -221,11 +274,36 @@
         }
     }
 
+    private async Task LoadActiveWorkout()
+    {
+        try
+        {
+            var userId = TelegramWebAppStateService.ValidationResult?.Data?.User?.Id;
+            
+            if (userId != null && userId != Guid.Empty)
+            {
+                activeWorkoutHistory = await WorkoutHistoryService.GetActiveWorkoutAsync(userId.Value);
+            }
+        }
+        catch
+        {
+            // Игнорируем ошибки загрузки активной тренировки
+        }
+    }
+
     private void ViewWorkout(Guid workoutId)
     {
-        // TODO: Навигация на страницу деталей тренировки
-        // Пока заглушка - можно будет добавить страницу /workouts/{id}
-        Navigation.NavigateTo($"/workouts/{workoutId}");
+        var isActive = activeWorkoutHistory != null && activeWorkoutHistory.WorkoutId == workoutId;
+        
+        if (isActive)
+        {
+            // Если активная, переходим на страницу активной тренировки
+            Navigation.NavigateTo($"/workouts/{workoutId}/active/{activeWorkoutHistory!.Id}");
+        }
+        else
+        {
+            Navigation.NavigateTo($"/workouts/{workoutId}");
+        }
     }
 
     private void AddWorkout()

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SetRep.Core.Entities;
 using SetRep.Core.Repositories;
@@ -6,6 +7,7 @@ namespace SetRep.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class WeightHistoryController : ControllerBase
 {
     private readonly IWeightHistoryRepository _weightHistoryRepository;

@@ -1,16 +1,22 @@
 @page "/workouts/add"
+@using System.Text.Json
+@using System.Text.Json.Serialization
+@using SetRep.Core.ApiRequestServices
 @using SetRep.Core.Entities
 @using SetRep.MiniApp.Components.Dialog
 @using SetRep.Shared.DTO
-@using System.Text.Json
-@using System.Text.Json.Serialization
+@using SetRep.MiniApp.Client.Services
+@using static SetRep.MiniApp.Client.Services.InitializationHelper
 @rendermode InteractiveServer
-@inject HttpClient Http
+@inject IWorkoutService WorkoutService
+@inject IWorkoutExerciseService WorkoutExerciseService
+@inject IUserService UserService
 @inject NavigationManager Navigation
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject ITelegramBackButtonService TelegramBackButtonService
 @inject ITelegramWebAppStateService TelegramWebAppStateService
+@inject IAppInitializationService AppInitializationService
 @implements IAsyncDisposable
 
 <PageTitle>SetRep - Добавить тренировку</PageTitle>
@@ -24,6 +30,8 @@
                             @bind-Value="workoutDto.Name"
                             Variant="Variant.Outlined"
                             Placeholder="Например: Тренировка груди"
+                            Required="true"
+                            RequiredError="Название обязательно для заполнения"
                             Class="mb-3" />
                 <MudTextField T="string"
                               Label="Заметки к тренировке"
@@ -48,12 +56,6 @@
                             <div class="exercise-list-item">
                                 <div class="exercise-info">
                                     <MudText Typo="Typo.body1" Class="exercise-name">@exercise.Name</MudText>
-                                    @if (!string.IsNullOrWhiteSpace(exercise.Description))
-                                    {
-                                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1">
-                                            @exercise.Description
-                                        </MudText>
-                                    }
                                 </div>
                                 <MudIconButton Icon="@Icons.Material.Filled.Delete" 
                                              Color="Color.Error" 
@@ -84,29 +86,30 @@
 
     <!-- Кнопки действий -->
     <div class="action-buttons">
-        <MudButton Variant="Variant.Text" 
-                   Color="Color.Default" 
-                   FullWidth="true" 
-                   Class="mb-3"
-                   OnClick="Cancel">
-            Отмена
-        </MudButton>
-        <MudButton Variant="Variant.Filled" 
-                   Color="Color.Primary" 
-                   FullWidth="true" 
-                   Class="save-btn"
-                   OnClick="SaveWorkout"
-                   Disabled="@(!isFormValid || isSaving || !selectedExercises.Any())">
-            @if (isSaving)
-            {
-                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
-                <MudText Class="ms-2">Сохранение...</MudText>
-            }
-            else
-            {
-                <MudText>Сохранить тренировку</MudText>
-            }
-        </MudButton>
+
+        <MudStack Row="true">
+            <MudButton Variant="Variant.Outlined"
+                       Color="Color.Default"
+                       FullWidth="true"
+                       OnClick="Cancel">
+                Отмена
+            </MudButton>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       FullWidth="true"
+                       OnClick="SaveWorkout"
+                       Disabled="@(!isFormValid || isSaving || !selectedExercises.Any())">
+                @if (isSaving)
+                {
+                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                    <MudText Class="ms-2">Сохранение...</MudText>
+                }
+                else
+                {
+                    <MudText>Сохранить</MudText>
+                }
+            </MudButton>
+        </MudStack>
     </div>
 </div>
 
@@ -142,12 +145,7 @@
         margin-top: 16px;
     }
 
-    .save-btn {
-        height: 48px;
-        border-radius: 12px;
-        text-transform: none;
-        font-weight: 500;
-    }
+
 </style>
 
 @code {
@@ -164,9 +162,14 @@
 
     private List<Exercise> selectedExercises = new();
 
-    protected override async Task OnInitializedAsync()
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        await TelegramBackButtonService.ShowAsync();
+        if (firstRender)
+        {
+            await WaitForInitializationAsync(AppInitializationService);
+            await TelegramBackButtonService.ShowAsync();
+        }
     }
 
     private async Task OpenSelectExercisesDialog()
@@ -221,20 +224,11 @@
             if (workoutDto.UserId == Guid.Empty && TelegramWebAppStateService.ValidationResult?.Data?.User != null)
             {
                 var telegramId = TelegramWebAppStateService.ValidationResult.Data.User.TelegramId;
-                var userResponse = await Http.GetAsync($"api/Users/telegram/{telegramId}");
+                var user = await UserService.GetUserByTelegramIdAsync(telegramId);
 
-                if (userResponse.IsSuccessStatusCode)
+                if (user != null)
                 {
-                    var user = await userResponse.Content.ReadFromJsonAsync<UserDto>();
-                    if (user != null)
-                    {
-                        workoutDto.UserId = user.Id;
-                    }
-                    else
-                    {
-                        errorMessage = "Не удалось получить данные пользователя.";
-                        return;
-                    }
+                    workoutDto.UserId = user.Id;
                 }
                 else
                 {
@@ -244,25 +238,10 @@
             }
 
             // Создаем тренировку через DTO
-            var workoutResponse = await Http.PostAsJsonAsync("api/workouts", workoutDto);
-
-            if (!workoutResponse.IsSuccessStatusCode)
-            {
-                var responseContent = await workoutResponse.Content.ReadAsStringAsync();
-                var statusCode = (int)workoutResponse.StatusCode;
-                errorMessage = statusCode switch
-                {
-                    400 => $"Неверные данные. Проверьте заполненные поля. {responseContent}",
-                    500 => "Ошибка сервера при создании тренировки.",
-                    _ => $"Ошибка при создании тренировки: код {statusCode}"
-                };
-                return;
-            }
-
-            var createdWorkout = await workoutResponse.Content.ReadFromJsonAsync<Workout>();
+            var createdWorkout = await WorkoutService.CreateWorkoutAsync(workoutDto);
             if (createdWorkout == null)
             {
-                errorMessage = "Не удалось получить созданную тренировку.";
+                errorMessage = "Ошибка при создании тренировки.";
                 return;
             }
 
@@ -278,15 +257,14 @@
                     Order = order++
                 };
 
-                var exerciseResponse = await Http.PostAsJsonAsync("api/workoutexercises", workoutExerciseDto);
-                if (!exerciseResponse.IsSuccessStatusCode)
+                var createdWorkoutExercise = await WorkoutExerciseService.CreateWorkoutExerciseAsync(workoutExerciseDto);
+                if (createdWorkoutExercise == null)
                 {
                     errorMessage = $"Ошибка при добавлении упражнения '{exercise.Name}' в тренировку.";
                     return;
                 }
             }
 
-            Snackbar.Add("Тренировка успешно создана", Severity.Success);
             Navigation.NavigateTo("/workouts");
         }
         catch (HttpRequestException ex)
@@ -306,6 +284,6 @@
 
     public async ValueTask DisposeAsync()
     {
-        await TelegramBackButtonService.HideAsync();
+
     }
 }

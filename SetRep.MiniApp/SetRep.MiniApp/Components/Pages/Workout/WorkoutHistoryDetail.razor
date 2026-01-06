@@ -1,10 +1,13 @@
 @page "/workout/history/{WorkoutHistoryId:guid}"
+@using SetRep.Core.ApiRequestServices
 @using SetRep.Core.Entities
 @using SetRep.MiniApp.Client.Services
+@using static SetRep.MiniApp.Client.Services.InitializationHelper
 @rendermode InteractiveServer
-@inject HttpClient Http
+@inject IWorkoutHistoryService WorkoutHistoryService
 @inject NavigationManager Navigation
 @inject ITelegramBackButtonService TelegramBackButtonService
+@inject IAppInitializationService AppInitializationService
 @implements IAsyncDisposable
 
 <PageTitle>SetRep - Детали тренировки</PageTitle>
@@ -54,7 +57,7 @@ else if (workoutHistory != null)
         <!-- Информация о тренировке -->
         <MudCard Elevation="2" Class="mb-4 workout-info-card">
             <MudCardContent>
-                <MudText Typo="Typo.h5" Class="mb-3">@(workoutHistory.Workout?.Name ?? "Тренировка")</MudText>
+                <MudText Typo="Typo.h5" Class="mb-3">@(workoutHistory.Workout?.Name ?? workoutHistory.WorkoutName ?? "Тренировка")</MudText>
                 
                 <div class="workout-meta">
                     <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-1">
@@ -89,7 +92,7 @@ else if (workoutHistory != null)
         {
             <MudText Typo="Typo.h6" Class="mb-3">Выполненные упражнения</MudText>
             
-            @foreach (var exerciseGroup in workoutHistory.Sets.GroupBy(s => s.ExerciseId).OrderBy(g => g.First().Exercise?.Name ?? ""))
+            @foreach (var exerciseGroup in GetOrderedExerciseGroups(workoutHistory))
             {
                 var firstSet = exerciseGroup.First();
                 var exercise = firstSet.Exercise;
@@ -100,11 +103,11 @@ else if (workoutHistory != null)
                     <MudCardContent>
                         <MudText Typo="Typo.h6" Class="mb-3">@(exercise?.Name ?? "Неизвестное упражнение")</MudText>
                         
-                        <MudTable Items="@sets" Hover="true" Dense="true" Striped="true" Class="compact-table">
+                        <MudTable Items="@sets" Hover="true" Dense="true" Striped="true" Class="compact-table" Breakpoint="Breakpoint.None">
                             <HeaderContent>
                                 <MudTh>№</MudTh>
                                 <MudTh>Вес</MudTh>
-                                <MudTh>Повторения</MudTh>
+                                <MudTh>Повт.</MudTh>
                             </HeaderContent>
                             <RowTemplate>
                                 <MudTd DataLabel="№">@context.SetNumber</MudTd>
@@ -217,16 +220,14 @@ else if (workoutHistory != null)
     private bool isLoading = true;
     private string? errorMessage;
 
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadWorkoutHistory();
-    }
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
+            await WaitForInitializationAsync(AppInitializationService);
             await TelegramBackButtonService.ShowAsync();
+            await LoadWorkoutHistory();
+            StateHasChanged();
         }
     }
 
@@ -237,28 +238,10 @@ else if (workoutHistory != null)
 
         try
         {
-            var response = await Http.GetAsync($"api/workouthistory/{WorkoutHistoryId}/details");
-
-            if (response.IsSuccessStatusCode)
+            workoutHistory = await WorkoutHistoryService.GetWorkoutHistoryDetailsAsync(WorkoutHistoryId);
+            if (workoutHistory == null)
             {
-                workoutHistory = await response.Content.ReadFromJsonAsync<WorkoutHistory>();
-            }
-            else
-            {
-                var statusCode = (int)response.StatusCode;
-                var statusText = response.StatusCode.ToString();
-
-                errorMessage = statusCode switch
-                {
-                    404 => "Тренировка не найдена.",
-                    502 => "Сервер API недоступен (Bad Gateway). Убедитесь, что API сервер запущен и доступен.",
-                    503 => "Сервис временно недоступен. Попробуйте позже.",
-                    401 => "Требуется авторизация для доступа к API.",
-                    403 => "Доступ запрещен.",
-                    _ => $"Ошибка при загрузке тренировки: {statusText} (код {statusCode})"
-                };
-
-                workoutHistory = null;
+                errorMessage = "Тренировка не найдена.";
             }
         }
         catch (HttpRequestException ex)
@@ -285,7 +268,8 @@ else if (workoutHistory != null)
 
     private string FormatDate(DateTime date)
     {
-        return date.ToString("dd.MM.yyyy HH:mm");
+        var localDate = date.AddHours(3); // UTC+3
+        return localDate.ToString("dd.MM.yyyy HH:mm");
     }
 
     private string FormatDuration(TimeSpan duration)
@@ -297,8 +281,31 @@ else if (workoutHistory != null)
         return $"{duration.Minutes}м {duration.Seconds}с";
     }
 
+    private IEnumerable<IGrouping<Guid, WorkoutHistorySet>> GetOrderedExerciseGroups(WorkoutHistory workoutHistory)
+    {
+        if (workoutHistory.Sets == null || !workoutHistory.Sets.Any())
+        {
+            return Enumerable.Empty<IGrouping<Guid, WorkoutHistorySet>>();
+        }
+
+        var groupedSets = workoutHistory.Sets.Where(s => s.IsCompleted).GroupBy(s => s.ExerciseId).ToList();
+
+        if (workoutHistory.Workout?.WorkoutExercises != null && workoutHistory.Workout.WorkoutExercises.Any())
+        {
+            return groupedSets.OrderBy(g =>
+            {
+                var exerciseId = g.Key;
+                var workoutExercise = workoutHistory.Workout.WorkoutExercises
+                    .FirstOrDefault(we => we.ExerciseId == exerciseId);
+                return workoutExercise?.Order ?? int.MaxValue;
+            }).ThenBy(g => g.Min(s => s.CompletedAt));
+        }
+
+        return groupedSets.OrderBy(g => g.Min(s => s.CompletedAt));
+    }
+
     public async ValueTask DisposeAsync()
     {
-        await TelegramBackButtonService.HideAsync();
+
     }
 }

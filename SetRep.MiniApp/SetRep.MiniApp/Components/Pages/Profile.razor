@@ -1,6 +1,12 @@
 @page "/profile"
 @rendermode InteractiveServer
 @using SetRep.MiniApp.Components.Layout
+@using SetRep.MiniApp.Client.Services
+@using static SetRep.MiniApp.Client.Services.InitializationHelper
+@inject IAppInitializationService AppInitializationService
+@inject ITelegramWebAppStateService TelegramWebAppStateService
+@inject ITelegramBackButtonService TelegramBackButtonService
+@implements IAsyncDisposable
 
 <PageTitle>SetRep - Профиль</PageTitle>
 
@@ -10,11 +16,30 @@
         <MudCardContent>
             <div class="profile-header">
                 <MudAvatar Size="Size.Large" Color="Color.Primary" Class="profile-avatar">
-                    <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Large" />
+                    @if (string.IsNullOrEmpty(TelegramWebAppStateService.ValidationResult?.Data?.User.PhotoUrl))
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Large" />
+                    }
+                    else
+                    {
+                        <MudImage Src="@TelegramWebAppStateService.ValidationResult?.Data?.User.PhotoUrl" Alt="@TelegramWebAppStateService.ValidationResult?.Data?.User.Username"></MudImage>
+                    }
                 </MudAvatar>
                 <div class="profile-info">
-                    <MudText Typo="Typo.h6">@UserName</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">@UserEmail</MudText>
+                    <MudStack Row>
+                        @if (string.IsNullOrEmpty(TelegramWebAppStateService.ValidationResult?.Data?.User.LastName))
+                        {
+                            <MudText Typo="Typo.h6">@TelegramWebAppStateService.ValidationResult?.Data?.User.FirstName</MudText>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.h6">@TelegramWebAppStateService.ValidationResult?.Data?.User.FirstName @TelegramWebAppStateService.ValidationResult?.Data?.User.LastName</MudText>
+                        }
+                    </MudStack>
+                    @if (!string.IsNullOrEmpty(TelegramWebAppStateService.ValidationResult?.Data?.User.Username))
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">@TelegramWebAppStateService.ValidationResult?.Data?.User.Username</MudText>
+                    }
                 </div>
             </div>
         </MudCardContent>
@@ -24,15 +49,15 @@
     <MudCard Elevation="2" Class="mb-4 settings-card">
         <MudCardContent>
             <MudText Typo="Typo.h6" GutterBottom="true">Цель по весу</MudText>
-            <MudNumericField T="double" 
-                             @bind-Value="TargetWeight" 
-                             Label="Целевой вес (кг)" 
+            <MudNumericField T="double"
+                             @bind-Value="TargetWeight"
+                             Label="Целевой вес (кг)"
                              Variant="Variant.Outlined"
                              Adornment="Adornment.End"
                              AdornmentIcon="@Icons.Material.Filled.Scale"
                              Class="mb-3" />
-            <MudButton Variant="Variant.Filled" 
-                       Color="Color.Primary" 
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
                        FullWidth="true"
                        OnClick="SaveTargetWeight">
                 Сохранить
@@ -44,9 +69,9 @@
     <MudCard Elevation="2" Class="mb-4 settings-card">
         <MudCardContent>
             <MudText Typo="Typo.h6" GutterBottom="true">Единицы измерения</MudText>
-            <MudSelect T="string" 
-                       @bind-Value="WeightUnit" 
-                       Label="Единица веса" 
+            <MudSelect T="string"
+                       @bind-Value="WeightUnit"
+                       Label="Единица веса"
                        Variant="Variant.Outlined"
                        Class="mb-3">
                 <MudSelectItem T="string" Value="@("kg")">Килограммы (кг)</MudSelectItem>
@@ -56,7 +81,7 @@
     </MudCard>
 
     <!-- Дополнительные настройки -->
-    <MudCard Elevation="2" Class="mb-4 settings-card">
+    @* <MudCard Elevation="2" Class="mb-4 settings-card">
         <MudCardContent>
             <MudText Typo="Typo.h6" GutterBottom="true">Дополнительно</MudText>
             <MudListItem T="string" Href="exercises" Icon="@Icons.Material.Filled.Notifications" Text="Упражнения" />
@@ -67,7 +92,7 @@
             <MudDivider Class="my-2" />
             <MudListItem T="string" Href="#" Icon="@Icons.Material.Filled.Info" Text="О приложении" />
         </MudCardContent>
-    </MudCard>
+    </MudCard> *@
 </div>
 
 <style>
@@ -108,6 +133,20 @@
     private void SaveTargetWeight()
     {
         // TODO: Сохранение цели по весу
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await WaitForInitializationAsync(AppInitializationService);
+            await TelegramBackButtonService.ShowAsync();
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+
     }
 }
 

@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SetRep.API.Extensions;
 using SetRep.Core.Entities;
 using SetRep.Core.Repositories;
 
@@ -6,6 +8,7 @@ namespace SetRep.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class UsersController : ControllerBase
 {
     private readonly IUserRepository _userRepository;
@@ -15,6 +18,27 @@ public class UsersController : ControllerBase
     {
         _userRepository = userRepository;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Получить текущего аутентифицированного пользователя
+    /// </summary>
+    [HttpGet("me")]
+    public async Task<ActionResult<User>> GetCurrentUser()
+    {
+        var userId = User.GetUserId();
+        if (userId == null)
+        {
+            return Unauthorized();
+        }
+
+        var user = await _userRepository.GetByIdAsync(userId.Value);
+        if (user == null)
+        {
+            return NotFound();
+        }
+
+        return Ok(user);
     }
 
     /// <summary>

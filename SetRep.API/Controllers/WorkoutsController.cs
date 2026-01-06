@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SetRep.Core.Entities;
 using SetRep.Core.Repositories;
@@ -7,24 +8,27 @@ namespace SetRep.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class WorkoutsController : ControllerBase
 {
     private readonly IWorkoutRepository _workoutRepository;
     private readonly ILogger<WorkoutsController> _logger;
 
-    public WorkoutsController(IWorkoutRepository workoutRepository, ILogger<WorkoutsController> logger)
+    public WorkoutsController(
+        IWorkoutRepository workoutRepository, 
+        ILogger<WorkoutsController> logger)
     {
         _workoutRepository = workoutRepository;
         _logger = logger;
     }
 
     /// <summary>
-    /// Получить все тренировки
+    /// Получить все тренировки для конкретного пользователя
     /// </summary>
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Workout>>> GetAll()
+    public async Task<ActionResult<IEnumerable<Workout>>> GetAll([FromQuery] Guid userId)
     {
-        var workouts = await _workoutRepository.GetAllAsync();
+        var workouts = await _workoutRepository.GetByUserIdAsync(userId);
         return Ok(workouts);
     }
 
@@ -136,6 +140,8 @@ public class WorkoutsController : ControllerBase
             return NotFound();
         }
 
+        // Удаляем саму тренировку
+        // История тренировок сохранится, но WorkoutId будет установлен в null
         await _workoutRepository.DeleteAsync(workout);
         await _workoutRepository.SaveChangesAsync();
 

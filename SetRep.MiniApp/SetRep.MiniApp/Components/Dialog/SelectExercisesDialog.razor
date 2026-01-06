@@ -1,8 +1,9 @@
 @using SetRep.Core.Entities
 @using SetRep.Core.Enums
 @using SetRep.Core.Extensions
+@using SetRep.MiniApp.Client.Services
 
-@inject HttpClient Http
+@inject IExerciseService ExerciseService
 
 <MudDialog>
     <TitleContent>
@@ -24,31 +25,57 @@
         }
         else if (availableExercises.Any())
         {
-            <MudList T="Guid"
-                     @bind-SelectedValues="selectedExerciseIds"
-                     SelectionMode="SelectionMode.MultiSelection"
-                     CheckBoxColor="Color.Primary"
-                     Dense="true"
-                     Class="exercise-list">
-                @foreach (var exercise in availableExercises)
-                {
-                    <MudListItem @key="exercise.Id" Value="@exercise.Id">
-                        <div class="exercise-item">
-                            <MudText Typo="Typo.body1" Class="exercise-name">@exercise.Name</MudText>
-                            @if (exercise.MuscleGroup.HasValue)
-                            {
-                                <MudChip T="string"
-                                         Size="Size.Small"
-                                         Color="Color.Primary"
-                                         Variant="Variant.Text"
-                                         Class="mt-1">
-                                    @exercise.MuscleGroup.Value.GetDescription()
-                                </MudChip>
-                            }
-                        </div>
-                    </MudListItem>
-                }
-            </MudList>
+            <!-- Поле поиска -->
+            <MudTextField @bind-Value="searchQuery"
+                          Variant="Variant.Outlined"
+                          Placeholder="Поиск упражнений..."
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          IconSize="Size.Medium"
+                          Class="mb-3 search-field"
+                          Immediate="true" />
+            
+            @if (filteredExercises.Any())
+            {
+                <MudList T="Guid"
+                         @bind-SelectedValues="selectedExerciseIds"
+                         SelectionMode="SelectionMode.MultiSelection"
+                         CheckBoxColor="Color.Primary"
+                         Dense="true"
+                         Class="exercise-list">
+                    @foreach (var exercise in filteredExercises)
+                    {
+                        <MudListItem @key="exercise.Id" Value="@exercise.Id">
+                            <div class="exercise-item">
+                                <MudText Typo="Typo.body1" Class="exercise-name">@exercise.Name</MudText>
+                                @if (exercise.MuscleGroup.HasValue)
+                                {
+                                    <MudChip T="string"
+                                             Size="Size.Small"
+                                             Color="Color.Primary"
+                                             Variant="Variant.Text"
+                                             Class="mt-1">
+                                        @exercise.MuscleGroup.Value.GetDescription()
+                                    </MudChip>
+                                }
+                            </div>
+                        </MudListItem>
+                    }
+                </MudList>
+            }
+            else
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="py-4">
+                    @if (!string.IsNullOrWhiteSpace(searchQuery))
+                    {
+                        <text>Ничего не найдено по запросу "@searchQuery"</text>
+                    }
+                    else
+                    {
+                        <text>Нет доступных упражнений</text>
+                    }
+                </MudText>
+            }
         }
         else
         {
@@ -100,16 +127,39 @@
     .exercise-name {
         font-weight: 500;
     }
+
+    .search-field {
+        border-radius: 8px;
+    }
 </style>
 
 @code {
     [CascadingParameter] IMudDialogInstance? MudDialog { get; set; }
 
     private List<Exercise> availableExercises = new();
+    private string searchQuery = string.Empty;
     private IReadOnlyCollection<Guid> selectedExerciseIds = [];
     private bool isLoading = true;
     private bool isSaving = false;
     private string? errorMessage;
+
+    private IEnumerable<Exercise> filteredExercises
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(searchQuery))
+                return availableExercises;
+
+            var query = searchQuery.Trim().ToLowerInvariant();
+            return availableExercises.Where(e =>
+                e.Name.ToLowerInvariant().Contains(query) ||
+                (!string.IsNullOrWhiteSpace(e.Description) && 
+                 e.Description.ToLowerInvariant().Contains(query)) ||
+                (e.MuscleGroup.HasValue && 
+                 e.MuscleGroup.Value.GetDescription().ToLowerInvariant().Contains(query))
+            );
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -123,17 +173,14 @@
 
         try
         {
-            var response = await Http.GetAsync("api/exercises");
-
-            if (response.IsSuccessStatusCode)
+            var data = await ExerciseService.GetExercisesAsync();
+            if (data != null)
             {
-                var data = await response.Content.ReadFromJsonAsync<List<Exercise>>();
-                availableExercises = data ?? new List<Exercise>();
+                availableExercises = data;
             }
             else
             {
-                var statusCode = (int)response.StatusCode;
-                errorMessage = $"Ошибка при загрузке упражнений: код {statusCode}";
+                errorMessage = "Не удалось загрузить упражнения. Проверьте подключение к API.";
             }
         }
         catch (Exception ex)

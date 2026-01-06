@@ -1,9 +1,14 @@
-using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
+using Microsoft.OpenApi.Models;
 using SetRep.API.Services;
 using SetRep.Core.Repositories;
 using SetRep.Infrastructure.Data;
 using SetRep.Infrastructure.Repositories;
+using System.Text;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -20,7 +25,39 @@ builder.Services.AddOpenApi();
 
 // Добавляем Swagger
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "SetRep API",
+        Version = "v1"
+    });
+
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "JWT Authorization header using the Bearer scheme. Enter '{token}'",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT"
+    });
+
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 
 // Добавляем DbContext для PostgreSQL
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -38,6 +75,40 @@ builder.Services.AddScoped<IWorkoutHistorySetRepository, WorkoutHistorySetReposi
 
 // Регистрируем сервис валидации Telegram WebApp
 builder.Services.AddScoped<ITelegramWebAppValidationService, TelegramWebAppValidationService>();
+
+// Регистрируем сервис JWT токенов
+builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
+
+// Регистрируем фоновый сервис для автоматического завершения тренировок
+builder.Services.AddHostedService<WorkoutAutoCompletionService>();
+
+// Настройка JWT аутентификации
+var jwtSecretKey = builder.Configuration["Jwt:SecretKey"] 
+    ?? throw new InvalidOperationException("Jwt:SecretKey is not configured");
+var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "SetRep.API";
+var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "SetRep.Client";
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecretKey)),
+        ValidateIssuer = true,
+        ValidIssuer = jwtIssuer,
+        ValidateAudience = true,
+        ValidAudience = jwtAudience,
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.Zero
+    };
+});
+
+builder.Services.AddAuthorization();
 
 // Настройка CORS для доступа из WebApp и MiniApp
 builder.Services.AddCors(options =>
@@ -89,6 +160,7 @@ if (!string.IsNullOrEmpty(httpsPort))
 
 app.UseCors("AllowWebApp");
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

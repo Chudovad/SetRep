@@ -40,11 +40,39 @@ jobs:
         run: |
           ssh -o StrictHostKeyChecking=no ${USER}@${HOST} bash -s -- <<EOF
             set -e
+            export DOCKER_BUILDKIT=1
+            export COMPOSE_DOCKER_CLI_BUILD=1
             cd "${{ secrets.DEPLOY_PATH }}"
             echo "[INFO] Current directory: \$(pwd)"
             echo "[INFO] Fetching code..."
             git fetch origin production
             git reset --hard origin/production
+
+            echo "[INFO] Setting up Docker Buildx..."
+            # Проверяем наличие buildx
+            if ! docker buildx version &> /dev/null; then
+              echo "[INFO] Docker Buildx not found, installing..."
+              mkdir -p ~/.docker/cli-plugins
+              if command -v curl &> /dev/null; then
+                curl -SL https://github.com/docker/buildx/releases/download/v0.12.1/buildx-v0.12.1.linux-amd64 -o ~/.docker/cli-plugins/docker-buildx
+                chmod +x ~/.docker/cli-plugins/docker-buildx
+                docker buildx install || true
+              fi
+            fi
+            
+            # Создаем или используем builder
+            if docker buildx version &> /dev/null; then
+              if docker buildx ls 2>/dev/null | grep -q "default"; then
+                echo "[INFO] Using existing default builder"
+                docker buildx use default || true
+              else
+                echo "[INFO] Creating default buildx builder..."
+                docker buildx create --name default --use --driver docker || true
+                docker buildx inspect --bootstrap default || true
+              fi
+            else
+              echo "[WARNING] Docker Buildx is not available. BuildKit cache will not work."
+            fi
 
             echo "[INFO] Stopping and removing old containers..."
             if command -v docker &> /dev/null && docker compose version &> /dev/null; then

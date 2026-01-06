@@ -90,6 +90,29 @@ public class TelegramWebAppService : ITelegramWebAppService
                 var result = await response.Content.ReadFromJsonAsync<TelegramWebAppValidationResponse>();
                 if (result != null && result.IsValid && result.Data != null)
                 {
+                    var loginRequest = new { TgWebAppData = tgWebAppData };
+                    var loginResponse = await _httpClient.PostAsJsonAsync("api/auth/login", loginRequest);
+                    
+                    if (loginResponse.IsSuccessStatusCode)
+                    {
+                        var loginResult = await loginResponse.Content.ReadFromJsonAsync<LoginResponse>();
+                        if (loginResult != null && !string.IsNullOrWhiteSpace(loginResult.Token))
+                        {
+                            result.Data.Token = loginResult.Token;
+                            _logger.LogInformation("Токен успешно получен через /api/auth/login. Длина токена: {TokenLength}", loginResult.Token.Length);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Токен не найден в ответе /api/auth/login");
+                        }
+                    }
+                    else
+                    {
+                        var errorContent = await loginResponse.Content.ReadAsStringAsync();
+                        _logger.LogWarning("Не удалось получить токен через /api/auth/login: {StatusCode}, Ответ: {ErrorContent}", 
+                            loginResponse.StatusCode, errorContent);
+                    }
+
                     return new TelegramWebAppValidationResult
                     {
                         IsValid = true,
@@ -186,6 +209,12 @@ public class TelegramWebAppService : ITelegramWebAppService
     {
         public bool IsValid { get; set; }
         public TelegramWebAppData? Data { get; set; }
+    }
+
+    private class LoginResponse
+    {
+        public string Token { get; set; } = string.Empty;
+        public object? User { get; set; }
     }
 
     private class ErrorResponse

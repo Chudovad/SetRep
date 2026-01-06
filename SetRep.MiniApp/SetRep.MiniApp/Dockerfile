@@ -12,11 +12,18 @@ EXPOSE 8081
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
+
+# Копируем файлы проектов для восстановления зависимостей
 COPY ["SetRep.MiniApp/SetRep.MiniApp/SetRep.MiniApp.csproj", "SetRep.MiniApp/SetRep.MiniApp/"]
 COPY ["SetRep.MiniApp/SetRep.MiniApp.Client/SetRep.MiniApp.Client.csproj", "SetRep.MiniApp/SetRep.MiniApp.Client/"]
 COPY ["SetRep.Core/SetRep.Core.csproj", "SetRep.Core/"]
 COPY ["SetRep.Shared/SetRep.Shared.csproj", "SetRep.Shared/"]
-RUN dotnet restore "./SetRep.MiniApp/SetRep.MiniApp/SetRep.MiniApp.csproj"
+
+# Восстанавливаем зависимости с кэшированием NuGet пакетов
+RUN --mount=type=cache,id=nuget,target=/root/.nuget/packages \
+    --mount=type=cache,id=nuget-http,target=/root/.local/share/NuGet \
+    dotnet restore "./SetRep.MiniApp/SetRep.MiniApp/SetRep.MiniApp.csproj" --verbosity normal
+
 COPY . .
 WORKDIR "/src/SetRep.MiniApp/SetRep.MiniApp"
 RUN dotnet build "./SetRep.MiniApp.csproj" -c $BUILD_CONFIGURATION -o /app/build

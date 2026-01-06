@@ -1,20 +1,35 @@
 @page "/exercises"
+@using SetRep.Core.ApiRequestServices
 @using SetRep.Core.Entities
 @using SetRep.Core.Enums
 @using SetRep.Core.Extensions
-@using SetRep.MiniApp.Components.Dialog
 @using SetRep.MiniApp.Client.Services
+@using SetRep.MiniApp.Components.Dialog
+@using static SetRep.MiniApp.Client.Services.InitializationHelper
 @rendermode InteractiveServer
-@inject HttpClient Http
+@inject IExerciseService ExerciseService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @inject ITelegramBackButtonService TelegramBackButtonService
+@inject ITelegramWebAppStateService TelegramWebAppStateService
+@inject IAppInitializationService AppInitializationService
 @implements IAsyncDisposable
 
 <PageTitle>SetRep - Упражнения</PageTitle>
 
 <div class="exercises-container">
+    <!-- Поле поиска -->
+    <MudTextField @bind-Value="searchQuery"
+                  Variant="Variant.Outlined"
+                  Placeholder="Поиск упражнений..."
+                  Adornment="Adornment.Start"
+                  AdornmentIcon="@Icons.Material.Filled.Search"
+                  IconSize="Size.Medium"
+                  Class="mb-4 search-field"
+                  Immediate="true">
+    </MudTextField>
+    
     <!-- Кнопка добавления упражнения -->
     <MudButton Variant="Variant.Filled" 
                Color="Color.Primary" 
@@ -59,9 +74,9 @@
             </MudCardContent>
         </MudCard>
     }
-    else if (exercises.Any())
+    else if (filteredExercises.Any())
     {
-        @foreach (var exercise in exercises)
+        @foreach (var exercise in filteredExercises)
         {
             <div @onclick="() => ViewExercise(exercise.Id)" class="exercise-card-wrapper">
                 <MudCard Elevation="2" Class="mb-3 exercise-item-card">
@@ -72,7 +87,7 @@
                                 @if (!string.IsNullOrWhiteSpace(exercise.Description))
                                 {
                                     <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
-                                        @exercise.Description
+                                        @TruncateDescription(exercise.Description)
                                     </MudText>
                                 }
                                 <div class="exercise-item-meta">
@@ -192,23 +207,57 @@
         text-transform: none;
         font-weight: 500;
     }
+
+    .search-field {
+        border-radius: 12px;
+    }
 </style>
 
 @code {
-    private List<Exercise> exercises = new();
+    private List<Exercise> allExercises = new();
+    private string searchQuery = string.Empty;
     private bool isLoading = true;
     private string? errorMessage;
 
-    protected override async Task OnInitializedAsync()
+    private IEnumerable<Exercise> filteredExercises
     {
-        await LoadExercises();
+        get
+        {
+            Guid? currentUserId = null;
+            if (TelegramWebAppStateService?.ValidationResult?.Data?.User != null)
+            {
+                currentUserId = TelegramWebAppStateService.ValidationResult.Data.User.Id;
+            }
+
+            var availableExercises = allExercises.Where(e =>
+                e.IsSystem || (currentUserId.HasValue && e.CreatedByUserId == currentUserId.Value)
+            );
+
+            var sortedExercises = availableExercises.OrderBy(e => e.IsSystem ? 1 : 0)
+                                                   .ThenBy(e => e.Name);
+
+            if (string.IsNullOrWhiteSpace(searchQuery))
+                return sortedExercises;
+
+            var query = searchQuery.Trim().ToLowerInvariant();
+            return sortedExercises.Where(e =>
+                e.Name.ToLowerInvariant().Contains(query) ||
+                (!string.IsNullOrWhiteSpace(e.Description) && 
+                 e.Description.ToLowerInvariant().Contains(query)) ||
+                (e.MuscleGroup.HasValue && 
+                 e.MuscleGroup.Value.GetDescription().ToLowerInvariant().Contains(query))
+            );
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            await TelegramBackButtonService.ShowAsync();
+            await WaitForInitializationAsync(AppInitializationService);
+            await TelegramBackButtonService.HideAsync();
+            await LoadExercises();
+            StateHasChanged();
         }
     }
 
@@ -216,49 +265,35 @@
     {
         isLoading = true;
         errorMessage = null;
-        
+
         try
         {
-            var response = await Http.GetAsync("api/exercises");
-            
-            if (response.IsSuccessStatusCode)
+            var data = await ExerciseService.GetExercisesAsync();
+            if (data != null)
             {
-                var data = await response.Content.ReadFromJsonAsync<List<Exercise>>();
-                exercises = data ?? new List<Exercise>();
+                allExercises = data;
             }
             else
             {
-                var statusCode = (int)response.StatusCode;
-                var statusText = response.StatusCode.ToString();
-                
-                errorMessage = statusCode switch
-                {
-                    502 => "Сервер API недоступен (Bad Gateway). Убедитесь, что API сервер запущен и доступен.",
-                    503 => "Сервис временно недоступен. Попробуйте позже.",
-                    404 => "Эндпоинт API не найден. Проверьте конфигурацию API URL.",
-                    401 => "Требуется авторизация для доступа к API.",
-                    403 => "Доступ запрещен.",
-                    _ => $"Ошибка при загрузке упражнений: {statusText} (код {statusCode})"
-                };
-                
-                exercises = new List<Exercise>();
+                errorMessage = "Не удалось загрузить упражнения. Проверьте подключение к API.";
+                allExercises = new List<Exercise>();
             }
         }
         catch (HttpRequestException ex)
         {
             errorMessage = $"Ошибка сети при подключении к API: {ex.Message}. " +
                           "Убедитесь, что API сервер запущен и доступен.";
-            exercises = new List<Exercise>();
+            allExercises = new List<Exercise>();
         }
         catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
         {
             errorMessage = "Превышено время ожидания ответа от API. Сервер может быть перегружен или недоступен.";
-            exercises = new List<Exercise>();
+            allExercises = new List<Exercise>();
         }
         catch (Exception ex)
         {
             errorMessage = $"Не удалось загрузить упражнения: {ex.Message}";
-            exercises = new List<Exercise>();
+            allExercises = new List<Exercise>();
         }
         finally
         {
@@ -275,14 +310,13 @@
             MaxWidth = MaxWidth.Small, 
             FullWidth = true 
         };
-        
+
         var dialogReference = await DialogService.ShowAsync<AddExerciseDialog>("Добавить упражнение", parameters, options);
         var result = await dialogReference.Result;
-        
+
         if (!result.Canceled && result.Data is Exercise createdExercise)
         {
-            exercises.Insert(0, createdExercise);
-            Snackbar.Add("Упражнение успешно добавлено", Severity.Success);
+            allExercises.Insert(0, createdExercise);
             StateHasChanged();
         }
     }
@@ -292,9 +326,21 @@
         Navigation.NavigateTo($"/exercises/{exerciseId}");
     }
 
+    private string TruncateDescription(string description)
+    {
+        if (string.IsNullOrWhiteSpace(description))
+            return string.Empty;
+
+        const int maxLength = 50;
+        if (description.Length <= maxLength)
+            return description;
+
+        return description.Substring(0, maxLength) + "...";
+    }
+
     public async ValueTask DisposeAsync()
     {
-        await TelegramBackButtonService.HideAsync();
+        
     }
 }
 

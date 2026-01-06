@@ -1,12 +1,15 @@
+@using SetRep.Core.ApiRequestServices
 @using SetRep.MiniApp.Client.Services
 @using SetRep.Shared.DTO
 @using SetRep.Shared.Telegram
-@using System.Net.Http.Json
 @using System.Text.Json
+@using Microsoft.JSInterop
 
 @inject ITelegramWebAppService? TelegramWebAppService
 @inject ITelegramWebAppStateService? TelegramWebAppStateService
-@inject HttpClient HttpClient
+@inject IAppInitializationService? AppInitializationService
+@inject IUserService? UserService
+@inject IJSRuntime JSRuntime
 @inject ILogger<TelegramWebAppInitializer>? Logger
 @implements IAsyncDisposable
 @rendermode InteractiveServer
@@ -18,39 +21,105 @@
     {
         if (firstRender && TelegramWebAppService != null && TelegramWebAppStateService != null)
         {
-            try
+            await InitializeApplicationAsync();
+        }
+    }
+
+    private async Task InitializeApplicationAsync()
+    {
+        try
+        {
+            AppInitializationService?.SetInitializing(true);
+            Logger?.LogInformation("Начало валидации Telegram WebApp данных");
+
+            // Валидация Telegram WebApp
+            var validationResult = await TelegramWebAppService.GetAndValidateAsync();
+
+            if (!validationResult.IsValid)
             {
-                Logger?.LogInformation("Начало валидации Telegram WebApp данных");
-                var validationResult = await TelegramWebAppService.GetAndValidateAsync();
+                Logger?.LogWarning("Ошибка валидации Telegram WebApp данных: {Error}",
+                    validationResult.ErrorMessage);
 
-                if (validationResult.IsValid && validationResult.Data?.User != null)
-                {
-                    Logger?.LogInformation("Telegram WebApp данные успешно валидированы. User ID: {UserId}", 
-                        validationResult.Data.User.TelegramId);
-
-                    await EnsureUserExistsAsync(validationResult.Data.User);
-                }
-                else
-                {
-                    Logger?.LogWarning("Ошибка валидации Telegram WebApp данных: {Error}", 
-                        validationResult.ErrorMessage);
-                }
-
-                // Сохраняем результат в сервисе состояния
                 TelegramWebAppStateService.SetValidationResult(validationResult);
+                AppInitializationService?.SetInitializing(false);
+                return;
             }
-            catch (Exception ex)
+
+            if (validationResult.Data?.User == null)
             {
-                Logger?.LogError(ex, "Критическая ошибка при валидации Telegram WebApp данных");
-                if (TelegramWebAppStateService != null)
+                Logger?.LogWarning("Данные пользователя отсутствуют в результате валидации");
+                TelegramWebAppStateService.SetValidationResult(new TelegramWebAppValidationResult
                 {
-                    TelegramWebAppStateService.SetValidationResult(new TelegramWebAppValidationResult
-                    {
-                        IsValid = false,
-                        ErrorMessage = $"Критическая ошибка: {ex.Message}"
-                    });
-                }
+                    IsValid = false,
+                    ErrorMessage = "Данные пользователя отсутствуют"
+                });
+                AppInitializationService?.SetInitializing(false);
+                return;
             }
+
+            Logger?.LogInformation("Telegram WebApp данные успешно валидированы. User ID: {UserId}",
+                validationResult.Data.User.TelegramId);
+
+            // Сохраняем успешный результат в сервисе состояния
+            TelegramWebAppStateService.SetValidationResult(validationResult);
+
+            // Валидация пользователя
+            await EnsureUserExistsAsync(validationResult.Data.User);
+
+            // Настройка темы и включение кнопки назад параллельно
+            var themeTask = InitializeThemeAsync();
+            // Завершаем инициализацию
+            AppInitializationService?.SetInitializing(false);
+            Logger?.LogInformation("Инициализация приложения завершена успешно");
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogError(ex, "Критическая ошибка при инициализации приложения");
+            if (TelegramWebAppStateService != null)
+            {
+                TelegramWebAppStateService.SetValidationResult(new TelegramWebAppValidationResult
+                {
+                    IsValid = false,
+                    ErrorMessage = $"Критическая ошибка: {ex.Message}"
+                });
+            }
+            AppInitializationService?.SetInitializing(false);
+        }
+    }
+
+    private async Task InitializeThemeAsync()
+    {
+        try
+        {
+            var startTime = DateTime.UtcNow;
+            var timeout = TimeSpan.FromSeconds(1);
+
+            while (DateTime.UtcNow - startTime < timeout)
+            {
+                try
+                {
+                    var isReady = await JSRuntime.InvokeAsync<bool>("telegramThemeHelper.isReady");
+
+                    if (isReady)
+                    {
+                        var theme = await JSRuntime.InvokeAsync<string>("telegramThemeHelper.getTheme");
+                        Logger?.LogInformation("Загружена тема Telegram: {Theme}", theme);
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogDebug(ex, "Ожидание загрузки веб-приложения Telegram...");
+                }
+
+                await Task.Delay(50);
+            }
+
+            Logger?.LogWarning("Веб-приложение Telegram не загрузилось вовремя, используется тема по умолчанию");
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogError(ex, "Ошибка при инициализации темы Telegram");
         }
     }
 
@@ -58,18 +127,21 @@
     {
         try
         {
-            UserDto? foundUser = null;
+            if (UserService == null)
+            {
+                Logger?.LogError("IUserService не доступен");
+                return;
+            }
 
             // Сначала ищем по TelegramId
-            var response = await HttpClient.GetAsync($"api/Users/telegram/{telegramUser.TelegramId}");
+            var foundUser = await UserService.GetUserByTelegramIdAsync(telegramUser.TelegramId);
 
-            if (response.IsSuccessStatusCode)
+            if (foundUser != null)
             {
-                foundUser = await response.Content.ReadFromJsonAsync<UserDto>();
                 telegramUser.Id = foundUser.Id;
                 Logger?.LogDebug("Пользователь найден по Telegram ID {TelegramId}", telegramUser.TelegramId);
             }
-            else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            else
             {
                 Logger?.LogInformation("Пользователь с Telegram ID {TelegramId} не найден, создаем нового", telegramUser.TelegramId);
 
@@ -84,21 +156,19 @@
                     CreatedAt = DateTime.UtcNow
                 };
 
-                var createResponse = await HttpClient.PostAsJsonAsync("api/Users", newUser);
+                var createdUser = await UserService.CreateUserAsync(newUser);
 
-                if (createResponse.IsSuccessStatusCode)
+                if (createdUser != null)
                 {
-                    telegramUser.Id = newUser.Id;
-                    Logger?.LogInformation("Пользователь успешно создан с ID {UserId} и сохранен в сервис состояния", newUser.Id);
+                    telegramUser.Id = createdUser.Id;
+                    Logger?.LogInformation("Пользователь успешно создан с ID {UserId} и сохранен в сервис состояния", createdUser.Id);
                 }
                 else
                 {
-                    var errorContent = await createResponse.Content.ReadAsStringAsync();
-                    Logger?.LogError("Ошибка при создании пользователя: {StatusCode} - {Error}",
-                        createResponse.StatusCode, errorContent);
+                    Logger?.LogError("Ошибка при создании пользователя через сервис");
                 }
             }
-            
+
         }
         catch (Exception ex)
         {
@@ -108,7 +178,6 @@
 
     public async ValueTask DisposeAsync()
     {
-        // Очистка ресурсов при необходимости
         await Task.CompletedTask;
     }
 }

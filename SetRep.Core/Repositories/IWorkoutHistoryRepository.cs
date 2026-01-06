@@ -26,4 +26,9 @@ public interface IWorkoutHistoryRepository : IRepository<WorkoutHistory>
     /// Получить историю тренировок по шаблону тренировки
     /// </summary>
     Task<IEnumerable<WorkoutHistory>> GetByWorkoutIdAsync(Guid workoutId);
+
+    /// <summary>
+    /// Получить активные тренировки, начатые до указанной даты
+    /// </summary>
+    Task<IEnumerable<WorkoutHistory>> GetActiveWorkoutsStartedBeforeAsync(DateTime date);
 }

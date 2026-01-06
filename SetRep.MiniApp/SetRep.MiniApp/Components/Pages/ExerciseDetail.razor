@@ -1,12 +1,20 @@
 @page "/exercises/{ExerciseId:guid}"
+@using SetRep.Core.ApiRequestServices
 @using SetRep.Core.Entities
 @using SetRep.Core.Enums
 @using SetRep.Core.Extensions
 @using SetRep.MiniApp.Client.Services
+@using SetRep.MiniApp.Components.Dialog
+@using MudBlazor
+@using static SetRep.MiniApp.Client.Services.InitializationHelper
 @rendermode InteractiveServer
-@inject HttpClient Http
+@inject IExerciseService ExerciseService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @inject ITelegramBackButtonService TelegramBackButtonService
+@inject ITelegramWebAppStateService TelegramWebAppStateService
+@inject IAppInitializationService AppInitializationService
 @implements IAsyncDisposable
 
 <PageTitle>SetRep - @(exercise?.Name ?? "Упражнение")</PageTitle>
@@ -39,14 +47,14 @@ else if (errorMessage != null)
                     <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="mb-4">
                         @errorMessage
                     </MudText>
-                    <MudButton Variant="Variant.Filled" 
-                               Color="Color.Primary" 
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
                                StartIcon="@Icons.Material.Filled.Refresh"
                                OnClick="LoadExercise">
                         Попробовать снова
                     </MudButton>
-                    <MudButton Variant="Variant.Text" 
-                               Color="Color.Primary" 
+                    <MudButton Variant="Variant.Text"
+                               Color="Color.Primary"
                                Class="mt-2"
                                StartIcon="@Icons.Material.Filled.ArrowBack"
                                OnClick="GoBack">
@@ -65,7 +73,20 @@ else if (exercise != null)
         {
             <MudCard Elevation="2" Class="mb-4 exercise-image-card">
                 <MudCardContent Class="pa-0">
-                    <img src="@exercise.Image" alt="@exercise.Name" class="exercise-image" />
+                    @if (exercise.Image.EndsWith(".mp4"))
+                    {
+                        <video src="@exercise.Image"
+                               autoplay
+                               loop
+                               playsinline
+                               muted
+                               class="exercise-video"
+                               title="@exercise.Name"></video>
+                    }
+                    else
+                    {
+                        <img src="@exercise.Image" alt="@exercise.Name" class="exercise-image" />
+                    }
                 </MudCardContent>
             </MudCard>
         }
@@ -86,8 +107,32 @@ else if (exercise != null)
         <!-- Название и описание -->
         <MudCard Elevation="2" Class="mb-4 exercise-info-card">
             <MudCardContent>
-                <MudText Typo="Typo.h4" Class="mb-3">@exercise.Name</MudText>
-                
+                <div class="exercise-header">
+                    <MudText Typo="Typo.h5" Class="exercise-title">@exercise.Name</MudText>
+                    @if (CanEditExercise)
+                    {
+                        <div class="exercise-actions">
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                           Color="Color.Primary"
+                                           Size="Size.Medium"
+                                           OnClick="OpenEditDialog"
+                                           Disabled="isDeleting"
+                                           Class="exercise-action-btn" />
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                           Color="Color.Error"
+                                           Size="Size.Medium"
+                                           OnClick="OpenDeleteDialog"
+                                           Disabled="isDeleting"
+                                           Class="exercise-action-btn">
+                                @if (isDeleting)
+                                {
+                                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                }
+                            </MudIconButton>
+                        </div>
+                    }
+                </div>
+
                 @if (!string.IsNullOrWhiteSpace(exercise.Description))
                 {
                     <MudText Typo="Typo.body2" Color="Color.Secondary" Class="exercise-description">
@@ -114,6 +159,21 @@ else if (exercise != null)
                 }
             </MudCardContent>
         </MudCard>
+
+        @if (!string.IsNullOrEmpty(exercise.VideoUrl))
+        {
+            <MudExpansionPanels Class="mb-4">
+                <MudExpansionPanel Text="Как делать упражнение">
+                    <video src="@exercise.VideoUrl"
+                           loop
+                           playsinline
+                           muted
+                           controls
+                           class="exercise-video"
+                           title="@exercise.Name"></video>
+                </MudExpansionPanel>
+            </MudExpansionPanels>
+        }
     </div>
 }
 
@@ -122,33 +182,43 @@ else if (exercise != null)
         max-width: 100%;
     }
 
-    .exercise-image-card {
-        border-radius: 12px;
-        overflow: hidden;
+    .exercise-image {
+        max-height: 400px;
     }
 
-    .exercise-image {
-        width: 100%;
-        height: auto;
-        display: block;
+    .exercise-video {
         max-height: 400px;
-        object-fit: contain;
-        background-color: #f5f5f5;
     }
 
     .exercise-image-placeholder {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
         padding: 48px 24px;
         min-height: 200px;
-        background-color: #f5f5f5;
-        border-radius: 12px;
     }
 
     .exercise-info-card, .exercise-muscle-group-card {
         border-radius: 12px;
+    }
+
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+
+    .exercise-title {
+        flex: 1;
+        margin: 0;
+    }
+
+    .exercise-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .exercise-action-btn {
+        min-width: 40px;
     }
 
     .exercise-description {
@@ -156,17 +226,6 @@ else if (exercise != null)
         word-wrap: break-word;
     }
 
-    .loading-card, .error-card {
-        border-radius: 12px;
-        margin-top: 32px;
-    }
-
-    .loading-state, .error-state {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 24px;
-    }
 </style>
 
 @code {
@@ -174,18 +233,35 @@ else if (exercise != null)
 
     private Exercise? exercise;
     private bool isLoading = true;
+    private bool isDeleting = false;
     private string? errorMessage;
 
-    protected override async Task OnInitializedAsync()
+    private bool CanEditExercise
     {
-        await LoadExercise();
+        get
+        {
+            if (exercise == null || exercise.IsSystem)
+                return false;
+
+            // Проверяем, что упражнение создано текущим пользователем
+            Guid? currentUserId = null;
+            if (TelegramWebAppStateService?.ValidationResult?.Data?.User != null)
+            {
+                currentUserId = TelegramWebAppStateService.ValidationResult.Data.User.Id;
+            }
+
+            return currentUserId.HasValue && exercise.CreatedByUserId == currentUserId.Value;
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
+            await WaitForInitializationAsync(AppInitializationService);
             await TelegramBackButtonService.ShowAsync();
+            await LoadExercise();
+            StateHasChanged();
         }
     }
 
@@ -193,31 +269,13 @@ else if (exercise != null)
     {
         isLoading = true;
         errorMessage = null;
-        
+
         try
         {
-            var response = await Http.GetAsync($"api/exercises/{ExerciseId}");
-            
-            if (response.IsSuccessStatusCode)
+            exercise = await ExerciseService.GetExerciseByIdAsync(ExerciseId);
+            if (exercise == null)
             {
-                exercise = await response.Content.ReadFromJsonAsync<Exercise>();
-            }
-            else
-            {
-                var statusCode = (int)response.StatusCode;
-                var statusText = response.StatusCode.ToString();
-                
-                errorMessage = statusCode switch
-                {
-                    404 => "Упражнение не найдено.",
-                    502 => "Сервер API недоступен (Bad Gateway). Убедитесь, что API сервер запущен и доступен.",
-                    503 => "Сервис временно недоступен. Попробуйте позже.",
-                    401 => "Требуется авторизация для доступа к API.",
-                    403 => "Доступ запрещен.",
-                    _ => $"Ошибка при загрузке упражнения: {statusText} (код {statusCode})"
-                };
-                
-                exercise = null;
+                errorMessage = "Упражнение не найдено.";
             }
         }
         catch (HttpRequestException ex)
@@ -247,8 +305,98 @@ else if (exercise != null)
         Navigation.NavigateTo("/exercises");
     }
 
+    private async Task OpenEditDialog()
+    {
+        if (exercise == null)
+            return;
+
+        var parameters = new DialogParameters<EditExerciseDialog>
+        {
+            { nameof(EditExerciseDialog.Exercise), exercise }
+        };
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialogReference = await DialogService.ShowAsync<EditExerciseDialog>("Редактировать упражнение", parameters, options);
+        var result = await dialogReference.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadExercise();
+        }
+    }
+
+    private async Task OpenDeleteDialog()
+    {
+        if (exercise == null)
+            return;
+
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { nameof(ConfirmDialog.Title), "Подтверждение удаления" },
+            { nameof(ConfirmDialog.ContentText), $"Вы уверены, что хотите удалить упражнение \"{exercise.Name}\"? Это действие нельзя отменить." },
+            { nameof(ConfirmDialog.ButtonText), "Удалить" },
+            { nameof(ConfirmDialog.Color), Color.Error }
+        };
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialogReference = await DialogService.ShowAsync<ConfirmDialog>("Подтверждение удаления", parameters, options);
+        var result = await dialogReference.Result;
+
+        if (!result.Canceled)
+        {
+            await DeleteExercise();
+        }
+    }
+
+    private async Task DeleteExercise()
+    {
+        if (exercise == null)
+            return;
+
+        isDeleting = true;
+        StateHasChanged();
+
+        try
+        {
+            var success = await ExerciseService.DeleteExerciseAsync(exercise.Id);
+            if (success)
+            {
+                Snackbar.Add("Упражнение успешно удалено", Severity.Success);
+                await Task.Delay(500); // Небольшая задержка для показа сообщения
+                Navigation.NavigateTo("/exercises");
+            }
+            else
+            {
+                Snackbar.Add("Ошибка при удалении упражнения. Проверьте подключение к API.", Severity.Error);
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            Snackbar.Add($"Ошибка сети: {ex.Message}", Severity.Error);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Не удалось удалить упражнение: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isDeleting = false;
+            StateHasChanged();
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
-        await TelegramBackButtonService.HideAsync();
+        
     }
 }

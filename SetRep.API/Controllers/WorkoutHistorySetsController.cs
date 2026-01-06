@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SetRep.Core.Entities;
 using SetRep.Core.Repositories;
@@ -7,6 +8,7 @@ namespace SetRep.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class WorkoutHistorySetsController : ControllerBase
 {
     private readonly IWorkoutHistorySetRepository _workoutHistorySetRepository;
@@ -114,6 +116,31 @@ public class WorkoutHistorySetsController : ControllerBase
         existing.IsCompleted = dto.IsCompleted;
         existing.Notes = dto.Notes;
         existing.CompletedAt = dto.CompletedAt;
+        existing.UpdatedAt = DateTime.UtcNow;
+
+        await _workoutHistorySetRepository.UpdateAsync(existing);
+        await _workoutHistorySetRepository.SaveChangesAsync();
+
+        return NoContent();
+    }
+
+    /// <summary>
+    /// Обновить статус выполнения подхода
+    /// </summary>
+    [HttpPatch("{id}/complete")]
+    public async Task<IActionResult> ToggleCompletion(Guid id, [FromBody] bool isCompleted)
+    {
+        var existing = await _workoutHistorySetRepository.GetByIdAsync(id);
+        if (existing == null)
+        {
+            return NotFound();
+        }
+
+        existing.IsCompleted = isCompleted;
+        if (isCompleted && existing.CompletedAt == default)
+        {
+            existing.CompletedAt = DateTime.UtcNow;
+        }
         existing.UpdatedAt = DateTime.UtcNow;
 
         await _workoutHistorySetRepository.UpdateAsync(existing);
