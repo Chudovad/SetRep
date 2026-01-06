@@ -19,6 +19,18 @@
 <PageTitle>SetRep - Упражнения</PageTitle>
 
 <div class="exercises-container">
+    <!-- Заголовок с кнопкой добавления -->
+    <div class="d-flex align-center mb-4 header-with-action">
+        <MudText Typo="Typo.h5" Class="flex-grow-1 mb-0">
+            Выберите группу мышц
+        </MudText>
+        <MudIconButton Icon="@Icons.Material.Filled.Add" 
+                       Color="Color.Primary" 
+                       Variant="Variant.Text"
+                       OnClick="OpenAddExerciseDialog"
+                       Class="add-exercise-icon-btn" />
+    </div>
+    
     <!-- Поле поиска -->
     <MudTextField @bind-Value="searchQuery"
                   Variant="Variant.Outlined"
@@ -30,15 +42,6 @@
                   Immediate="true">
     </MudTextField>
     
-    <!-- Кнопка добавления упражнения -->
-    <MudButton Variant="Variant.Filled" 
-               Color="Color.Primary" 
-               FullWidth="true" 
-               Class="mb-4 add-exercise-btn"
-               StartIcon="@Icons.Material.Filled.Add"
-               OnClick="OpenAddExerciseDialog">
-        Добавить упражнение
-    </MudButton>
     @if (isLoading)
     {
         <MudCard Elevation="2" Class="loading-card">
@@ -46,7 +49,7 @@
                 <div class="loading-state">
                     <MudProgressCircular Indeterminate="true" Size="Size.Large" Class="mb-4" />
                     <MudText Typo="Typo.body1" Color="Color.Secondary" Align="Align.Center">
-                        Загрузка упражнений...
+                        @(string.IsNullOrWhiteSpace(searchQuery) ? "Загрузка групп мышц..." : "Загрузка упражнений...")
                     </MudText>
                 </div>
             </MudCardContent>
@@ -74,39 +77,83 @@
             </MudCardContent>
         </MudCard>
     }
-    else if (filteredExercises.Any())
+    else if (!string.IsNullOrWhiteSpace(searchQuery))
     {
-        @foreach (var exercise in filteredExercises)
+        <!-- Режим поиска - показываем упражнения -->
+        @if (filteredExercises.Any())
         {
-            <div @onclick="() => ViewExercise(exercise.Id)" class="exercise-card-wrapper">
-                <MudCard Elevation="2" Class="mb-3 exercise-item-card">
-                    <MudCardContent>
-                        <div class="exercise-item-header">
-                            <div class="exercise-item-info">
-                                <MudText Typo="Typo.h6" Class="mb-1">@exercise.Name</MudText>
-                                @if (!string.IsNullOrWhiteSpace(exercise.Description))
-                                {
-                                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
-                                        @TruncateDescription(exercise.Description)
-                                    </MudText>
-                                }
-                                <div class="exercise-item-meta">
-                                    @if (exercise.MuscleGroup.HasValue)
+            @foreach (var exercise in filteredExercises)
+            {
+                <div @onclick="() => ViewExercise(exercise.Id)" class="exercise-card-wrapper">
+                    <MudCard Elevation="2" Class="mb-3 exercise-item-card">
+                        <MudCardContent>
+                            <div class="exercise-item-header">
+                                <div class="exercise-item-info">
+                                    <MudText Typo="Typo.h6" Class="mb-1">@exercise.Name</MudText>
+                                    @if (!string.IsNullOrWhiteSpace(exercise.Description))
                                     {
-                                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text">
-                                            @exercise.MuscleGroup.Value.GetDescription()
-                                        </MudChip>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
+                                            @TruncateDescription(exercise.Description)
+                                        </MudText>
                                     }
-                                    @if (exercise.IsSystem)
-                                    {
-                                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text">
-                                            Системное
-                                        </MudChip>
-                                    }
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                        Ед. изм.: @exercise.WeightUnit
-                                    </MudText>
+                                    <div class="exercise-item-meta">
+                                        @if (exercise.MuscleGroup.HasValue)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text">
+                                                @exercise.MuscleGroup.Value.GetDescription()
+                                            </MudChip>
+                                        }
+                                        @if (exercise.IsSystem)
+                                        {
+                                            <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text">
+                                                Системное
+                                            </MudChip>
+                                        }
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                            Ед. изм.: @exercise.WeightUnit
+                                        </MudText>
+                                    </div>
                                 </div>
+                                <MudIcon Icon="@Icons.Material.Filled.ChevronRight" 
+                                         Color="Color.Secondary" 
+                                         Class="exercise-arrow-icon" />
+                            </div>
+                        </MudCardContent>
+                    </MudCard>
+                </div>
+            }
+        }
+        else
+        {
+            <MudCard Elevation="2" Class="empty-state-card">
+                <MudCardContent>
+                    <div class="empty-state">
+                        <MudIcon Icon="@Icons.Material.Filled.FitnessCenter" Size="Size.Large" Color="Color.Secondary" Class="mb-4" />
+                        <MudText Typo="Typo.h6" Align="Align.Center" Class="mb-2">
+                            Ничего не найдено
+                        </MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
+                            Попробуйте изменить запрос
+                        </MudText>
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        }
+    }
+    else if (availableMuscleGroups.Any())
+    {
+        <!-- Режим групп мышц -->
+        @foreach (var group in availableMuscleGroups)
+        {
+            <div @onclick="() => NavigateToGroup((int)group.MuscleGroup)" class="muscle-group-card-wrapper">
+                <MudCard Elevation="2" Class="mb-3 muscle-group-card">
+                    <MudCardContent>
+                        <div class="muscle-group-header">
+                            <div class="muscle-group-info">
+                                <MudText Typo="Typo.h6" Class="mb-1">@group.MuscleGroup.GetDescription()</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                    @group.Count @GetExerciseCountText(group.Count)
+                                </MudText>
                             </div>
                             <MudIcon Icon="@Icons.Material.Filled.ChevronRight" 
                                      Color="Color.Secondary" 
@@ -124,7 +171,7 @@
                 <div class="empty-state">
                     <MudIcon Icon="@Icons.Material.Filled.FitnessCenter" Size="Size.Large" Color="Color.Secondary" Class="mb-4" />
                     <MudText Typo="Typo.h6" Align="Align.Center" Class="mb-2">
-                        Нет упражнений
+                        Нет групп мышц
                     </MudText>
                     <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
                         Упражнения пока не добавлены
@@ -138,6 +185,30 @@
 <style>
     .exercises-container {
         max-width: 100%;
+    }
+
+    .muscle-group-card-wrapper {
+        cursor: pointer;
+    }
+
+    .muscle-group-card {
+        border-radius: 12px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .muscle-group-card-wrapper:hover .muscle-group-card {
+        transform: translateY(-2px);
+    }
+
+    .muscle-group-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .muscle-group-info {
+        flex: 1;
     }
 
     .exercise-card-wrapper {
@@ -164,17 +235,17 @@
         flex: 1;
     }
 
-    .exercise-arrow-icon {
-        flex-shrink: 0;
-        margin-top: 4px;
-    }
-
     .exercise-item-meta {
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
         align-items: center;
         margin-top: 8px;
+    }
+
+    .exercise-arrow-icon {
+        flex-shrink: 0;
+        margin-top: 4px;
     }
 
     .empty-state-card {
@@ -201,11 +272,12 @@
         padding: 24px;
     }
 
-    .add-exercise-btn {
-        height: 48px;
-        border-radius: 12px;
-        text-transform: none;
-        font-weight: 500;
+    .header-with-action {
+        gap: 8px;
+    }
+
+    .add-exercise-icon-btn {
+        flex-shrink: 0;
     }
 
     .search-field {
@@ -219,7 +291,13 @@
     private bool isLoading = true;
     private string? errorMessage;
 
-    private IEnumerable<Exercise> filteredExercises
+    private class MuscleGroupInfo
+    {
+        public MuscleGroup MuscleGroup { get; set; }
+        public int Count { get; set; }
+    }
+
+    private IEnumerable<MuscleGroupInfo> availableMuscleGroups
     {
         get
         {
@@ -233,20 +311,51 @@
                 e.IsSystem || (currentUserId.HasValue && e.CreatedByUserId == currentUserId.Value)
             );
 
-            var sortedExercises = availableExercises.OrderBy(e => e.IsSystem ? 1 : 0)
-                                                   .ThenBy(e => e.Name);
+            var grouped = availableExercises
+                .Where(e => e.MuscleGroup.HasValue)
+                .GroupBy(e => e.MuscleGroup.Value)
+                .Select(g => new MuscleGroupInfo
+                {
+                    MuscleGroup = g.Key,
+                    Count = g.Count()
+                })
+                .OrderBy(g => g.MuscleGroup.GetDescription())
+                .ToList();
 
+            return grouped;
+        }
+    }
+
+    private IEnumerable<Exercise> filteredExercises
+    {
+        get
+        {
             if (string.IsNullOrWhiteSpace(searchQuery))
-                return sortedExercises;
+                return Enumerable.Empty<Exercise>();
 
             var query = searchQuery.Trim().ToLowerInvariant();
-            return sortedExercises.Where(e =>
+            
+            Guid? currentUserId = null;
+            if (TelegramWebAppStateService?.ValidationResult?.Data?.User != null)
+            {
+                currentUserId = TelegramWebAppStateService.ValidationResult.Data.User.Id;
+            }
+
+            var availableExercises = allExercises.Where(e =>
+                e.IsSystem || (currentUserId.HasValue && e.CreatedByUserId == currentUserId.Value)
+            );
+
+            var matchingExercises = availableExercises.Where(e =>
                 e.Name.ToLowerInvariant().Contains(query) ||
                 (!string.IsNullOrWhiteSpace(e.Description) && 
                  e.Description.ToLowerInvariant().Contains(query)) ||
                 (e.MuscleGroup.HasValue && 
                  e.MuscleGroup.Value.GetDescription().ToLowerInvariant().Contains(query))
             );
+
+            return matchingExercises.OrderBy(e => e.IsSystem ? 1 : 0)
+                                   .ThenBy(e => e.Name)
+                                   .ToList();
         }
     }
 
@@ -321,6 +430,11 @@
         }
     }
 
+    private void NavigateToGroup(int muscleGroupId)
+    {
+        Navigation.NavigateTo($"/exercises/group/{muscleGroupId}");
+    }
+
     private void ViewExercise(Guid exerciseId)
     {
         Navigation.NavigateTo($"/exercises/{exerciseId}");
@@ -338,9 +452,17 @@
         return description.Substring(0, maxLength) + "...";
     }
 
+    private string GetExerciseCountText(int count)
+    {
+        if (count % 10 == 1 && count % 100 != 11)
+            return "упражнение";
+        if (count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 10 || count % 100 >= 20))
+            return "упражнения";
+        return "упражнений";
+    }
+
     public async ValueTask DisposeAsync()
     {
         
     }
 }
-
