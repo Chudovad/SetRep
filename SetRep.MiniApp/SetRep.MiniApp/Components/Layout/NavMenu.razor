@@ -35,6 +35,11 @@
 </MudPaper>
 
 <style>
+    /* Добавляем отступ снизу для body, чтобы контент не залазил под меню */
+    body {
+        padding-bottom: 79px;
+    }
+
     .mobile-bottom-nav {
         position: fixed;
         bottom: 0;
@@ -45,11 +50,22 @@
         justify-content: space-around;
         align-items: center;
         padding: 0;
-        padding-bottom: 15px;
+        padding-bottom: env(safe-area-inset-bottom, 15px); /* Учитываем безопасную зону для iOS */
         background: var(--mud-palette-surface);
         border-top: 1px solid var(--mud-palette-divider);
         box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
         height: 79px;
+    }
+
+    /* Скрываем меню при появлении клавиатуры */
+    @@media (max-height: 500px) {
+        .mobile-bottom-nav {
+            display: none;
+        }
+
+        body {
+            padding-bottom: 0;
+        }
     }
 
     .nav-item {
@@ -128,7 +144,7 @@
     {
         var currentUri = Navigation.ToBaseRelativePath(Navigation.Uri);
         var routePath = route.TrimStart('/');
-        
+
         bool isActive;
         if (exactMatch)
         {
