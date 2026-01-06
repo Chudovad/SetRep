@@ -140,8 +140,6 @@ public class WorkoutsController : ControllerBase
             return NotFound();
         }
 
-        // Удаляем саму тренировку
-        // История тренировок сохранится, но WorkoutId будет установлен в null
         await _workoutRepository.DeleteAsync(workout);
         await _workoutRepository.SaveChangesAsync();
 
