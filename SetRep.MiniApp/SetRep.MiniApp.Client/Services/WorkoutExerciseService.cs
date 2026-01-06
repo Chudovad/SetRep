@@ -160,6 +160,27 @@ public class WorkoutExerciseService : IWorkoutExerciseService
     }
 
     /// <summary>
+    /// Обновить связь тренировки и упражнения
+    /// </summary>
+    public async Task<bool> UpdateWorkoutExerciseAsync(Guid workoutExerciseId, CreateWorkoutExerciseDto dto)
+    {
+        try
+        {
+            var request = new HttpRequestMessage(HttpMethod.Put, $"api/workoutexercises/{workoutExerciseId}")
+            {
+                Content = JsonContent.Create(dto)
+            };
+            request.AddBearerToken(_telegramWebAppStateService);
+            var response = await _httpClient.SendAsync(request);
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
     /// Удалить связь тренировки и упражнения
     /// </summary>
     public async Task<bool> DeleteWorkoutExerciseAsync(Guid workoutExerciseId)

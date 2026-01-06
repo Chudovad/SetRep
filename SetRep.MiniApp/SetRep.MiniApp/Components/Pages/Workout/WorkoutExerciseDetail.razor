@@ -107,6 +107,60 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
             </MudExpansionPanel>
         </MudExpansionPanels>
 
+        <!-- Заметки к упражнению в тренировке -->
+        <MudCard Elevation="2" Class="mb-4">
+            <MudCardContent>
+                <div class="d-flex align-center justify-space-between mb-3">
+                    <MudText Typo="Typo.h6">Заметки к упражнению</MudText>
+                    @if (!isEditingNotes)
+                    {
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit"
+                                       Color="Color.Primary"
+                                       OnClick="StartEditingNotes"
+                                       Size="Size.Small" />
+                    }
+                </div>
+                @if (isEditingNotes)
+                {
+                    <MudTextField T="string"
+                                 @bind-Value="exerciseNotes"
+                                 Label="Заметки"
+                                 Variant="Variant.Outlined"
+                                 Lines="3"
+                                 MaxLength="2000"
+                                 Class="mb-3" />
+                    <div class="d-flex gap-2">
+                        <MudButton Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.Save"
+                                   OnClick="SaveNotes"
+                                   Disabled="isSavingNotes">
+                            Сохранить
+                        </MudButton>
+                        <MudButton Variant="Variant.Text"
+                                   Color="Color.Default"
+                                   OnClick="CancelEditingNotes"
+                                   Disabled="isSavingNotes">
+                            Отмена
+                        </MudButton>
+                    </div>
+                }
+                else
+                {
+                    @if (!string.IsNullOrWhiteSpace(workoutExercise.Notes))
+                    {
+                        <MudText Typo="Typo.body1" Style="white-space: pre-wrap;">@workoutExercise.Notes</MudText>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            Заметок нет. Нажмите на кнопку редактирования, чтобы добавить заметку.
+                        </MudText>
+                    }
+                }
+            </MudCardContent>
+        </MudCard>
+
         <!-- Кнопка удаления упражнения из тренировки -->
         <MudCard Elevation="2" Class="mb-4">
             <MudCardContent>
@@ -128,7 +182,8 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
                     Reps="@newSetReps"
                     RepsChanged="@((int value) => newSetReps = value)"
                     IsAddingSet="@isAddingSet"
-                    OnAddSet="@AddSet" />
+                    OnAddSet="@AddSet"
+                    WeightStep="@GetWeightStep()" />
 
         <!-- Таблица подходов -->
         @if (sets != null && sets.Any())
@@ -152,7 +207,7 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
                                                      @bind-Value="editingWeight"
                                                      Variant="Variant.Outlined"
                                                      Min="0"
-                                                     Step="@((decimal?)0.5)"
+                                                     Step="@((decimal?)GetWeightStep())"
                                                      Immediate="true"
                                                      Style="width: 80px;"
                                                      Margin="Margin.Dense"
@@ -272,7 +327,10 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
     private bool isLoading = true;
     private bool isAddingSet = false;
     private bool isDeleting = false;
+    private bool isEditingNotes = false;
+    private bool isSavingNotes = false;
     private string? errorMessage;
+    private string exerciseNotes = string.Empty;
     private decimal? newSetWeight;
     private int newSetReps;
     private string weightLabel = "Вес (кг)";
@@ -312,6 +370,7 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
                 {
                     weightLabel = $"Вес ({workoutExercise.Exercise.WeightUnit})";
                 }
+                exerciseNotes = workoutExercise.Notes ?? string.Empty;
             }
             else if (workoutExercise == null)
             {
@@ -561,6 +620,65 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
             isDeleting = false;
             StateHasChanged();
         }
+    }
+
+    private void StartEditingNotes()
+    {
+        exerciseNotes = workoutExercise?.Notes ?? string.Empty;
+        isEditingNotes = true;
+    }
+
+    private void CancelEditingNotes()
+    {
+        exerciseNotes = workoutExercise?.Notes ?? string.Empty;
+        isEditingNotes = false;
+    }
+
+    private async Task SaveNotes()
+    {
+        if (workoutExercise == null || isSavingNotes)
+        {
+            return;
+        }
+
+        isSavingNotes = true;
+        StateHasChanged();
+
+        try
+        {
+            var updateDto = new CreateWorkoutExerciseDto
+            {
+                WorkoutId = workoutExercise.WorkoutId,
+                ExerciseId = workoutExercise.ExerciseId,
+                Order = workoutExercise.Order,
+                Notes = exerciseNotes
+            };
+
+            var success = await WorkoutExerciseService.UpdateWorkoutExerciseAsync(WorkoutExerciseId, updateDto);
+            if (success)
+            {
+                await LoadWorkoutExercise();
+                isEditingNotes = false;
+            }
+            else
+            {
+                Snackbar.Add("Ошибка при сохранении заметок", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSavingNotes = false;
+            StateHasChanged();
+        }
+    }
+
+    private decimal GetWeightStep()
+    {
+        return ExerciseStepHelper.GetWeightStep(workoutExercise?.Exercise?.MuscleGroup);
     }
 
     public async ValueTask DisposeAsync()
