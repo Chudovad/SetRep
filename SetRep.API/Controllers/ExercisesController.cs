@@ -11,11 +11,16 @@ namespace SetRep.API.Controllers;
 public class ExercisesController : ControllerBase
 {
     private readonly IExerciseRepository _exerciseRepository;
+    private readonly IWorkoutExerciseRepository _workoutExerciseRepository;
     private readonly ILogger<ExercisesController> _logger;
 
-    public ExercisesController(IExerciseRepository exerciseRepository, ILogger<ExercisesController> logger)
+    public ExercisesController(
+        IExerciseRepository exerciseRepository,
+        IWorkoutExerciseRepository workoutExerciseRepository,
+        ILogger<ExercisesController> logger)
     {
         _exerciseRepository = exerciseRepository;
+        _workoutExerciseRepository = workoutExerciseRepository;
         _logger = logger;
     }
 
@@ -151,7 +156,14 @@ public class ExercisesController : ControllerBase
             return NotFound();
         }
 
+        var workoutExercises = await _workoutExerciseRepository.GetByExerciseIdAsync(id);
+        foreach (var workoutExercise in workoutExercises)
+        {
+            await _workoutExerciseRepository.DeleteAsync(workoutExercise);
+        }
+
         await _exerciseRepository.DeleteAsync(exercise);
+
         await _exerciseRepository.SaveChangesAsync();
 
         return NoContent();

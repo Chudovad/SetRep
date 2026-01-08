@@ -27,5 +27,12 @@ public class WorkoutExerciseRepository(ApplicationDbContext context) : Repositor
             .Include(we => we.Sets.OrderBy(s => s.SetNumber))
             .FirstOrDefaultAsync(we => we.Id == workoutExerciseId);
     }
+
+    public async Task<IEnumerable<WorkoutExercise>> GetByExerciseIdAsync(Guid exerciseId)
+    {
+        return await _dbSet
+            .Where(we => we.ExerciseId == exerciseId)
+            .ToListAsync();
+    }
 }
 

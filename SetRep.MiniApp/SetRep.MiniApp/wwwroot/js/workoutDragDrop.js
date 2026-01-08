@@ -302,7 +302,7 @@ window.workoutDragDrop = {
         placeholder.style.marginBottom = '12px';
         placeholder.style.border = '2px dashed #ccc';
         placeholder.style.borderRadius = '12px';
-        placeholder.style.backgroundColor = '#f5f5f5';
+        placeholder.style.backgroundColor = 'transparent';
         
         self.placeholder = placeholder;
         element.parentNode.insertBefore(placeholder, element);
