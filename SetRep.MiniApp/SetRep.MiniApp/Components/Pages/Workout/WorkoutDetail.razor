@@ -96,7 +96,9 @@ else if (workout != null)
         <!-- Кнопка начала тренировки -->
         @if (workout.WorkoutExercises != null && workout.WorkoutExercises.Any())
         {
-            @if (activeWorkoutHistory != null)
+            var isCurrentWorkoutActive = activeWorkoutHistory != null && activeWorkoutHistory.WorkoutId == WorkoutId;
+            var hasOtherActiveWorkout = activeWorkoutHistory != null && activeWorkoutHistory.WorkoutId != WorkoutId;
+            @if (isCurrentWorkoutActive)
             {
                 <MudButton Variant="Variant.Filled"
                            Color="Color.Info"
@@ -116,7 +118,7 @@ else if (workout != null)
                            Class="mb-4 start-workout-button"
                            StartIcon="@Icons.Material.Filled.PlayArrow"
                            OnClick="StartWorkout"
-                           Disabled="isStartingWorkout">
+                           Disabled="isStartingWorkout || hasOtherActiveWorkout">
                     @if (isStartingWorkout)
                     {
                         <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
@@ -434,16 +436,12 @@ else if (workout != null)
                 return;
             }
 
-            var workoutHistories = await WorkoutService.GetWorkoutHistoryByWorkoutIdAsync(WorkoutId);
-            if (workoutHistories != null)
-            {
-                activeWorkoutHistory = workoutHistories
-                    .FirstOrDefault(wh => wh.UserId == userId && wh.EndTime == null);
+            // Получаем активную тренировку пользователя (любую)
+            activeWorkoutHistory = await WorkoutHistoryService.GetActiveWorkoutAsync(userId);
 
-                if (activeWorkoutHistory != null)
-                {
-                    StateHasChanged();
-                }
+            if (activeWorkoutHistory != null)
+            {
+                StateHasChanged();
             }
         }
         catch
