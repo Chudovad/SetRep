@@ -91,3 +91,11 @@ window.openTelegramLinkHelper = {
     },
 
 };
+
+window.navigationHelper = {
+    goBack: function () {
+        if (window.history && window.history.length > 1) {
+            window.history.back();
+        }
+    }
+};

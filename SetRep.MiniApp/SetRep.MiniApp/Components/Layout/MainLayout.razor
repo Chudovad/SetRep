@@ -11,11 +11,13 @@
 <MudDialogProvider />
 <MudSnackbarProvider />
 <MudLayout Class="mobile-layout">
-    <MudMainContent Class="mobile-content">
-        <CascadingValue Value="this" Name="MainLayout">
-            @Body
-        </CascadingValue>
-    </MudMainContent>
+    <MudSwipeArea OnSwipeEnd="@HandleSwipe" Style="width: 100%; height: 100%;">
+        <MudMainContent Class="mobile-content">
+            <CascadingValue Value="this" Name="MainLayout">
+                @Body
+            </CascadingValue>
+        </MudMainContent>
+    </MudSwipeArea>
     <NavMenu />
 </MudLayout>
 
@@ -168,6 +170,22 @@
         catch (Exception ex)
         {
             Logger?.LogError(ex, "Ошибка при отключении вертикальных свайпов");
+        }
+    }
+
+    private async Task HandleSwipe(SwipeEventArgs e)
+    {
+        if (e.SwipeDirection == SwipeDirection.LeftToRight)
+        {
+            try
+            {
+                await JSRuntime.InvokeVoidAsync("navigationHelper.goBack");
+                Logger?.LogInformation("Выполнен переход на предыдущую страницу по свайпу");
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Ошибка при переходе на предыдущую страницу");
+            }
         }
     }
 
