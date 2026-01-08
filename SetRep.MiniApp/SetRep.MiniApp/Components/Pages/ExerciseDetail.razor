@@ -112,28 +112,33 @@ else if (exercise != null)
             <MudCardContent>
                 <div class="exercise-header">
                     <MudText Typo="Typo.h5" Class="exercise-title">@exercise.Name</MudText>
-                    @if (CanEditExercise)
-                    {
-                        <div class="exercise-actions">
-                            <MudIconButton Icon="@Icons.Material.Filled.Edit"
-                                           Color="Color.Primary"
-                                           Size="Size.Medium"
-                                           OnClick="OpenEditDialog"
-                                           Disabled="isDeleting"
-                                           Class="exercise-action-btn" />
-                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                           Color="Color.Error"
-                                           Size="Size.Medium"
-                                           OnClick="OpenDeleteDialog"
-                                           Disabled="isDeleting"
-                                           Class="exercise-action-btn">
-                                @if (isDeleting)
-                                {
-                                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
-                                }
-                            </MudIconButton>
-                        </div>
-                    }
+                    <div class="exercise-actions">
+                        <MudMenu Icon="@Icons.Material.Filled.MoreVert"
+                                 Color="Color.Default"
+                                 AnchorOrigin="Origin.BottomRight"
+                                 TransformOrigin="Origin.TopRight"
+                                 Variant="Variant.Text"
+                                 Size="Size.Medium"
+                                 Class="exercise-menu-button"
+                                 StopPropagation="true">
+                            @if (CanEditExercise)
+                            {
+                                <MudMenuItem OnClick="OpenEditDialog" Icon="@Icons.Material.Filled.Edit">
+                                    Редактировать
+                                </MudMenuItem>
+                            }
+                            <MudMenuItem OnClick="OpenSelectWorkoutDialog" Icon="@Icons.Material.Filled.Add" Disabled="isAddingToWorkout">
+                                @(isAddingToWorkout ? "Добавление..." : "Добавить в тренировку")
+                            </MudMenuItem>
+                            @if (CanEditExercise)
+                            {
+                                <MudDivider />
+                                <MudMenuItem OnClick="OpenDeleteDialog" Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Disabled="isDeleting">
+                                    @(isDeleting ? "Удаление..." : "Удалить")
+                                </MudMenuItem>
+                            }
+                        </MudMenu>
+                    </div>
                 </div>
 
                 @if (!string.IsNullOrWhiteSpace(exercise.Description))
@@ -177,25 +182,6 @@ else if (exercise != null)
                 </MudExpansionPanel>
             </MudExpansionPanels>
         }
-
-        <!-- Кнопка добавления в тренировку -->
-        <MudButton Variant="Variant.Filled" 
-                   Color="Color.Primary" 
-                   FullWidth="true" 
-                   Class="mb-4 add-to-workout-btn"
-                   StartIcon="@Icons.Material.Filled.Add"
-                   OnClick="OpenSelectWorkoutDialog"
-                   Disabled="isAddingToWorkout">
-            @if (isAddingToWorkout)
-            {
-                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
-                <span class="ms-2">Добавление...</span>
-            }
-            else
-            {
-                <span>Добавить в тренировку</span>
-            }
-        </MudButton>
     </div>
 }
 
@@ -239,20 +225,13 @@ else if (exercise != null)
         align-items: center;
     }
 
-    .exercise-action-btn {
+    .exercise-menu-button {
         min-width: 40px;
     }
 
     .exercise-description {
         white-space: pre-wrap;
         word-wrap: break-word;
-    }
-
-    .add-to-workout-btn {
-        height: 48px;
-        border-radius: 12px;
-        text-transform: none;
-        font-weight: 500;
     }
 </style>
 

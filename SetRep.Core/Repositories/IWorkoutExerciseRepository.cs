@@ -16,5 +16,10 @@ public interface IWorkoutExerciseRepository : IRepository<WorkoutExercise>
     /// Получить упражнение тренировки с подходами
     /// </summary>
     Task<WorkoutExercise?> GetWithSetsAsync(Guid workoutExerciseId);
+
+    /// <summary>
+    /// Получить все связи тренировок и упражнений по идентификатору упражнения
+    /// </summary>
+    Task<IEnumerable<WorkoutExercise>> GetByExerciseIdAsync(Guid exerciseId);
 }
 
