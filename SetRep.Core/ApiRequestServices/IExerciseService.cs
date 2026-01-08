@@ -1,4 +1,5 @@
 using SetRep.Core.Entities;
+using SetRep.Core.Enums;
 
 namespace SetRep.Core.ApiRequestServices;
 
@@ -16,6 +17,11 @@ public interface IExerciseService
     /// Получить упражнение по идентификатору
     /// </summary>
     Task<Exercise?> GetExerciseByIdAsync(Guid exerciseId);
+
+    /// <summary>
+    /// Получить упражнения по группе мышц
+    /// </summary>
+    Task<List<Exercise>?> GetExercisesByMuscleGroupAsync(MuscleGroup muscleGroup);
 
     /// <summary>
     /// Создать новое упражнение

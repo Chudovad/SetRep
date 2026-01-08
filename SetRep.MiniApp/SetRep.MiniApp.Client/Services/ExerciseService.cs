@@ -1,6 +1,7 @@
 using System.Net.Http.Json;
 using SetRep.Core.ApiRequestServices;
 using SetRep.Core.Entities;
+using SetRep.Core.Enums;
 using SetRep.MiniApp.Client.Extensions;
 
 namespace SetRep.MiniApp.Client.Services;
@@ -56,6 +57,28 @@ public class ExerciseService : IExerciseService
             if (response.IsSuccessStatusCode)
             {
                 return await response.Content.ReadFromJsonAsync<Exercise>();
+            }
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Получить упражнения по группе мышц
+    /// </summary>
+    public async Task<List<Exercise>?> GetExercisesByMuscleGroupAsync(MuscleGroup muscleGroup)
+    {
+        try
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, $"api/exercises/muscle-group/{(int)muscleGroup}");
+            request.AddBearerToken(_telegramWebAppStateService);
+            var response = await _httpClient.SendAsync(request);
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadFromJsonAsync<List<Exercise>>();
             }
             return null;
         }

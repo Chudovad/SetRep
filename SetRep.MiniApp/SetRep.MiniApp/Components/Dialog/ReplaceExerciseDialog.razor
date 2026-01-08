@@ -1,0 +1,314 @@
+@using SetRep.Core.Entities
+@using SetRep.Core.Enums
+@using SetRep.Core.Extensions
+@using SetRep.MiniApp.Client.Services
+@using Microsoft.AspNetCore.Components
+
+@inject IExerciseService ExerciseService
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Заменить упражнение</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (isLoading)
+        {
+            <div class="loading-container">
+                <MudProgressCircular Indeterminate="true" Size="Size.Medium" Class="mb-3" />
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
+                    Загрузка упражнений...
+                </MudText>
+            </div>
+        }
+        else if (errorMessage != null)
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-3">@errorMessage</MudAlert>
+        }
+        else
+        {
+            <!-- Поле поиска -->
+            <MudTextField @bind-Value="searchQuery"
+                          Variant="Variant.Outlined"
+                          Placeholder="Поиск упражнений..."
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          IconSize="Size.Medium"
+                          Class="mb-3 search-field"
+                          Immediate="true" />
+            
+            @if (filteredAllExercises.Any())
+            {
+                <div class="exercise-list-container">
+                    <MudList T="Guid"
+                             SelectedValue="selectedExerciseId"
+                             SelectedValueChanged="OnSelectedExerciseChanged"
+                             SelectionMode="SelectionMode.SingleSelection"
+                             CheckBoxColor="Color.Primary"
+                             Dense="true"
+                             Class="exercise-list">
+                        @if (filteredSameGroupExercises.Any())
+                        {
+                            <MudText Typo="Typo.subtitle1" Class="mb-2 mt-2 section-title px-4">
+                                Из той же группы мышц
+                            </MudText>
+                            @foreach (var exercise in filteredSameGroupExercises)
+                            {
+                                <MudListItem @key="exercise.Id" Value="@exercise.Id">
+                                    <div class="exercise-item">
+                                        <MudText Typo="Typo.body1" Class="exercise-name">@exercise.Name</MudText>
+                                        @if (exercise.MuscleGroup.HasValue)
+                                        {
+                                            <MudChip T="string"
+                                                     Size="Size.Small"
+                                                     Color="Color.Primary"
+                                                     Variant="Variant.Text"
+                                                     Class="mt-1">
+                                                @exercise.MuscleGroup.Value.GetDescription()
+                                            </MudChip>
+                                        }
+                                    </div>
+                                </MudListItem>
+                            }
+                        }
+
+                        @if (filteredOtherExercises.Any())
+                        {
+                            <MudText Typo="Typo.subtitle1" Class="mb-2 mt-2 section-title px-4">
+                                Все упражнения
+                            </MudText>
+                            @foreach (var exercise in filteredOtherExercises)
+                            {
+                                <MudListItem @key="exercise.Id" Value="@exercise.Id">
+                                    <div class="exercise-item">
+                                        <MudText Typo="Typo.body1" Class="exercise-name">@exercise.Name</MudText>
+                                        @if (exercise.MuscleGroup.HasValue)
+                                        {
+                                            <MudChip T="string"
+                                                     Size="Size.Small"
+                                                     Color="Color.Primary"
+                                                     Variant="Variant.Text"
+                                                     Class="mt-1">
+                                                @exercise.MuscleGroup.Value.GetDescription()
+                                            </MudChip>
+                                        }
+                                    </div>
+                                </MudListItem>
+                            }
+                        }
+                    </MudList>
+                </div>
+            }
+            else
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="py-4">
+                    @if (!string.IsNullOrWhiteSpace(searchQuery))
+                    {
+                        <text>Ничего не найдено по запросу "@searchQuery"</text>
+                    }
+                    else
+                    {
+                        <text>Нет доступных упражнений</text>
+                    }
+                </MudText>
+            }
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel"
+                   Variant="Variant.Text">
+            Отмена
+        </MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   OnClick="ReplaceSelected"
+                   Disabled="@(selectedExerciseId == Guid.Empty || isSaving)">
+            @if (isSaving)
+            {
+                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                <MudText Class="ms-2">Замена...</MudText>
+            }
+            else
+            {
+                <MudText>Заменить</MudText>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+<style>
+    .loading-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px;
+    }
+
+    .exercise-list-container {
+        max-height: 500px;
+        overflow-y: auto;
+    }
+
+    .exercise-list {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .exercise-item {
+        flex: 1;
+    }
+
+    .exercise-name {
+        font-weight: 500;
+    }
+
+    .search-field {
+        border-radius: 8px;
+    }
+
+    .section-title {
+        font-weight: 600;
+        color: var(--mud-palette-primary);
+    }
+</style>
+
+@code {
+    [CascadingParameter] IMudDialogInstance? MudDialog { get; set; }
+    [Parameter] public WorkoutExercise? CurrentWorkoutExercise { get; set; }
+    [Parameter] public List<Guid>? ExcludedExerciseIds { get; set; }
+
+    private List<Exercise> allExercises = new();
+    private List<Exercise> sameGroupExercises = new();
+    private List<Exercise> otherExercises = new();
+    private string searchQuery = string.Empty;
+    private Guid selectedExerciseId = Guid.Empty;
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private string? errorMessage;
+
+    private IEnumerable<Exercise> filteredSameGroupExercises
+    {
+        get
+        {
+            var exercises = sameGroupExercises;
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+            {
+                var query = searchQuery.Trim().ToLowerInvariant();
+                exercises = exercises.Where(e =>
+                    e.Name.ToLowerInvariant().Contains(query) ||
+                    (!string.IsNullOrWhiteSpace(e.Description) && 
+                     e.Description.ToLowerInvariant().Contains(query)) ||
+                    (e.MuscleGroup.HasValue && 
+                     e.MuscleGroup.Value.GetDescription().ToLowerInvariant().Contains(query))
+                ).ToList();
+            }
+            return exercises;
+        }
+    }
+
+    private IEnumerable<Exercise> filteredOtherExercises
+    {
+        get
+        {
+            var exercises = otherExercises;
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+            {
+                var query = searchQuery.Trim().ToLowerInvariant();
+                exercises = exercises.Where(e =>
+                    e.Name.ToLowerInvariant().Contains(query) ||
+                    (!string.IsNullOrWhiteSpace(e.Description) && 
+                     e.Description.ToLowerInvariant().Contains(query)) ||
+                    (e.MuscleGroup.HasValue && 
+                     e.MuscleGroup.Value.GetDescription().ToLowerInvariant().Contains(query))
+                ).ToList();
+            }
+            return exercises;
+        }
+    }
+
+    private IEnumerable<Exercise> filteredAllExercises
+    {
+        get
+        {
+            return filteredSameGroupExercises.Concat(filteredOtherExercises);
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadExercises();
+    }
+
+    private async Task LoadExercises()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            var excludedIds = ExcludedExerciseIds?.ToHashSet() ?? new HashSet<Guid>();
+            if (CurrentWorkoutExercise?.ExerciseId != null)
+            {
+                excludedIds.Add(CurrentWorkoutExercise.ExerciseId);
+            }
+
+            var data = await ExerciseService.GetExercisesAsync();
+            if (data != null)
+            {
+                allExercises = data.Where(e => !excludedIds.Contains(e.Id)).ToList();
+
+                // Разделяем на упражнения из той же группы мышц и остальные
+                if (CurrentWorkoutExercise?.Exercise?.MuscleGroup != null)
+                {
+                    var currentMuscleGroup = CurrentWorkoutExercise.Exercise.MuscleGroup.Value;
+                    sameGroupExercises = allExercises
+                        .Where(e => e.MuscleGroup == currentMuscleGroup)
+                        .ToList();
+                    otherExercises = allExercises
+                        .Where(e => e.MuscleGroup != currentMuscleGroup)
+                        .ToList();
+                }
+                else
+                {
+                    sameGroupExercises = new List<Exercise>();
+                    otherExercises = allExercises;
+                }
+            }
+            else
+            {
+                errorMessage = "Не удалось загрузить упражнения. Проверьте подключение к API.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Не удалось загрузить упражнения: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void OnSelectedExerciseChanged(Guid exerciseId)
+    {
+        selectedExerciseId = exerciseId;
+        StateHasChanged();
+    }
+
+    private void Cancel()
+    {
+        MudDialog?.Cancel();
+    }
+
+    private void ReplaceSelected()
+    {
+        if (selectedExerciseId == Guid.Empty || isSaving)
+            return;
+
+        var selectedExercise = allExercises.FirstOrDefault(e => e.Id == selectedExerciseId);
+
+        if (selectedExercise != null)
+        {
+            MudDialog?.Close(DialogResult.Ok(selectedExercise));
+        }
+    }
+}
