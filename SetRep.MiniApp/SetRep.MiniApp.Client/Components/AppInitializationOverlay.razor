@@ -4,7 +4,6 @@
 @inject ITelegramWebAppStateService TelegramWebAppStateService
 @inject IAppInitializationService AppInitializationService
 @inject ILogger<AppInitializationOverlay> Logger
-@inject NavigationManager NavigationManager
 @implements IDisposable
 
 @if (AppInitializationService.IsInitializing || (_validationFailed && !AppInitializationService.IsInitializing))
@@ -21,15 +20,11 @@
                 <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Large" Color="Color.Error" />
                 <MudText Typo="Typo.h6" Class="mt-4" Align="Align.Center">Ошибка валидации</MudText>
                 <MudText Typo="Typo.body2" Class="mt-4" Align="Align.Center" Style="opacity: 0.7;">
-                    Приложение заблокировано. Пожалуйста, откройте приложение через Telegram.
+                    Приложение работает только внутри Telegram. Пожалуйста, запустите его через официальный бот.
                 </MudText>
-                <MudButton Variant="Variant.Filled" 
-                           Color="Color.Primary" 
-                           Class="mt-4" 
-                           StartIcon="@Icons.Material.Filled.Refresh"
-                           OnClick="ReloadApplication">
-                    Перезагрузить приложение
-                </MudButton>
+                <MudText Typo="Typo.body2" Class="mt-4" Align="Align.Center" Style="opacity: 0.7;">
+                    Если вы уже в Telegram, попробуйте перезапустить бота.
+                </MudText>
             }
         </div>
     </MudOverlay>
@@ -127,11 +122,6 @@
     private void OnInitializationStateChanged()
     {
         InvokeAsync(StateHasChanged);
-    }
-
-    private void ReloadApplication()
-    {
-        NavigationManager.NavigateTo(NavigationManager.Uri, forceLoad: true);
     }
 
     public void Dispose()
