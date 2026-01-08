@@ -163,9 +163,24 @@ else if (workout != null)
                                             @(item.WorkoutExercise.Exercise?.Name ?? "Неизвестное упражнение")
                                         </MudText>
                                     </div>
-                                    <MudIcon Icon="@Icons.Material.Filled.ChevronRight" 
-                                             Color="Color.Secondary" 
-                                             Class="exercise-arrow-icon" />
+                                    <div class="exercise-header-right" @onclick:stopPropagation="true">
+                                        <MudMenu Icon="@Icons.Material.Filled.MoreVert"
+                                                 Color="Color.Default"
+                                                 AnchorOrigin="Origin.BottomRight"
+                                                 TransformOrigin="Origin.TopRight"
+                                                 Variant="Variant.Text"
+                                                 Size="Size.Medium"
+                                                 Class="exercise-menu-button"
+                                                 StopPropagation="true">
+                                            <MudMenuItem OnClick="@(() => OpenEditNotesDialog(item.WorkoutExercise))" Icon="@Icons.Material.Filled.Edit">
+                                                Редактировать заметку
+                                            </MudMenuItem>
+                                            <MudDivider />
+                                            <MudMenuItem OnClick="@(() => ConfirmDeleteExercise(item.WorkoutExercise))" Icon="@Icons.Material.Filled.Delete" Color="Color.Error">
+                                                Удалить
+                                            </MudMenuItem>
+                                        </MudMenu>
+                                    </div>
                                 </div>
                             </MudCardContent>
                         </MudCard>
@@ -245,8 +260,8 @@ else if (workout != null)
 
     .drag-handle-icon {
         cursor: grab;
-        margin-right: 8px;
         user-select: none;
+        flex-shrink: 0;
     }
 
     .drag-handle-icon:active {
@@ -265,7 +280,7 @@ else if (workout != null)
     .exercise-header {
         display: flex;
         justify-content: space-between;
-        align-items: flex-start;
+        align-items: center;
         gap: 16px;
     }
 
@@ -273,9 +288,14 @@ else if (workout != null)
         flex: 1;
     }
 
-    .exercise-arrow-icon {
+    .exercise-header-right {
+        display: flex;
+        align-items: center;
         flex-shrink: 0;
-        margin-top: 4px;
+    }
+
+    .exercise-menu-button {
+        flex-shrink: 0;
     }
 
     .sets-list {
@@ -350,6 +370,7 @@ else if (workout != null)
     private bool isLoading = true;
     private bool isStartingWorkout = false;
     private bool isReordering = false;
+    private bool isDeleting = false;
     private string? errorMessage;
     private List<WorkoutExerciseItem> exerciseItems = new();
 
@@ -725,6 +746,98 @@ else if (workout != null)
         finally
         {
             isReordering = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenEditNotesDialog(WorkoutExercise workoutExercise)
+    {
+        if (workoutExercise == null || isDeleting)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<EditWorkoutExerciseNotesDialog>
+        {
+            { nameof(EditWorkoutExerciseNotesDialog.WorkoutExercise), workoutExercise }
+        };
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true, 
+            MaxWidth = MaxWidth.Small, 
+            FullWidth = true 
+        };
+
+        var dialogReference = await DialogService.ShowAsync<EditWorkoutExerciseNotesDialog>("Редактировать заметку упражнения", parameters, options);
+        var result = await dialogReference.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadWorkout();
+        }
+    }
+
+    private async Task ConfirmDeleteExercise(WorkoutExercise workoutExercise)
+    {
+        if (workoutExercise == null || isDeleting)
+        {
+            return;
+        }
+
+        var exerciseName = workoutExercise.Exercise?.Name ?? "упражнение";
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { nameof(ConfirmDialog.Title), "Подтверждение удаления" },
+            { nameof(ConfirmDialog.ContentText), $"Вы уверены, что хотите удалить упражнение \"{exerciseName}\" из тренировки? Это действие нельзя отменить." },
+            { nameof(ConfirmDialog.ButtonText), "Удалить" },
+            { nameof(ConfirmDialog.Color), Color.Error }
+        };
+
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true, 
+            MaxWidth = MaxWidth.Small, 
+            FullWidth = true 
+        };
+
+        var dialogReference = await DialogService.ShowAsync<ConfirmDialog>("Подтверждение удаления", parameters, options);
+        var result = await dialogReference.Result;
+
+        if (!result.Canceled)
+        {
+            await DeleteExercise(workoutExercise.Id);
+        }
+    }
+
+    private async Task DeleteExercise(Guid workoutExerciseId)
+    {
+        if (isDeleting)
+        {
+            return;
+        }
+
+        isDeleting = true;
+        StateHasChanged();
+
+        try
+        {
+            var success = await WorkoutExerciseService.DeleteWorkoutExerciseAsync(workoutExerciseId);
+            if (success)
+            {
+                await LoadWorkout();
+            }
+            else
+            {
+                Snackbar.Add("Ошибка при удалении упражнения", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка при удалении упражнения: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isDeleting = false;
             StateHasChanged();
         }
     }

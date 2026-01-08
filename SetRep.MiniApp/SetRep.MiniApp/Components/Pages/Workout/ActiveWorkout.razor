@@ -213,7 +213,7 @@ else if (workout != null && currentExercise != null)
                                     </span>
                                 }
                             </MudTd>
-                            <MudTd DataLabel="Повторения">
+                            <MudTd DataLabel="Повторения" Style="width: 60px">
                                 @if (editingSetId == context.Id && editingField == "reps")
                                 {
                                     <MudNumericField T="int"
@@ -222,7 +222,7 @@ else if (workout != null && currentExercise != null)
                                                      Min="0"
                                                      Step="1"
                                                      Immediate="true"
-                                                     Style="width: 80px;"
+                                                     Style="width: 60px;"
                                                      Margin="Margin.Dense"
                                                      @onblur="() => SaveSet(context.Id)" />
                                 }
