@@ -5,6 +5,8 @@
 @using SetRep.MiniApp.Components.Dialog
 @using SetRep.Shared.DTO
 @using static SetRep.MiniApp.Client.Services.InitializationHelper
+@using Microsoft.JSInterop
+@using Microsoft.AspNetCore.Components
 @rendermode InteractiveServer
 @inject IWorkoutService WorkoutService
 @inject IWorkoutExerciseService WorkoutExerciseService
@@ -15,6 +17,7 @@
 @inject IAppInitializationService AppInitializationService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject IJSRuntime JSRuntime
 @implements IAsyncDisposable
 
 <PageTitle>SetRep - @(workout?.Name ?? "Тренировка")</PageTitle>
@@ -142,20 +145,11 @@ else if (workout != null)
         {
             <MudText Typo="Typo.h6" Class="mb-3">Упражнения</MudText>
             
-            <MudDropContainer T="WorkoutExerciseItem" 
-                              Items="@exerciseItems" 
-                              ItemsSelector="@((item, dropzone) => item.Zone == dropzone)"
-                              ItemDropped="OnExerciseDropped" 
-                              Class="exercise-drop-container"
-                              @key="@($"exercises-{exerciseItems.Count}")">
-                <ChildContent>
-                    <MudDropZone T="WorkoutExerciseItem" 
-                                 Identifier="exercises-zone" 
-                                 AllowReorder="true" 
-                                 Class="exercise-drop-zone" />
-                </ChildContent>
-                <ItemRenderer>
-                    <div @onclick="() => ViewWorkoutExercise(context.WorkoutExercise.Id)" class="exercise-card-wrapper">
+            <div id="exercise-list-container" class="exercise-list-container">
+                @for (int i = 0; i < exerciseItems.Count; i++)
+                {
+                    var item = exerciseItems[i];
+                    <div @onclick="() => ViewWorkoutExercise(item.WorkoutExercise.Id)" class="exercise-card-wrapper">
                         <MudCard Elevation="2" Class="mb-3 exercise-card">
                             <MudCardContent>
                                 <div class="exercise-header">
@@ -164,7 +158,7 @@ else if (workout != null)
                                              Class="drag-handle-icon" />
                                     <div class="exercise-header-content">
                                         <MudText Typo="Typo.h6">
-                                            @(context.WorkoutExercise.Exercise?.Name ?? "Неизвестное упражнение")
+                                            @(item.WorkoutExercise.Exercise?.Name ?? "Неизвестное упражнение")
                                         </MudText>
                                     </div>
                                     <MudIcon Icon="@Icons.Material.Filled.ChevronRight" 
@@ -174,8 +168,8 @@ else if (workout != null)
                             </MudCardContent>
                         </MudCard>
                     </div>
-                </ItemRenderer>
-            </MudDropContainer>
+                }
+            </div>
         }
         else
         {
@@ -228,16 +222,23 @@ else if (workout != null)
         gap: 4px;
     }
 
-    .exercise-drop-container {
+    .exercise-list-container {
         width: 100%;
-    }
-
-    .exercise-drop-zone {
-        min-height: 50px;
     }
 
     .exercise-card-wrapper {
         cursor: pointer;
+    }
+
+    .exercise-card-wrapper.dragging {
+        opacity: 0.5;
+    }
+
+    .exercise-card-wrapper.placeholder {
+        border: 2px dashed #ccc;
+        border-radius: 12px;
+        background-color: #f5f5f5;
+        margin-bottom: 12px;
     }
 
     .drag-handle-icon {
@@ -365,6 +366,12 @@ else if (workout != null)
             await LoadWorkout();
             await CheckActiveWorkout();
             StateHasChanged();
+        }
+        
+        // Инициализируем drag and drop после рендеринга списка упражнений
+        if (exerciseItems.Any())
+        {
+            await InitializeDragAndDrop();
         }
     }
 
@@ -620,6 +627,8 @@ else if (workout != null)
 
                     await InvokeAsync(StateHasChanged);
                     
+                    // Инициализируем drag and drop после добавления упражнений
+                    await InitializeDragAndDrop();
                 }
                 else
                 {
@@ -631,6 +640,9 @@ else if (workout != null)
                     UpdateExerciseItems();
                     StateHasChanged();
                     await InvokeAsync(StateHasChanged);
+                    
+                    // Инициализируем drag and drop после добавления упражнений
+                    await InitializeDragAndDrop();
                 }
             }
         }
@@ -640,9 +652,28 @@ else if (workout != null)
         }
     }
 
-    private async Task OnExerciseDropped(MudItemDropInfo<WorkoutExerciseItem> dropInfo)
+    private async Task InitializeDragAndDrop()
     {
-        if (isReordering || workout?.WorkoutExercises == null || dropInfo.Item == null)
+        try
+        {
+            var dotNetReference = DotNetObjectReference.Create(this);
+            await JSRuntime.InvokeVoidAsync("workoutDragDrop.init", "exercise-list-container", dotNetReference);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Ошибка инициализации drag and drop: {ex.Message}");
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnExerciseDropped(int oldIndex, int newIndex)
+    {
+        if (isReordering || workout?.WorkoutExercises == null || oldIndex < 0 || newIndex < 0)
+        {
+            return;
+        }
+
+        if (oldIndex == newIndex)
         {
             return;
         }
@@ -652,15 +683,6 @@ else if (workout != null)
 
         try
         {
-            var newIndex = dropInfo.IndexInZone;
-            var item = dropInfo.Item;
-            var oldIndex = exerciseItems.IndexOf(item);
-
-            if (oldIndex == newIndex)
-            {
-                return;
-            }
-
             var orderedExercises = exerciseItems.Select(ei => ei.WorkoutExercise).ToList();
             
             var movedExercise = orderedExercises[oldIndex];
@@ -687,6 +709,9 @@ else if (workout != null)
                 }
 
                 await LoadWorkout();
+                
+                // Обновляем индексы в JS после перезагрузки
+                await JSRuntime.InvokeVoidAsync("workoutDragDrop.updateIndices", "exercise-list-container");
             }
             else
             {
