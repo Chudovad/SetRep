@@ -5,10 +5,13 @@
 @using SetRep.Core.Extensions
 @using SetRep.MiniApp.Client.Services
 @using SetRep.MiniApp.Components.Dialog
+@using SetRep.Shared.DTO
 @using MudBlazor
 @using static SetRep.MiniApp.Client.Services.InitializationHelper
 @rendermode InteractiveServer
 @inject IExerciseService ExerciseService
+@inject IWorkoutService WorkoutService
+@inject IWorkoutExerciseService WorkoutExerciseService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
@@ -174,6 +177,25 @@ else if (exercise != null)
                 </MudExpansionPanel>
             </MudExpansionPanels>
         }
+
+        <!-- Кнопка добавления в тренировку -->
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   FullWidth="true" 
+                   Class="mb-4 add-to-workout-btn"
+                   StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="OpenSelectWorkoutDialog"
+                   Disabled="isAddingToWorkout">
+            @if (isAddingToWorkout)
+            {
+                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                <span class="ms-2">Добавление...</span>
+            }
+            else
+            {
+                <span>Добавить в тренировку</span>
+            }
+        </MudButton>
     </div>
 }
 
@@ -226,6 +248,12 @@ else if (exercise != null)
         word-wrap: break-word;
     }
 
+    .add-to-workout-btn {
+        height: 48px;
+        border-radius: 12px;
+        text-transform: none;
+        font-weight: 500;
+    }
 </style>
 
 @code {
@@ -234,6 +262,7 @@ else if (exercise != null)
     private Exercise? exercise;
     private bool isLoading = true;
     private bool isDeleting = false;
+    private bool isAddingToWorkout = false;
     private string? errorMessage;
 
     private bool CanEditExercise
@@ -391,6 +420,90 @@ else if (exercise != null)
         finally
         {
             isDeleting = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenSelectWorkoutDialog()
+    {
+        if (exercise == null || isAddingToWorkout)
+            return;
+
+        var parameters = new DialogParameters<SelectWorkoutDialog>();
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true, 
+            MaxWidth = MaxWidth.Medium, 
+            FullWidth = true 
+        };
+
+        var dialogReference = await DialogService.ShowAsync<SelectWorkoutDialog>("Выберите тренировку", parameters, options);
+        var result = await dialogReference.Result;
+
+        if (!result.Canceled && result.Data is SetRep.Core.Entities.Workout selectedWorkout)
+        {
+            await AddExerciseToWorkout(selectedWorkout);
+        }
+    }
+
+    private async Task AddExerciseToWorkout(SetRep.Core.Entities.Workout workout)
+    {
+        if (exercise == null || workout == null || isAddingToWorkout)
+            return;
+
+        isAddingToWorkout = true;
+        StateHasChanged();
+
+        try
+        {
+            // Получаем детали тренировки, чтобы узнать текущий максимальный порядок
+            var workoutDetails = await WorkoutService.GetWorkoutDetailsAsync(workout.Id);
+            if (workoutDetails == null)
+            {
+                Snackbar.Add("Не удалось загрузить детали тренировки", Severity.Error);
+                return;
+            }
+
+            // Проверяем, не добавлено ли уже это упражнение в тренировку
+            var existingExerciseIds = workoutDetails.WorkoutExercises?
+                .Select(we => we.ExerciseId)
+                .ToHashSet() ?? new HashSet<Guid>();
+
+            if (existingExerciseIds.Contains(exercise.Id))
+            {
+                Snackbar.Add($"Упражнение \"{exercise.Name}\" уже добавлено в тренировку \"{workout.Name}\"", Severity.Info);
+                return;
+            }
+
+            // Определяем порядок для нового упражнения
+            int maxOrder = workoutDetails.WorkoutExercises?.Any() == true 
+                ? workoutDetails.WorkoutExercises.Max(we => we.Order) + 1 
+                : 0;
+
+            var workoutExerciseDto = new CreateWorkoutExerciseDto
+            {
+                WorkoutId = workout.Id,
+                ExerciseId = exercise.Id,
+                Order = maxOrder
+            };
+
+            var createdWorkoutExercise = await WorkoutExerciseService.CreateWorkoutExerciseAsync(workoutExerciseDto);
+            if (createdWorkoutExercise != null)
+            {
+                Snackbar.Add($"Упражнение успешно добавлено в тренировку \"{workout.Name}\"", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add($"Ошибка при добавлении упражнения в тренировку", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка при добавлении упражнения в тренировку: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isAddingToWorkout = false;
             StateHasChanged();
         }
     }
