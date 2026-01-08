@@ -1,7 +1,9 @@
 @page "/workouts/{WorkoutId:guid}/active/{WorkoutHistoryId:guid}"
 @using SetRep.Core.ApiRequestServices
 @using SetRep.Core.Entities
+@using SetRep.Core.Enums
 @using SetRep.MiniApp.Client.Services
+@using SetRep.MiniApp.Components.Dialog
 @using SetRep.Shared.DTO
 @using static SetRep.MiniApp.Client.Services.InitializationHelper
 @rendermode InteractiveServer
@@ -9,10 +11,13 @@
 @inject IWorkoutHistoryService WorkoutHistoryService
 @inject IActiveWorkoutService ActiveWorkoutService
 @inject IWorkoutHistorySetService WorkoutHistorySetService
+@inject IWorkoutExerciseService WorkoutExerciseService
+@inject IExerciseService ExerciseService
 @inject NavigationManager Navigation
 @inject ITelegramBackButtonService TelegramBackButtonService
 @inject IAppInitializationService AppInitializationService
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 @inject IJSRuntime JSRuntime
 @implements IAsyncDisposable
 
@@ -118,11 +123,24 @@ else if (workout != null && currentExercise != null)
         }
 
         <!-- Название и описание упражнения -->
-        <MudExpansionPanels Class="mb-4">
-            <MudExpansionPanel Text="@currentExercise.Exercise.Name" MaxHeight="150">
-                @currentExercise.Exercise.Description
-            </MudExpansionPanel>
-        </MudExpansionPanels>
+        <MudCard Elevation="2" Class="mb-4">
+            <MudCardContent>
+                <div class="exercise-header-with-actions">
+                    <MudText Typo="Typo.h6" Class="exercise-name-header">@currentExercise.Exercise.Name</MudText>
+                    <MudIconButton Icon="@Icons.Material.Filled.SwapHoriz"
+                                   Color="Color.Primary"
+                                   Size="Size.Medium"
+                                   OnClick="ReplaceExercise"
+                                   Title="Заменить упражнение" />
+                </div>
+                @if (!string.IsNullOrWhiteSpace(currentExercise.Exercise.Description))
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2" Style="white-space: pre-wrap;">
+                        @currentExercise.Exercise.Description
+                    </MudText>
+                }
+            </MudCardContent>
+        </MudCard>
 
         @if (!string.IsNullOrEmpty(currentExercise.Exercise.VideoUrl))
         {
@@ -348,6 +366,17 @@ else if (workout != null && currentExercise != null)
     .exercise-description {
         white-space: pre-wrap;
         word-wrap: break-word;
+    }
+
+    .exercise-header-with-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .exercise-name-header {
+        flex: 1;
     }
 
 </style>
@@ -722,6 +751,88 @@ else if (workout != null && currentExercise != null)
     private decimal GetWeightStep()
     {
         return ExerciseStepHelper.GetWeightStep(currentExercise?.Exercise?.MuscleGroup);
+    }
+
+    private async Task ReplaceExercise()
+    {
+        if (currentExercise == null || workout == null)
+            return;
+
+        // Получаем список ID упражнений, которые уже есть в тренировке (кроме текущего)
+        var excludedExerciseIds = workout.WorkoutExercises?
+            .Where(we => we.Id != currentExercise.Id)
+            .Select(we => we.ExerciseId)
+            .ToList() ?? new List<Guid>();
+
+        var parameters = new DialogParameters<ReplaceExerciseDialog>
+        {
+            { nameof(ReplaceExerciseDialog.CurrentWorkoutExercise), currentExercise },
+            { nameof(ReplaceExerciseDialog.ExcludedExerciseIds), excludedExerciseIds }
+        };
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true, 
+            MaxWidth = MaxWidth.Medium, 
+            FullWidth = true 
+        };
+
+        var dialogReference = await DialogService.ShowAsync<ReplaceExerciseDialog>("Заменить упражнение", parameters, options);
+        var result = await dialogReference.Result;
+
+        if (result != null && !result.Canceled && result.Data is Exercise selectedExercise)
+        {
+            // Проверяем, что выбранное упражнение не совпадает с текущим
+            if (selectedExercise.Id == currentExercise.ExerciseId)
+            {
+                Snackbar.Add("Выбрано то же самое упражнение", Severity.Info);
+                return;
+            }
+
+            // Проверяем, что выбранное упражнение еще не добавлено в тренировку
+            var existingExerciseIds = workout.WorkoutExercises?
+                .Where(we => we.Id != currentExercise.Id)
+                .Select(we => we.ExerciseId)
+                .ToHashSet() ?? new HashSet<Guid>();
+
+            if (existingExerciseIds.Contains(selectedExercise.Id))
+            {
+                Snackbar.Add("Это упражнение уже есть в тренировке", Severity.Warning);
+                return;
+            }
+
+            await ReplaceCurrentExercise(selectedExercise);
+        }
+    }
+
+    private async Task ReplaceCurrentExercise(Exercise newExercise)
+    {
+        if (currentExercise == null || workout == null)
+            return;
+
+        try
+        {
+            var updateDto = new CreateWorkoutExerciseDto
+            {
+                WorkoutId = currentExercise.WorkoutId,
+                ExerciseId = newExercise.Id,
+                Order = currentExercise.Order,
+                Notes = currentExercise.Notes
+            };
+
+            var success = await WorkoutExerciseService.UpdateWorkoutExerciseAsync(currentExercise.Id, updateDto);
+            if (success)
+            {
+                await LoadWorkout();
+            }
+            else
+            {
+                Snackbar.Add("Ошибка при замене упражнения", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка при замене упражнения: {ex.Message}", Severity.Error);
+        }
     }
 
     public async ValueTask DisposeAsync()
