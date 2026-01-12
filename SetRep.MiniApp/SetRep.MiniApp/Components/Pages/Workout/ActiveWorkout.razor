@@ -26,16 +26,76 @@
 @if (isLoading)
 {
     <div class="active-workout-container">
-        <MudCard Elevation="2" Class="loading-card">
+        @* Скелетон таймера и навигации *@
+        <MudCard Elevation="2" Class="mb-4 timer-card">
             <MudCardContent>
-                <div class="loading-state">
-                    <MudProgressCircular Indeterminate="true" Size="Size.Large" Class="mb-4" />
-                    <MudText Typo="Typo.body1" Color="Color.Secondary" Align="Align.Center">
-                        Загрузка тренировки...
-                    </MudText>
+                <div class="timer-header">
+                    <MudSkeleton Width="40px" Height="40px" Variant="SkeletonVariant.Circular" />
+                    <div class="timer-display">
+                        <MudSkeleton Typo="Typo.h5" Width="100px" Height="32px" Class="mb-1" />
+                        <MudSkeleton Typo="Typo.body2" Width="80px" Height="20px" />
+                    </div>
+                    <MudSkeleton Width="40px" Height="40px" Variant="SkeletonVariant.Circular" />
                 </div>
             </MudCardContent>
         </MudCard>
+
+        @* Скелетон изображения упражнения *@
+        <MudCard Elevation="2" Class="mb-4 exercise-image-card">
+            <MudCardContent Class="pa-0">
+                <MudSkeleton Height="250px" Width="100%" />
+            </MudCardContent>
+        </MudCard>
+
+        @* Скелетон названия и описания упражнения *@
+        <MudCard Elevation="2" Class="mb-4">
+            <MudCardContent>
+                <div class="exercise-header-with-actions">
+                    <MudSkeleton Typo="Typo.h6" Width="70%" Height="24px" />
+                    <MudSkeleton Width="40px" Height="40px" Variant="SkeletonVariant.Circular" />
+                </div>
+                <MudSkeleton Typo="Typo.body2" Width="100%" Height="60px" Class="mt-2" />
+            </MudCardContent>
+        </MudCard>
+
+        @* Скелетон формы добавления подхода *@
+        <MudCard Elevation="2" Class="mb-4">
+            <MudCardContent>
+                <MudSkeleton Width="100%" Height="40px" Class="mb-2" />
+                <MudSkeleton Width="100%" Height="40px" Class="mb-2" />
+                <MudSkeleton Width="100%" Height="48px" Variant="SkeletonVariant.Rounded" />
+            </MudCardContent>
+        </MudCard>
+
+        @* Скелетон таблицы подходов *@
+        <MudCard Elevation="2" Class="mb-4 sets-table-card">
+            <MudCardContent>
+                <MudSkeleton Typo="Typo.h6" Width="100px" Height="24px" Class="mb-3" />
+                @* Скелетон таблицы *@
+                <div class="skeleton-table">
+                    <div class="skeleton-table-header">
+                        <MudSkeleton Width="30px" Height="20px" />
+                        <MudSkeleton Width="30px" Height="20px" />
+                        <MudSkeleton Width="50px" Height="20px" />
+                        <MudSkeleton Width="60px" Height="20px" />
+                        <MudSkeleton Width="40px" Height="20px" />
+                    </div>
+                    @for (int j = 0; j < 3; j++)
+                    {
+                        <div class="skeleton-table-row">
+                            <MudSkeleton Width="20px" Height="20px" />
+                            <MudSkeleton Width="20px" Height="20px" />
+                            <MudSkeleton Width="40px" Height="20px" />
+                            <MudSkeleton Width="30px" Height="20px" />
+                            <MudSkeleton Width="30px" Height="30px" Variant="SkeletonVariant.Circular" />
+                        </div>
+                    }
+                </div>
+            </MudCardContent>
+        </MudCard>
+
+        @* Скелетон кнопки завершения тренировки *@
+        <MudSkeleton Width="100%" Height="48px" Variant="SkeletonVariant.Rounded" Class="mt-4" />
     </div>
 }
 else if (errorMessage != null)
@@ -377,6 +437,25 @@ else if (workout != null && currentExercise != null)
 
     .exercise-name-header {
         flex: 1;
+    }
+
+    .skeleton-table {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .skeleton-table-header {
+        display: flex;
+        gap: 16px;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--mud-palette-divider);
+    }
+
+    .skeleton-table-row {
+        display: flex;
+        gap: 16px;
+        padding: 8px 0;
     }
 
 </style>

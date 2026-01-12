@@ -96,15 +96,8 @@ else if (errorMessage != null)
                     <MudButton Variant="Variant.Filled"
                                Color="Color.Primary"
                                StartIcon="@Icons.Material.Filled.Refresh"
-                               OnClick="LoadWorkoutExercise">
+                               OnClick="LoadWorkout">
                         Попробовать снова
-                    </MudButton>
-                    <MudButton Variant="Variant.Text"
-                               Color="Color.Primary"
-                               Class="mt-2"
-                               StartIcon="@Icons.Material.Filled.ArrowBack"
-                               OnClick="GoBack">
-                        Вернуться к тренировке
                     </MudButton>
                 </div>
             </MudCardContent>
@@ -119,15 +112,6 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
         {
             <MudCard Elevation="2" Class="mb-4 navigation-card">
                 <MudCardContent>
-                    <div class="navigation-back-button mb-3">
-                        <MudButton Variant="Variant.Text"
-                                   Color="Color.Primary"
-                                   StartIcon="@Icons.Material.Filled.ArrowBack"
-                                   OnClick="GoBack"
-                                   Size="Size.Small">
-                            Назад к тренировке
-                        </MudButton>
-                    </div>
                     <div class="navigation-header">
                         <MudIconButton Icon="@Icons.Material.Filled.ArrowBack"
                                        Color="Color.Primary"
@@ -146,20 +130,6 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
                                        OnClick="NextExercise"
                                        Disabled="currentExerciseIndex >= exercises.Count - 1" />
                     </div>
-                </MudCardContent>
-            </MudCard>
-        }
-        else
-        {
-            <MudCard Elevation="2" Class="mb-4 navigation-card">
-                <MudCardContent>
-                    <MudButton Variant="Variant.Text"
-                               Color="Color.Primary"
-                               StartIcon="@Icons.Material.Filled.ArrowBack"
-                               OnClick="GoBack"
-                               Size="Size.Small">
-                        Назад к тренировке
-                    </MudButton>
                 </MudCardContent>
             </MudCard>
         }
@@ -200,11 +170,18 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
             </MudCard>
         }
 
-        <MudExpansionPanels Class="mb-4">
-            <MudExpansionPanel Text="@workoutExercise.Exercise.Name" MaxHeight="150">
-                @workoutExercise.Exercise.Description
-            </MudExpansionPanel>
-        </MudExpansionPanels>
+        <!-- Название и описание упражнения -->
+        <MudCard Elevation="2" Class="mb-4">
+            <MudCardContent>
+                <MudText Typo="Typo.h6" Class="mb-2">@workoutExercise.Exercise.Name</MudText>
+                @if (!string.IsNullOrWhiteSpace(workoutExercise.Exercise.Description))
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Style="white-space: pre-wrap;">
+                        @workoutExercise.Exercise.Description
+                    </MudText>
+                }
+            </MudCardContent>
+        </MudCard>
 
         <!-- Заметки к упражнению в тренировке -->
         @if (!string.IsNullOrWhiteSpace(workoutExercise.Notes))
@@ -370,11 +347,6 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
         text-align: center;
     }
 
-    .navigation-back-button {
-        display: flex;
-        justify-content: flex-start;
-    }
-
     .exercise-image {
         max-height: 400px;
     }
@@ -412,6 +384,7 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
     [Parameter] public Guid WorkoutId { get; set; }
     [Parameter] public Guid WorkoutExerciseId { get; set; }
 
+    private Workout? workout;
     private WorkoutExercise? workoutExercise;
     private List<Set> sets = new();
     private List<WorkoutExercise> exercises = new();
@@ -430,7 +403,6 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
     private string? editingField;
     private decimal? editingWeight;
     private int editingReps;
-    private Guid? lastLoadedWorkoutExerciseId;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -438,77 +410,93 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
         {
             await WaitForInitializationAsync(AppInitializationService);
             await TelegramBackButtonService.ShowAsync();
-            await LoadWorkoutExercise();
-            lastLoadedWorkoutExerciseId = WorkoutExerciseId;
+            await LoadWorkout();
             StateHasChanged();
         }
     }
 
-    protected override async Task OnParametersSetAsync()
-    {
-        // Перезагружаем данные, если изменился WorkoutExerciseId
-        if (lastLoadedWorkoutExerciseId != WorkoutExerciseId)
-        {
-            await LoadWorkoutExercise();
-            lastLoadedWorkoutExerciseId = WorkoutExerciseId;
-        }
-    }
-
-    private async Task LoadWorkoutExercise()
+    private async Task LoadWorkout()
     {
         isLoading = true;
         errorMessage = null;
 
         try
         {
-            // Загружаем тренировку для получения списка всех упражнений
-            var workout = await WorkoutService.GetWorkoutDetailsAsync(WorkoutId);
-            if (workout != null && workout.WorkoutExercises != null && workout.WorkoutExercises.Any())
+            workout = await WorkoutService.GetWorkoutDetailsAsync(WorkoutId);
+            if (workout == null || workout.WorkoutExercises == null || !workout.WorkoutExercises.Any())
             {
-                exercises = workout.WorkoutExercises.OrderBy(we => we.Order).ToList();
-                
-                // Находим текущий индекс упражнения
-                var currentIndex = exercises.FindIndex(we => we.Id == WorkoutExerciseId);
-                if (currentIndex >= 0)
-                {
-                    currentExerciseIndex = currentIndex;
-                }
+                errorMessage = "В тренировке нет упражнений";
+                return;
             }
 
-            workoutExercise = await WorkoutExerciseService.GetWorkoutExerciseWithSetsAsync(WorkoutExerciseId);
+            exercises = workout.WorkoutExercises.OrderBy(we => we.Order).ToList();
+            
+            // Находим текущий индекс упражнения
+            var currentIndex = exercises.FindIndex(we => we.Id == WorkoutExerciseId);
+            if (currentIndex >= 0)
+            {
+                currentExerciseIndex = currentIndex;
+            }
+            else
+            {
+                currentExerciseIndex = 0;
+            }
+            
+            workoutExercise = exercises[currentExerciseIndex];
 
-            if (workoutExercise != null && workoutExercise.Sets != null)
+            if (workoutExercise?.Exercise != null)
             {
-                sets = workoutExercise.Sets.OrderBy(s => s.SetNumber).ToList();
-                if (workoutExercise.Exercise != null)
-                {
-                    weightLabel = $"Вес ({workoutExercise.Exercise.WeightUnit})";
-                }
+                weightLabel = $"Вес ({workoutExercise.Exercise.WeightUnit})";
             }
-            else if (workoutExercise == null)
-            {
-                errorMessage = "Упражнение не найдено.";
-            }
+
+            await LoadSetsForCurrentExercise();
         }
         catch (HttpRequestException ex)
         {
             errorMessage = $"Ошибка сети при подключении к API: {ex.Message}. " +
                           "Убедитесь, что API сервер запущен и доступен.";
-            workoutExercise = null;
+            workout = null;
         }
         catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
         {
             errorMessage = "Превышено время ожидания ответа от API. Сервер может быть перегружен или недоступен.";
-            workoutExercise = null;
+            workout = null;
         }
         catch (Exception ex)
         {
-            errorMessage = $"Не удалось загрузить упражнение: {ex.Message}";
-            workoutExercise = null;
+            errorMessage = $"Не удалось загрузить тренировку: {ex.Message}";
+            workout = null;
         }
         finally
         {
             isLoading = false;
+        }
+    }
+
+    private async Task LoadSetsForCurrentExercise()
+    {
+        if (workoutExercise == null)
+        {
+            return;
+        }
+
+        try
+        {
+            var loadedExercise = await WorkoutExerciseService.GetWorkoutExerciseWithSetsAsync(workoutExercise.Id);
+            if (loadedExercise != null && loadedExercise.Sets != null)
+            {
+                sets = loadedExercise.Sets.OrderBy(s => s.SetNumber).ToList();
+                // Обновляем workoutExercise, чтобы получить актуальные данные об упражнении
+                workoutExercise = loadedExercise;
+            }
+            else
+            {
+                sets = new List<Set>();
+            }
+        }
+        catch
+        {
+            sets = new List<Set>();
         }
     }
 
@@ -527,7 +515,7 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
 
             var createSetDto = new CreateSetDto
             {
-                WorkoutExerciseId = WorkoutExerciseId,
+                WorkoutExerciseId = workoutExercise.Id,
                 SetNumber = nextSetNumber,
                 Reps = newSetReps,
                 Weight = newSetWeight,
@@ -538,12 +526,7 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
             var createdSet = await WorkoutExerciseService.CreateSetAsync(createSetDto);
             if (createdSet != null)
             {
-                // Перезагружаем список подходов для получения актуальных данных
-                var updatedSets = await WorkoutExerciseService.GetSetsByWorkoutExerciseIdAsync(WorkoutExerciseId);
-                if (updatedSets != null)
-                {
-                    sets = updatedSets.OrderBy(s => s.SetNumber).ToList();
-                }
+                await LoadSetsForCurrentExercise();
                 newSetWeight = null;
                 newSetReps = 0;
                 StateHasChanged();
@@ -603,7 +586,7 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
 
             var updateDto = new CreateSetDto
             {
-                WorkoutExerciseId = WorkoutExerciseId,
+                WorkoutExerciseId = workoutExercise.Id,
                 SetNumber = set.SetNumber,
                 Reps = editingField == "reps" ? editingReps : set.Reps,
                 Weight = editingField == "weight" ? editingWeight : set.Weight,
@@ -618,12 +601,7 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
             var success = await WorkoutExerciseService.UpdateSetAsync(setId, updateDto);
             if (success)
             {
-                // Перезагружаем только подходы
-                var updatedSets = await WorkoutExerciseService.GetSetsByWorkoutExerciseIdAsync(WorkoutExerciseId);
-                if (updatedSets != null)
-                {
-                    sets = updatedSets.OrderBy(s => s.SetNumber).ToList();
-                }
+                await LoadSetsForCurrentExercise();
                 CancelEditing();
                 StateHasChanged();
             }
@@ -646,12 +624,7 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
 
             if (success)
             {
-                // Перезагружаем только подходы
-                var updatedSets = await WorkoutExerciseService.GetSetsByWorkoutExerciseIdAsync(WorkoutExerciseId);
-                if (updatedSets != null)
-                {
-                    sets = updatedSets.OrderBy(s => s.SetNumber).ToList();
-                }
+                await LoadSetsForCurrentExercise();
                 CancelEditing();
                 StateHasChanged();
             }
@@ -670,9 +643,15 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
     {
         if (currentExerciseIndex > 0 && exercises != null && exercises.Any())
         {
+            currentExerciseIndex--;
+            workoutExercise = exercises[currentExerciseIndex];
+            if (workoutExercise?.Exercise != null)
+            {
+                weightLabel = $"Вес ({workoutExercise.Exercise.WeightUnit})";
+            }
+            await LoadSetsForCurrentExercise();
             CancelEditing();
-            var previousExercise = exercises[currentExerciseIndex - 1];
-            Navigation.NavigateTo($"/workouts/{WorkoutId}/exercises/{previousExercise.Id}");
+            StateHasChanged();
         }
     }
 
@@ -680,15 +659,16 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
     {
         if (currentExerciseIndex < exercises.Count - 1 && exercises != null && exercises.Any())
         {
+            currentExerciseIndex++;
+            workoutExercise = exercises[currentExerciseIndex];
+            if (workoutExercise?.Exercise != null)
+            {
+                weightLabel = $"Вес ({workoutExercise.Exercise.WeightUnit})";
+            }
+            await LoadSetsForCurrentExercise();
             CancelEditing();
-            var nextExercise = exercises[currentExerciseIndex + 1];
-            Navigation.NavigateTo($"/workouts/{WorkoutId}/exercises/{nextExercise.Id}");
+            StateHasChanged();
         }
-    }
-
-    private void GoBack()
-    {
-        Navigation.NavigateTo($"/workouts/{WorkoutId}");
     }
 
     private decimal GetWeightStep()
