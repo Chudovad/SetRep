@@ -25,14 +25,23 @@
 @if (isLoading)
 {
     <div class="exercise-detail-container">
-        <MudCard Elevation="2" Class="loading-card">
+        @* Скелетон изображения упражнения *@
+        <MudCard Elevation="2" Class="mb-4 exercise-image-card">
+            <MudCardContent Class="pa-0">
+                <MudSkeleton Height="300px" Width="100%" />
+            </MudCardContent>
+        </MudCard>
+
+        @* Скелетон карточки информации *@
+        <MudCard Elevation="2" Class="mb-4 exercise-info-card">
             <MudCardContent>
-                <div class="loading-state">
-                    <MudProgressCircular Indeterminate="true" Size="Size.Large" Class="mb-4" />
-                    <MudText Typo="Typo.body1" Color="Color.Secondary" Align="Align.Center">
-                        Загрузка упражнения...
-                    </MudText>
+                <div class="exercise-header">
+                    <MudSkeleton Typo="Typo.h5" Width="70%" Height="32px" />
+                    <MudSkeleton Width="40px" Height="40px" Variant="SkeletonVariant.Circular" />
                 </div>
+                <MudSkeleton Typo="Typo.body2" Width="100%" Height="60px" Class="mb-2" />
+                <MudSkeleton Typo="Typo.body2" Width="80%" Height="60px" Class="mb-2" />
+                <MudSkeleton Width="120px" Height="32px" Variant="SkeletonVariant.Rounded" Style="margin-top: 15px" />
             </MudCardContent>
         </MudCard>
     </div>

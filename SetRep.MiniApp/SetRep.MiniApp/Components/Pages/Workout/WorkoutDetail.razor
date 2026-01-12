@@ -27,16 +27,39 @@
 @if (isLoading)
 {
     <div class="workout-detail-container">
-        <MudCard Elevation="2" Class="loading-card">
+        @* Скелетон карточки информации о тренировке *@
+        <MudCard Elevation="2" Class="mb-4 workout-info-card">
             <MudCardContent>
-                <div class="loading-state">
-                    <MudProgressCircular Indeterminate="true" Size="Size.Large" Class="mb-4" />
-                    <MudText Typo="Typo.body1" Color="Color.Secondary" Align="Align.Center">
-                        Загрузка тренировки...
-                    </MudText>
-                </div>
+                <MudSkeleton Typo="Typo.h4" Width="60%" Height="32px" Class="mb-2" />
+                <MudSkeleton Typo="Typo.body2" Width="90%" Height="20px" Class="mb-1" />
+                <MudSkeleton Typo="Typo.body2" Width="70%" Height="20px" />
             </MudCardContent>
         </MudCard>
+
+        @* Скелетон кнопки начала тренировки *@
+        <MudSkeleton Width="100%" Height="48px" Variant="SkeletonVariant.Rounded" Class="mb-4" />
+
+        @* Скелетон кнопки добавления упражнений *@
+        <MudSkeleton Width="100%" Height="48px" Variant="SkeletonVariant.Rounded" Class="mb-4" />
+
+        @* Скелетон списка упражнений *@
+        <MudSkeleton Typo="Typo.h6" Width="150px" Height="24px" Class="mb-3" />
+        @for (int i = 0; i < 3; i++)
+        {
+            <div class="exercise-card-wrapper">
+                <MudCard Elevation="2" Class="mb-3 exercise-card">
+                    <MudCardContent>
+                        <div class="exercise-header">
+                            <MudSkeleton Width="24px" Height="24px" />
+                            <div class="exercise-header-content">
+                                <MudSkeleton Typo="Typo.h6" Width="70%" Height="24px" />
+                            </div>
+                            <MudSkeleton Width="24px" Height="24px" Variant="SkeletonVariant.Circular" />
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </div>
+        }
     </div>
 }
 else if (errorMessage != null)
