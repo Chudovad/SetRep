@@ -244,16 +244,16 @@ else if (workout != null && currentExercise != null)
             <MudCard Elevation="2" Class="mb-4 sets-table-card">
                 <MudCardContent>
                     <MudText Typo="Typo.h6" Class="mb-3">Подходы</MudText>
-                    <MudTable Items="@currentSets" Hover="true" Dense="true" Striped="true" Class="compact-table" Breakpoint="Breakpoint.None">
+                    <MudTable Items="@currentSets" Hover="true" Dense="true" Striped="true" Class="compact-table sets-table" Breakpoint="Breakpoint.None">
                         <HeaderContent>
-                            <MudTh> </MudTh>
+                            <MudTh Class="checkbox-column"> </MudTh>
                             <MudTh>№</MudTh>
                             <MudTh>Вес</MudTh>
                             <MudTh>Повт.</MudTh>
                             <MudTh> </MudTh>
                         </HeaderContent>
                         <RowTemplate>
-                            <MudTd DataLabel="Выполнено">
+                            <MudTd DataLabel="Выполнено" Class="checkbox-column">
                                 @if (editingSetId != context.Id)
                                 {
                                     <MudCheckBox T="bool" Color="Color.Success" Value="@context.IsCompleted" ValueChanged="(bool value) => ToggleSetCompletion(context.Id, value)" />
@@ -273,7 +273,7 @@ else if (workout != null && currentExercise != null)
                                                      Min="0"
                                                      Step="@((decimal?)GetWeightStep())"
                                                      Immediate="true"
-                                                     Style="width: 80px;"
+                                                     Style="width: 70px;"
                                                      Margin="Margin.Dense"
                                                      @onblur="() => SaveSet(context.Id)" />
                                 }
@@ -319,24 +319,31 @@ else if (workout != null && currentExercise != null)
                                 }
                             </MudTd>
                             <MudTd DataLabel="Действия">
-                                @if (editingSetId == context.Id)
-                                {
-                                    <MudIconButton Icon="@Icons.Material.Filled.Check"
-                                                   Color="Color.Success"
-                                                   Size="Size.Small"
-                                                   OnClick="() => SaveSet(context.Id)" />
-                                    <MudIconButton Icon="@Icons.Material.Filled.Close"
-                                                   Color="Color.Default"
-                                                   Size="Size.Small"
-                                                   OnClick="CancelEditing" />
-                                }
-                                else
-                                {
-                                    <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                                   Color="Color.Error"
-                                                   Size="Size.Small"
-                                                   OnClick="() => DeleteSet(context.Id)" />
-                                }
+                                <div class="action-buttons">
+                                    @if (editingSetId == context.Id)
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Filled.Check"
+                                                       Color="Color.Success"
+                                                       Size="Size.Small"
+                                                       OnClick="() => SaveSet(context.Id)" />
+                                        <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                                       Color="Color.Default"
+                                                       Size="Size.Small"
+                                                       OnClick="CancelEditing" />
+                                    }
+                                    else
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
+                                                       Color="Color.Primary"
+                                                       Size="Size.Small"
+                                                       OnClick="() => DuplicateSet(context.Id)"
+                                                       Title="Дублировать подход" />
+                                        <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                       Color="Color.Error"
+                                                       Size="Size.Small"
+                                                       OnClick="() => DeleteSet(context.Id)" />
+                                    }
+                                </div>
                             </MudTd>
                         </RowTemplate>
                     </MudTable>
@@ -456,6 +463,20 @@ else if (workout != null && currentExercise != null)
         display: flex;
         gap: 16px;
         padding: 8px 0;
+    }
+
+    .action-buttons {
+        display: flex;
+        flex-direction: row;
+        gap: 4px;
+        align-items: center;
+    }
+
+    .sets-table .checkbox-column {
+        width: 30px !important;
+        min-width: 30px !important;
+        max-width: 30px !important;
+        padding: 8px 4px !important;
     }
 
 </style>
@@ -700,7 +721,7 @@ else if (workout != null && currentExercise != null)
                 DurationSeconds = set.DurationSeconds,
                 DistanceMeters = set.DistanceMeters,
                 RestSeconds = set.RestSeconds,
-                IsCompleted = set.IsCompleted,
+                IsCompleted = true,
                 Notes = set.Notes,
                 CompletedAt = set.CompletedAt
             };
@@ -756,6 +777,55 @@ else if (workout != null && currentExercise != null)
             else
             {
                 Snackbar.Add("Ошибка при удалении подхода", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DuplicateSet(Guid setId)
+    {
+        if (currentExercise == null)
+        {
+            return;
+        }
+
+        try
+        {
+            var set = currentSets.FirstOrDefault(s => s.Id == setId);
+            if (set == null)
+            {
+                Snackbar.Add("Подход не найден", Severity.Error);
+                return;
+            }
+
+            var nextSetNumber = currentSets.Any() ? currentSets.Max(s => s.SetNumber) + 1 : 1;
+
+            var createSetDto = new CreateWorkoutHistorySetDto
+            {
+                WorkoutHistoryId = WorkoutHistoryId,
+                ExerciseId = currentExercise.ExerciseId,
+                SetNumber = nextSetNumber,
+                Reps = set.Reps,
+                Weight = set.Weight,
+                DurationSeconds = set.DurationSeconds,
+                DistanceMeters = set.DistanceMeters,
+                RestSeconds = set.RestSeconds,
+                IsCompleted = false,
+                Notes = set.Notes,
+                CompletedAt = DateTime.UtcNow
+            };
+
+            var createdSet = await WorkoutHistorySetService.CreateSetAsync(createSetDto);
+            if (createdSet != null)
+            {
+                await LoadSetsForCurrentExercise();
+            }
+            else
+            {
+                Snackbar.Add("Ошибка при дублировании подхода", Severity.Error);
             }
         }
         catch (Exception ex)

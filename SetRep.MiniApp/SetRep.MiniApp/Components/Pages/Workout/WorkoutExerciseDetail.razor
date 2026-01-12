@@ -288,6 +288,11 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
                                 }
                                 else
                                 {
+                                    <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
+                                                   Color="Color.Primary"
+                                                   Size="Size.Small"
+                                                   OnClick="() => DuplicateSet(context.Id)"
+                                                   Title="Дублировать подход" />
                                     <MudIconButton Icon="@Icons.Material.Filled.Delete"
                                                    Color="Color.Error"
                                                    Size="Size.Small"
@@ -636,6 +641,55 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
         catch (Exception ex)
         {
             Snackbar.Add($"Не удалось удалить подход: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DuplicateSet(Guid setId)
+    {
+        if (workoutExercise == null)
+        {
+            return;
+        }
+
+        try
+        {
+            var set = sets.FirstOrDefault(s => s.Id == setId);
+            if (set == null)
+            {
+                Snackbar.Add("Подход не найден", Severity.Error);
+                return;
+            }
+
+            var nextSetNumber = sets.Any() ? sets.Max(s => s.SetNumber) + 1 : 1;
+
+            var createSetDto = new CreateSetDto
+            {
+                WorkoutExerciseId = workoutExercise.Id,
+                SetNumber = nextSetNumber,
+                Reps = set.Reps,
+                Weight = set.Weight,
+                DurationSeconds = set.DurationSeconds,
+                DistanceMeters = set.DistanceMeters,
+                RestSeconds = set.RestSeconds,
+                IsCompleted = false,
+                Notes = set.Notes,
+                CompletedAt = DateTime.UtcNow
+            };
+
+            var createdSet = await WorkoutExerciseService.CreateSetAsync(createSetDto);
+            if (createdSet != null)
+            {
+                await LoadSetsForCurrentExercise();
+                StateHasChanged();
+            }
+            else
+            {
+                Snackbar.Add("Ошибка при дублировании подхода", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка: {ex.Message}", Severity.Error);
         }
     }
 
