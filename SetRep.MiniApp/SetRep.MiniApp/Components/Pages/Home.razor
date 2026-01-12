@@ -48,10 +48,8 @@
     {
         <MudCard Elevation="2" Class="mb-4 workout-card">
             <MudCardContent>
-                <div class="loading-state-small">
-                    <MudProgressCircular Indeterminate="true" Size="Size.Small" />
-                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="ml-2">Загрузка...</MudText>
-                </div>
+                <MudSkeleton Typo="Typo.h6" Width="50%" Height="24px" Class="mb-3" />
+                <MudSkeleton Width="100%" Height="48px" Variant="SkeletonVariant.Rounded" />
             </MudCardContent>
         </MudCard>
     }

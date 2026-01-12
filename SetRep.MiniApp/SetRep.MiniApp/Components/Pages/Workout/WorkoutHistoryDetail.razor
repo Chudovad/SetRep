@@ -15,16 +15,44 @@
 @if (isLoading)
 {
     <div class="workout-history-detail-container">
-        <MudCard Elevation="2" Class="loading-card">
+        @* Скелетон карточки информации о тренировке *@
+        <MudCard Elevation="2" Class="mb-4 workout-info-card">
             <MudCardContent>
-                <div class="loading-state">
-                    <MudProgressCircular Indeterminate="true" Size="Size.Large" Class="mb-4" />
-                    <MudText Typo="Typo.body1" Color="Color.Secondary" Align="Align.Center">
-                        Загрузка деталей тренировки...
-                    </MudText>
+                <MudSkeleton Typo="Typo.h5" Width="60%" Height="32px" Class="mb-3" />
+                <div class="workout-meta">
+                    <MudSkeleton Typo="Typo.body2" Width="70%" Height="20px" Class="mb-1" />
+                    <MudSkeleton Typo="Typo.body2" Width="70%" Height="20px" Class="mb-1" />
+                    <MudSkeleton Typo="Typo.body2" Width="60%" Height="20px" />
                 </div>
             </MudCardContent>
         </MudCard>
+
+        @* Скелетон карточек упражнений *@
+        <MudSkeleton Typo="Typo.h6" Width="200px" Height="24px" Class="mb-3" />
+        @for (int i = 0; i < 3; i++)
+        {
+            <MudCard Elevation="2" Class="mb-3 exercise-card">
+                <MudCardContent>
+                    <MudSkeleton Typo="Typo.h6" Width="50%" Height="24px" Class="mb-3" />
+                    @* Скелетон таблицы *@
+                    <div class="skeleton-table">
+                        <div class="skeleton-table-header">
+                            <MudSkeleton Width="30px" Height="20px" />
+                            <MudSkeleton Width="50px" Height="20px" />
+                            <MudSkeleton Width="60px" Height="20px" />
+                        </div>
+                        @for (int j = 0; j < 3; j++)
+                        {
+                            <div class="skeleton-table-row">
+                                <MudSkeleton Width="20px" Height="20px" />
+                                <MudSkeleton Width="40px" Height="20px" />
+                                <MudSkeleton Width="30px" Height="20px" />
+                            </div>
+                        }
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        }
     </div>
 }
 else if (errorMessage != null)
@@ -210,6 +238,25 @@ else if (workoutHistory != null)
         flex-direction: column;
         align-items: center;
         padding: 24px;
+    }
+
+    .skeleton-table {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .skeleton-table-header {
+        display: flex;
+        gap: 16px;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--mud-palette-divider);
+    }
+
+    .skeleton-table-row {
+        display: flex;
+        gap: 16px;
+        padding: 8px 0;
     }
 </style>
 

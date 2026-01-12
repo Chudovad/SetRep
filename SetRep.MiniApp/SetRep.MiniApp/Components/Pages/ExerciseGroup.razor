@@ -44,16 +44,25 @@
     
     @if (isLoading)
     {
-        <MudCard Elevation="2" Class="loading-card">
-            <MudCardContent>
-                <div class="loading-state">
-                    <MudProgressCircular Indeterminate="true" Size="Size.Large" Class="mb-4" />
-                    <MudText Typo="Typo.body1" Color="Color.Secondary" Align="Align.Center">
-                        Загрузка упражнений...
-                    </MudText>
-                </div>
-            </MudCardContent>
-        </MudCard>
+        @for (int i = 0; i < 4; i++)
+        {
+            <div class="exercise-card-wrapper">
+                <MudCard Elevation="2" Class="mb-3 exercise-item-card">
+                    <MudCardContent>
+                        <div class="exercise-item-header">
+                            <div class="exercise-item-info">
+                                <MudSkeleton Typo="Typo.h6" Width="70%" Height="24px" Class="mb-1" />
+                                <MudSkeleton Typo="Typo.body2" Width="90%" Height="20px" Class="mb-2" />
+                                <div class="exercise-item-meta">
+                                    <MudSkeleton Width="100px" Height="16px" />
+                                </div>
+                            </div>
+                            <MudSkeleton Width="24px" Height="24px" />
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </div>
+        }
     }
     else if (errorMessage != null)
     {

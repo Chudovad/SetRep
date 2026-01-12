@@ -85,10 +85,9 @@
         }
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="ClearSelection"
-                   Disabled="@(!selectedExerciseIds.Any() || isSaving)"
+        <MudButton OnClick="CloseDialog"
                    Variant="Variant.Text">
-            Очистить
+            Отмена
         </MudButton>
         <MudButton Color="Color.Primary"
                    Variant="Variant.Filled"
@@ -193,10 +192,9 @@
         }
     }
 
-    private void ClearSelection()
+    private void CloseDialog()
     {
-        //selectedExerciseIds.Clear();
-        StateHasChanged();
+        MudDialog?.Cancel();
     }
 
     private void AddSelected()
