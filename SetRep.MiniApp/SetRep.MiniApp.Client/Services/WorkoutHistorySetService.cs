@@ -43,6 +43,28 @@ public class WorkoutHistorySetService : IWorkoutHistorySetService
     }
 
     /// <summary>
+    /// Получить все подходы истории тренировки
+    /// </summary>
+    public async Task<List<WorkoutHistorySet>?> GetSetsByWorkoutHistoryIdAsync(Guid workoutHistoryId)
+    {
+        try
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, $"api/workouthistorysets/workout-history/{workoutHistoryId}");
+            request.AddBearerToken(_telegramWebAppStateService);
+            var response = await _httpClient.SendAsync(request);
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadFromJsonAsync<List<WorkoutHistorySet>>();
+            }
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
     /// Создать новый подход в истории тренировки
     /// </summary>
     public async Task<WorkoutHistorySet?> CreateSetAsync(CreateWorkoutHistorySetDto dto)

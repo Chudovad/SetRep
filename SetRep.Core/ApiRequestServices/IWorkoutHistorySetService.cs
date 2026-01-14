@@ -14,6 +14,11 @@ public interface IWorkoutHistorySetService
     Task<List<WorkoutHistorySet>?> GetSetsByWorkoutHistoryAndExerciseAsync(Guid workoutHistoryId, Guid exerciseId);
 
     /// <summary>
+    /// Получить все подходы истории тренировки
+    /// </summary>
+    Task<List<WorkoutHistorySet>?> GetSetsByWorkoutHistoryIdAsync(Guid workoutHistoryId);
+
+    /// <summary>
     /// Создать новый подход в истории тренировки
     /// </summary>
     Task<WorkoutHistorySet?> CreateSetAsync(CreateWorkoutHistorySetDto dto);

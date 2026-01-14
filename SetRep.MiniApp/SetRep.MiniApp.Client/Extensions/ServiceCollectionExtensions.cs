@@ -35,6 +35,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IExerciseService, ExerciseService>();
         services.AddTransient<IWorkoutService, WorkoutService>();
         services.AddTransient<IWorkoutHistorySetService, WorkoutHistorySetService>();
+        services.AddTransient<ISetService, SetService>();
         services.AddTransient<IUserService, UserService>();
         services.AddScoped<IAppInitializationService, AppInitializationService>();
 
