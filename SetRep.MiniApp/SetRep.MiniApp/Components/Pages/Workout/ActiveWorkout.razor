@@ -226,7 +226,7 @@ else if (workout != null && currentExercise != null)
                     <MudCard Elevation="2" Class="mb-4 sets-table-card">
                         <MudCardContent>
                             <MudText Typo="Typo.h6" Class="mb-3">Подходы</MudText>
-                            <MudTable Items="@currentSets" Hover="true" Dense="true" Striped="true" Class="compact-table sets-table" Breakpoint="Breakpoint.None">
+                            <MudTable Items="@currentSets" Hover="true" Dense="true" Class="compact-table sets-table" Breakpoint="Breakpoint.None" RowClassFunc="@GetRowClass">
                                 <HeaderContent>
                                     <MudTh Class="checkbox-column"> </MudTh>
                                     <MudTh>№</MudTh>
@@ -513,6 +513,14 @@ else if (workout != null && currentExercise != null)
         min-width: 30px !important;
         max-width: 30px !important;
         padding: 8px 4px !important;
+    }
+
+    .sets-table .completed-set-row {
+        background-color: rgba(76, 175, 80, 0.1) !important;
+    }
+
+    .sets-table .completed-set-row:hover {
+        background-color: rgba(76, 175, 80, 0.2) !important;
     }
 
 </style>
@@ -937,6 +945,11 @@ else if (workout != null && currentExercise != null)
     private decimal GetWeightStep()
     {
         return ExerciseStepHelper.GetWeightStep(currentExercise?.Exercise?.MuscleGroup);
+    }
+
+    private string GetRowClass(WorkoutHistorySet set, int rowNumber)
+    {
+        return set.IsCompleted ? "completed-set-row" : string.Empty;
     }
 
     private async Task ReplaceExercise()

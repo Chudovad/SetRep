@@ -27,6 +27,9 @@ public class ExerciseConfiguration : IEntityTypeConfiguration<Exercise>
         builder.Property(e => e.Image)
             .HasMaxLength(2000);
 
+        builder.Property(e => e.MainImage)
+            .HasMaxLength(2000);
+
         builder.Property(e => e.VideoUrl)
             .HasMaxLength(2000);
 

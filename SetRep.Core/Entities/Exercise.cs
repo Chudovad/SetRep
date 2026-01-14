@@ -23,6 +23,11 @@ public class Exercise
     public string Image { get; set; } = string.Empty;
 
     /// <summary>
+    /// Главная картинка упражнения (для отображения в карточках)
+    /// </summary>
+    public string? MainImage { get; set; }
+
+    /// <summary>
     /// Ссылка на видео выполнения упражнения
     /// </summary>
     public string? VideoUrl { get; set; }
