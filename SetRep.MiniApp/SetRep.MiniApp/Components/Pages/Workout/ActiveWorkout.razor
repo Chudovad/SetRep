@@ -13,6 +13,7 @@
 @inject IWorkoutHistorySetService WorkoutHistorySetService
 @inject IWorkoutExerciseService WorkoutExerciseService
 @inject IExerciseService ExerciseService
+@inject ISetService SetService
 @inject NavigationManager Navigation
 @inject ITelegramBackButtonService TelegramBackButtonService
 @inject IAppInitializationService AppInitializationService
@@ -255,7 +256,7 @@ else if (workout != null && currentExercise != null)
                                                              Min="0"
                                                              Step="@((decimal?)GetWeightStep())"
                                                              Immediate="true"
-                                                             Style="width: 70px;"
+                                                             Style="width: 80px;"
                                                              Margin="Margin.Dense"
                                                              @onblur="() => SaveSet(context.Id)" />
                                         }
@@ -886,6 +887,9 @@ else if (workout != null && currentExercise != null)
 
         try
         {
+            // Обновляем подходы тренировки перед завершением
+            await UpdateWorkoutSetsIfNeeded();
+
             var success = await WorkoutHistoryService.EndWorkoutAsync(WorkoutHistoryId);
             if (success)
             {
@@ -903,6 +907,120 @@ else if (workout != null && currentExercise != null)
         finally
         {
             isEndingWorkout = false;
+        }
+    }
+
+    private async Task UpdateWorkoutSetsIfNeeded()
+    {
+        if (workout == null || workout.WorkoutExercises == null)
+        {
+            return;
+        }
+
+        try
+        {
+            // Получаем все подходы из истории тренировки
+            var historySets = await WorkoutHistorySetService.GetSetsByWorkoutHistoryIdAsync(WorkoutHistoryId);
+            if (historySets == null || !historySets.Any())
+            {
+                return;
+            }
+
+            // Получаем детали тренировки с подходами
+            var workoutDetails = await WorkoutService.GetWorkoutDetailsAsync(WorkoutId);
+            if (workoutDetails?.WorkoutExercises == null)
+            {
+                return;
+            }
+
+            // Группируем подходы истории по ExerciseId и SetNumber
+            var historySetsByExercise = historySets
+                .Where(s => s.IsCompleted)
+                .GroupBy(s => s.ExerciseId)
+                .ToDictionary(g => g.Key, g => g.ToList());
+
+            // Для каждого упражнения в тренировке
+            foreach (var workoutExercise in workoutDetails.WorkoutExercises)
+            {
+                if (!historySetsByExercise.TryGetValue(workoutExercise.ExerciseId, out var exerciseHistorySets))
+                {
+                    continue;
+                }
+
+                // Получаем подходы тренировки для этого упражнения
+                var workoutSets = await SetService.GetSetsByWorkoutExerciseIdAsync(workoutExercise.Id);
+                if (workoutSets == null || !workoutSets.Any())
+                {
+                    continue;
+                }
+
+                // Находим максимальные значения веса и повторений для каждого номера подхода
+                var maxValuesBySetNumber = exerciseHistorySets
+                    .GroupBy(s => s.SetNumber)
+                    .ToDictionary(
+                        g => g.Key,
+                        g => new
+                        {
+                            MaxWeight = g.Where(s => s.Weight.HasValue).Max(s => s.Weight),
+                            MaxReps = g.Max(s => s.Reps)
+                        });
+
+                // Для каждого подхода в тренировке
+                foreach (var workoutSet in workoutSets)
+                {
+                    if (!maxValuesBySetNumber.TryGetValue(workoutSet.SetNumber, out var maxValues))
+                    {
+                        continue;
+                    }
+
+                    // Проверяем, нужно ли обновить подход
+                    bool needsUpdate = false;
+                    decimal? newWeight = workoutSet.Weight;
+                    int newReps = workoutSet.Reps;
+
+                    // Если максимальный вес больше текущего, обновляем
+                    if (maxValues.MaxWeight.HasValue)
+                    {
+                        if (!workoutSet.Weight.HasValue || maxValues.MaxWeight.Value > workoutSet.Weight.Value)
+                        {
+                            newWeight = maxValues.MaxWeight.Value;
+                            needsUpdate = true;
+                        }
+                    }
+
+                    // Если максимальное количество повторений больше текущего, обновляем
+                    if (maxValues.MaxReps > workoutSet.Reps)
+                    {
+                        newReps = maxValues.MaxReps;
+                        needsUpdate = true;
+                    }
+
+                    // Обновляем подход, если нужно
+                    if (needsUpdate)
+                    {
+                        var updateDto = new CreateSetDto
+                        {
+                            WorkoutExerciseId = workoutSet.WorkoutExerciseId,
+                            SetNumber = workoutSet.SetNumber,
+                            Reps = newReps,
+                            Weight = newWeight,
+                            DurationSeconds = workoutSet.DurationSeconds,
+                            DistanceMeters = workoutSet.DistanceMeters,
+                            RestSeconds = workoutSet.RestSeconds,
+                            IsCompleted = workoutSet.IsCompleted,
+                            Notes = workoutSet.Notes,
+                            CompletedAt = workoutSet.CompletedAt
+                        };
+
+                        await SetService.UpdateSetAsync(workoutSet.Id, updateDto);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Логируем ошибку, но не прерываем завершение тренировки
+            Console.WriteLine($"Ошибка при обновлении подходов тренировки: {ex.Message}");
         }
     }
 
