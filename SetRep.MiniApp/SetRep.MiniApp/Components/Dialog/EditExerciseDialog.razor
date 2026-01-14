@@ -26,6 +26,12 @@
                          @bind-Value="exercise.Image"
                          Variant="Variant.Outlined"
                          Class="mb-3" />
+
+            <MudTextField T="string" 
+                         Label="Главная картинка (для карточек)" 
+                         @bind-Value="exercise.MainImage"
+                         Variant="Variant.Outlined"
+                         Class="mb-3" />
             
             <MudTextField T="string" 
                          Label="Описание" 
@@ -100,6 +106,7 @@
             Id = Exercise.Id,
             Name = Exercise.Name,
             Image = Exercise.Image ?? string.Empty,
+            MainImage = Exercise.MainImage,
             Description = Exercise.Description,
             MuscleGroup = Exercise.MuscleGroup,
             WeightUnit = Exercise.WeightUnit,

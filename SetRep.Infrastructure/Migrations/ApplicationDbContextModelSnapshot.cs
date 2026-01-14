@@ -48,6 +48,10 @@ namespace SetRep.Infrastructure.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(false);
 
+                    b.Property<string>("MainImage")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
                     b.Property<int?>("MuscleGroup")
                         .HasColumnType("integer")
                         .HasComment("Группа мышц");
