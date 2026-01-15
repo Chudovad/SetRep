@@ -53,6 +53,11 @@ public class ApplicationDbContext : DbContext
     /// </summary>
     public DbSet<WorkoutHistorySet> WorkoutHistorySets { get; set; } = null!;
 
+    /// <summary>
+    /// Планы тренировок
+    /// </summary>
+    public DbSet<WorkoutPlan> WorkoutPlans { get; set; } = null!;
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);

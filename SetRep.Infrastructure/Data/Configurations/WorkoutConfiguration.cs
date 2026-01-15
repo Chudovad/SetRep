@@ -33,8 +33,11 @@ public class WorkoutConfiguration : IEntityTypeConfiguration<Workout>
 
         builder.Property(w => w.UpdatedAt);
 
+        builder.Property(w => w.WorkoutPlanId);
+
         // Индексы
         builder.HasIndex(w => w.UserId);
+        builder.HasIndex(w => w.WorkoutPlanId);
 
         // Связи
         builder.HasMany(w => w.WorkoutExercises)

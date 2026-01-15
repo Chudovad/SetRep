@@ -242,9 +242,14 @@ namespace SetRep.Infrastructure.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("WorkoutPlanId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("UserId");
+
+                    b.HasIndex("WorkoutPlanId");
 
                     b.ToTable("Workouts", (string)null);
                 });
@@ -394,6 +399,33 @@ namespace SetRep.Infrastructure.Migrations
                     b.ToTable("WorkoutHistorySets", (string)null);
                 });
 
+            modelBuilder.Entity("SetRep.Core.Entities.WorkoutPlan", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("WorkoutPlans", (string)null);
+                });
+
             modelBuilder.Entity("SetRep.Core.Entities.Set", b =>
                 {
                     b.HasOne("SetRep.Core.Entities.WorkoutExercise", "WorkoutExercise")
@@ -424,7 +456,14 @@ namespace SetRep.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("SetRep.Core.Entities.WorkoutPlan", "WorkoutPlan")
+                        .WithMany("Workouts")
+                        .HasForeignKey("WorkoutPlanId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("User");
+
+                    b.Navigation("WorkoutPlan");
                 });
 
             modelBuilder.Entity("SetRep.Core.Entities.WorkoutExercise", b =>
@@ -483,6 +522,17 @@ namespace SetRep.Infrastructure.Migrations
                     b.Navigation("WorkoutHistory");
                 });
 
+            modelBuilder.Entity("SetRep.Core.Entities.WorkoutPlan", b =>
+                {
+                    b.HasOne("SetRep.Core.Entities.User", "User")
+                        .WithMany("WorkoutPlans")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SetRep.Core.Entities.Exercise", b =>
                 {
                     b.Navigation("WorkoutExercises");
@@ -491,6 +541,8 @@ namespace SetRep.Infrastructure.Migrations
             modelBuilder.Entity("SetRep.Core.Entities.User", b =>
                 {
                     b.Navigation("WeightHistory");
+
+                    b.Navigation("WorkoutPlans");
 
                     b.Navigation("Workouts");
                 });
@@ -508,6 +560,11 @@ namespace SetRep.Infrastructure.Migrations
             modelBuilder.Entity("SetRep.Core.Entities.WorkoutHistory", b =>
                 {
                     b.Navigation("Sets");
+                });
+
+            modelBuilder.Entity("SetRep.Core.Entities.WorkoutPlan", b =>
+                {
+                    b.Navigation("Workouts");
                 });
 #pragma warning restore 612, 618
         }
