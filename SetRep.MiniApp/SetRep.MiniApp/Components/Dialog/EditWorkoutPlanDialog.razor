@@ -1,0 +1,103 @@
+@using SetRep.Core.Entities
+@using SetRep.Core.ApiRequestServices
+@using SetRep.Shared.DTO
+
+@inject IWorkoutPlanService WorkoutPlanService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Редактировать план тренировки</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="@isFormValid">
+            <MudTextField T="string"
+                        Label="Название плана тренировки"
+                        @bind-Value="planName"
+                        Variant="Variant.Outlined"
+                        Required="true"
+                        RequiredError="Название обязательно для заполнения"
+                        Class="mb-3" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel"
+                   Variant="Variant.Text">
+            Отмена
+        </MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   OnClick="Save"
+                   Disabled="@(!isFormValid || isSaving)">
+            @if (isSaving)
+            {
+                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                <MudText Class="ms-2">Сохранение...</MudText>
+            }
+            else
+            {
+                <MudText>Сохранить</MudText>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance? MudDialog { get; set; }
+    [Parameter] public WorkoutPlan? WorkoutPlan { get; set; }
+
+    private MudForm? form;
+    private bool isFormValid;
+    private bool isSaving = false;
+    private string planName = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        if (WorkoutPlan != null)
+        {
+            planName = WorkoutPlan.Name;
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog?.Cancel();
+    }
+
+    private async Task Save()
+    {
+        await form!.Validate();
+
+        if (!isFormValid || isSaving || WorkoutPlan == null)
+            return;
+
+        isSaving = true;
+
+        try
+        {
+            var dto = new CreateWorkoutPlanDto
+            {
+                UserId = WorkoutPlan.UserId,
+                Name = planName
+            };
+
+            var success = await WorkoutPlanService.UpdateWorkoutPlanAsync(WorkoutPlan.Id, dto);
+            if (success)
+            {
+                MudDialog?.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add("Ошибка при обновлении плана тренировки", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка при обновлении плана тренировки: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+}

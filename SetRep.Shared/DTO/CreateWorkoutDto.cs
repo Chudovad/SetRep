@@ -19,5 +19,10 @@ public class CreateWorkoutDto
     /// Заметки к тренировке
     /// </summary>
     public string? Notes { get; set; }
+
+    /// <summary>
+    /// Идентификатор плана тренировки (опционально)
+    /// </summary>
+    public Guid? WorkoutPlanId { get; set; }
 }
 

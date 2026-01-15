@@ -1,0 +1,222 @@
+@using SetRep.Core.Entities
+@using SetRep.Core.ApiRequestServices
+
+@inject IWorkoutPlanService WorkoutPlanService
+@inject ITelegramWebAppStateService TelegramWebAppStateService
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Выберите план тренировки</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (isLoading)
+        {
+            <div class="loading-container">
+                <MudProgressCircular Indeterminate="true" Size="Size.Medium" Class="mb-3" />
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
+                    Загрузка планов...
+                </MudText>
+            </div>
+        }
+        else if (errorMessage != null)
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-3">@errorMessage</MudAlert>
+        }
+        else if (availablePlans.Any())
+        {
+            <!-- Поле поиска -->
+            <MudTextField @bind-Value="searchQuery"
+                          Variant="Variant.Outlined"
+                          Placeholder="Поиск планов..."
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          IconSize="Size.Medium"
+                          Class="mb-3 search-field"
+                          Immediate="true" />
+            
+            @if (filteredPlans.Any())
+            {
+                <MudList T="Guid"
+                         SelectedValue="selectedPlanId"
+                         SelectedValueChanged="OnSelectedPlanChanged"
+                         SelectionMode="SelectionMode.SingleSelection"
+                         Dense="true"
+                         Class="plan-list">
+                    @foreach (var plan in filteredPlans)
+                    {
+                        <MudListItem @key="plan.Id" Value="@plan.Id">
+                            <div class="plan-item">
+                                <MudText Typo="Typo.body1" Class="plan-name">@plan.Name</MudText>
+                            </div>
+                        </MudListItem>
+                    }
+                </MudList>
+            }
+            else
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="py-4">
+                    @if (!string.IsNullOrWhiteSpace(searchQuery))
+                    {
+                        <text>Ничего не найдено по запросу "@searchQuery"</text>
+                    }
+                    else
+                    {
+                        <text>Нет доступных планов</text>
+                    }
+                </MudText>
+            }
+        }
+        else
+        {
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="py-4">
+                Нет доступных планов. Создайте план тренировки, чтобы добавить в него тренировку.
+            </MudText>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel"
+                   Variant="Variant.Text">
+            Отмена
+        </MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   OnClick="AddToPlan"
+                   Disabled="@(selectedPlanId == Guid.Empty || isAdding)">
+            @if (isAdding)
+            {
+                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                <MudText Class="ms-2">Добавление...</MudText>
+            }
+            else
+            {
+                <MudText>Добавить</MudText>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+<style>
+    .loading-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px;
+    }
+
+    .plan-list {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .plan-item {
+        flex: 1;
+    }
+
+    .plan-name {
+        font-weight: 500;
+    }
+
+    .search-field {
+        border-radius: 8px;
+    }
+</style>
+
+@code {
+    [CascadingParameter] IMudDialogInstance? MudDialog { get; set; }
+    [Parameter] public Guid? ExcludedPlanId { get; set; }
+
+    private List<WorkoutPlan> availablePlans = new();
+    private string searchQuery = string.Empty;
+    private Guid selectedPlanId = Guid.Empty;
+    private bool isLoading = true;
+    private bool isAdding = false;
+    private string? errorMessage;
+
+    private IEnumerable<WorkoutPlan> filteredPlans
+    {
+        get
+        {
+            var plans = availablePlans;
+            
+            // Исключаем план, если указан
+            if (ExcludedPlanId.HasValue)
+            {
+                plans = plans.Where(p => p.Id != ExcludedPlanId.Value).ToList();
+            }
+
+            if (string.IsNullOrWhiteSpace(searchQuery))
+                return plans;
+
+            var query = searchQuery.Trim().ToLowerInvariant();
+            return plans.Where(p => p.Name.ToLowerInvariant().Contains(query));
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPlans();
+    }
+
+    private async Task LoadPlans()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            Guid userId = Guid.Empty;
+            if (TelegramWebAppStateService?.ValidationResult?.Data?.User != null)
+            {
+                userId = TelegramWebAppStateService.ValidationResult.Data.User.Id;
+            }
+
+            if (userId == Guid.Empty)
+            {
+                errorMessage = "Не удалось определить пользователя";
+                isLoading = false;
+                return;
+            }
+
+            var data = await WorkoutPlanService.GetWorkoutPlansAsync(userId);
+            if (data != null)
+            {
+                availablePlans = data;
+            }
+            else
+            {
+                errorMessage = "Не удалось загрузить планы. Проверьте подключение к API.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Не удалось загрузить планы: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void OnSelectedPlanChanged(Guid planId)
+    {
+        selectedPlanId = planId;
+        StateHasChanged();
+    }
+
+    private void Cancel()
+    {
+        MudDialog?.Cancel();
+    }
+
+    private void AddToPlan()
+    {
+        if (selectedPlanId == Guid.Empty || isAdding)
+            return;
+
+        var selectedPlan = availablePlans.FirstOrDefault(p => p.Id == selectedPlanId);
+        if (selectedPlan != null)
+        {
+            MudDialog?.Close(DialogResult.Ok(selectedPlan));
+        }
+    }
+}
