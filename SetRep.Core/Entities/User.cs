@@ -44,5 +44,10 @@ public class User
     /// Навигационное свойство: история веса пользователя
     /// </summary>
     public ICollection<WeightHistory> WeightHistory { get; set; } = [];
+
+    /// <summary>
+    /// Навигационное свойство: планы тренировок пользователя
+    /// </summary>
+    public ICollection<WorkoutPlan> WorkoutPlans { get; set; } = [];
 }
 

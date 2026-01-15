@@ -16,6 +16,11 @@ public class Workout
     public Guid UserId { get; set; }
 
     /// <summary>
+    /// Идентификатор плана тренировки (опционально)
+    /// </summary>
+    public Guid? WorkoutPlanId { get; set; }
+
+    /// <summary>
     /// Название тренировки
     /// </summary>
     public string Name { get; set; } = string.Empty;
@@ -39,6 +44,11 @@ public class Workout
     /// Навигационное свойство: пользователь
     /// </summary>
     public User User { get; set; } = null!;
+
+    /// <summary>
+    /// Навигационное свойство: план тренировки
+    /// </summary>
+    public WorkoutPlan? WorkoutPlan { get; set; }
 
     /// <summary>
     /// Навигационное свойство: упражнения в тренировке

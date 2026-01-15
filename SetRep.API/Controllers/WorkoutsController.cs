@@ -96,6 +96,7 @@ public class WorkoutsController : ControllerBase
             UserId = dto.UserId,
             Name = dto.Name,
             Notes = dto.Notes,
+            WorkoutPlanId = dto.WorkoutPlanId,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -120,6 +121,7 @@ public class WorkoutsController : ControllerBase
         existingWorkout.Name = dto.Name;
         existingWorkout.UserId = dto.UserId;
         existingWorkout.Notes = dto.Notes;
+        existingWorkout.WorkoutPlanId = dto.WorkoutPlanId;
         existingWorkout.UpdatedAt = DateTime.UtcNow;
 
         await _workoutRepository.UpdateAsync(existingWorkout);
