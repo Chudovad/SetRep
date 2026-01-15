@@ -133,6 +133,7 @@ public class ExercisesController : ControllerBase
 
         existingExercise.Name = exercise.Name;
         existingExercise.Image = exercise.Image ?? string.Empty;
+        existingExercise.MainImage = exercise.MainImage ?? string.Empty;
         existingExercise.Description = exercise.Description;
         existingExercise.MuscleGroup = exercise.MuscleGroup;
         existingExercise.WeightUnit = exercise.WeightUnit;
