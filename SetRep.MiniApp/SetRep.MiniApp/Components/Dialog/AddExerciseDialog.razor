@@ -41,7 +41,14 @@
             </MudFileUpload>
             @if (!string.IsNullOrEmpty(exercise.Image))
             {
-                <MudText Typo="Typo.caption" Class="mb-3">Текущее изображение: @exercise.Image</MudText>
+                <div class="mb-3">
+                    <MudImage Src="@exercise.Image" 
+                             Alt="Изображение упражнения" 
+                             Width="150" 
+                             Height="150" 
+                             ObjectFit="ObjectFit.Cover"
+                             Class="border rounded" />
+                </div>
             }
 
             <MudFileUpload T="IBrowserFile" 
@@ -60,7 +67,14 @@
             </MudFileUpload>
             @if (!string.IsNullOrEmpty(exercise.MainImage))
             {
-                <MudText Typo="Typo.caption" Class="mb-3">Текущая главная картинка: @exercise.MainImage</MudText>
+                <div class="mb-3">
+                    <MudImage Src="@exercise.MainImage" 
+                             Alt="Главная картинка упражнения" 
+                             Width="150" 
+                             Height="150" 
+                             ObjectFit="ObjectFit.Cover"
+                             Class="border rounded" />
+                </div>
             }
             
             <MudTextField T="string" 
