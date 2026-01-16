@@ -1,4 +1,3 @@
-using Microsoft.JSInterop;
 using MudBlazor.Services;
 using SetRep.Core.ApiRequestServices;
 using SetRep.MiniApp.Client.Services;
@@ -52,9 +51,8 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IFileUploadService, FileUploadService>();
         services.AddScoped<IAppInitializationService, AppInitializationService>();
 
-        // Настройка FileUpload через Options pattern
-        services.Configure<SetRep.MiniApp.Options.FileUploadOptions>(
-            builder.Configuration.GetSection(SetRep.MiniApp.Options.FileUploadOptions.SectionName));
+        services.Configure<Options.FileUploadOptions>(
+            builder.Configuration.GetSection(Options.FileUploadOptions.SectionName));
 
         return services;
     }
