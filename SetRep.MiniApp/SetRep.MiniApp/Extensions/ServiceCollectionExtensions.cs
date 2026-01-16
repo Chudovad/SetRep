@@ -49,7 +49,12 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IWorkoutHistorySetService, WorkoutHistorySetService>();
         services.AddTransient<ISetService, SetService>();
         services.AddTransient<IUserService, UserService>();
+        services.AddTransient<IFileUploadService, FileUploadService>();
         services.AddScoped<IAppInitializationService, AppInitializationService>();
+
+        // Настройка FileUpload через Options pattern
+        services.Configure<SetRep.MiniApp.Options.FileUploadOptions>(
+            builder.Configuration.GetSection(SetRep.MiniApp.Options.FileUploadOptions.SectionName));
 
         return services;
     }

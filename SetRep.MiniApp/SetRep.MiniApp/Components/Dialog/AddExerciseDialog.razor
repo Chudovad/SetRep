@@ -4,9 +4,17 @@
 @using SetRep.Core.Entities
 @using SetRep.Core.Enums
 @using SetRep.Core.Extensions
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Options
+@using SetRep.MiniApp.Options
 
 @inject ITelegramWebAppStateService TelegramWebAppStateService
 @inject IExerciseService ExerciseService
+@inject IFileUploadService FileUploadService
+@inject ISnackbar Snackbar
+@inject ILogger<AddExerciseDialog>? Logger
+@inject IOptions<FileUploadOptions> FileUploadOptionsAccessor
 
 <MudDialog>
     <TitleContent>
@@ -22,17 +30,57 @@
                           RequiredError="Название обязательно для заполнения"
                           Class="mb-3" />
 
-            <MudTextField T="string" 
-                         Label="Ссылка на изображение" 
-                         @bind-Value="exercise.Image"
-                         Variant="Variant.Outlined"
-                         Class="mb-3" />
+            <MudFileUpload T="IBrowserFile" 
+                          Accept="image/*"
+                          MaxFileSize="@maxFileSize"
+                          FilesChanged="OnImageFileChanged"
+                          Class="mb-3">
+                <ActivatorContent>
+                    <MudButton HtmlTag="label" 
+                              Variant="Variant.Outlined" 
+                              Color="Color.Primary" 
+                              StartIcon="@Icons.Material.Filled.CloudUpload">
+                        Загрузить изображение
+                    </MudButton>
+                </ActivatorContent>
+            </MudFileUpload>
+            @if (!string.IsNullOrEmpty(imagePreviewUrl))
+            {
+                <div class="mb-3">
+                    <MudImage Src="@imagePreviewUrl" 
+                             Alt="Изображение упражнения" 
+                             Width="150" 
+                             Height="150" 
+                             ObjectFit="ObjectFit.Cover"
+                             Class="border rounded" />
+                </div>
+            }
 
-            <MudTextField T="string" 
-                         Label="Главная картинка (для карточек)" 
-                         @bind-Value="exercise.MainImage"
-                         Variant="Variant.Outlined"
-                         Class="mb-3" />
+            <MudFileUpload T="IBrowserFile" 
+                          Accept="image/*"
+                          MaxFileSize="@maxFileSize"
+                          FilesChanged="OnMainImageFileChanged"
+                          Class="mb-3">
+                <ActivatorContent>
+                    <MudButton HtmlTag="label" 
+                              Variant="Variant.Outlined" 
+                              Color="Color.Primary" 
+                              StartIcon="@Icons.Material.Filled.CloudUpload">
+                        Загрузить главную картинку
+                    </MudButton>
+                </ActivatorContent>
+            </MudFileUpload>
+            @if (!string.IsNullOrEmpty(mainImagePreviewUrl))
+            {
+                <div class="mb-3">
+                    <MudImage Src="@mainImagePreviewUrl" 
+                             Alt="Главная картинка упражнения" 
+                             Width="150" 
+                             Height="150" 
+                             ObjectFit="ObjectFit.Cover"
+                             Class="border rounded" />
+                </div>
+            }
             
             <MudTextField T="string" 
                          Label="Описание" 
@@ -96,7 +144,14 @@
     private MudForm? form;
     private bool isFormValid;
     private bool isSaving = false;
+    private bool isUploadingImage = false;
+    private bool isUploadingMainImage = false;
     private string? errorMessage;
+    private IBrowserFile? selectedImageFile;
+    private IBrowserFile? selectedMainImageFile;
+    private string? imagePreviewUrl;
+    private string? mainImagePreviewUrl;
+    private long maxFileSize;
 
     private Exercise exercise = new()
     {
@@ -112,6 +167,8 @@
     protected override void OnInitialized()
     {
         base.OnInitialized();
+        maxFileSize = FileUploadOptionsAccessor.Value.MaxFileSizeBytes;
+        
         if (PreselectedMuscleGroup.HasValue)
         {
             exercise.MuscleGroup = PreselectedMuscleGroup.Value;
@@ -121,6 +178,118 @@
     private void Cancel()
     {
         MudDialog?.Cancel();
+    }
+
+    private async Task OnImageFileChanged(IBrowserFile file)
+    {
+        selectedImageFile = file;
+        imagePreviewUrl = await CreateImagePreviewUrlAsync(file);
+        StateHasChanged();
+    }
+
+    private async Task OnMainImageFileChanged(IBrowserFile file)
+    {
+        selectedMainImageFile = file;
+        mainImagePreviewUrl = await CreateImagePreviewUrlAsync(file);
+        StateHasChanged();
+    }
+
+    private async Task OnImageFileRemoved()
+    {
+        selectedImageFile = null;
+        exercise.Image = string.Empty;
+        imagePreviewUrl = string.Empty;
+        await Task.CompletedTask;
+    }
+
+    private async Task OnMainImageFileRemoved()
+    {
+        selectedMainImageFile = null;
+        exercise.MainImage = null;
+        mainImagePreviewUrl = null;
+        await Task.CompletedTask;
+    }
+
+    private async Task<string> CreateImagePreviewUrlAsync(IBrowserFile file)
+    {
+        try
+        {
+            using var stream = file.OpenReadStream(maxAllowedSize: maxFileSize);
+            using var memoryStream = new MemoryStream();
+            await stream.CopyToAsync(memoryStream);
+            var imageBytes = memoryStream.ToArray();
+            var base64String = Convert.ToBase64String(imageBytes);
+            var contentType = file.ContentType ?? "image/jpeg";
+            return $"data:{contentType};base64,{base64String}";
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogError(ex, "Ошибка при создании preview изображения");
+            return string.Empty;
+        }
+    }
+
+    private async Task UploadImageAsync(IBrowserFile file, bool isMainImage)
+    {
+        if (file == null) return;
+
+        // Проверка размера файла
+        if (file.Size > maxFileSize)
+        {
+            var maxSizeMB = maxFileSize / 1024.0 / 1024.0;
+            Snackbar.Add($"Размер файла превышает {maxSizeMB:F1} МБ", Severity.Error);
+            return;
+        }
+
+        try
+        {
+            if (isMainImage)
+            {
+                isUploadingMainImage = true;
+            }
+            else
+            {
+                isUploadingImage = true;
+            }
+
+            using var stream = file.OpenReadStream(maxAllowedSize: maxFileSize);
+            var contentType = file.ContentType ?? "image/jpeg";
+            var url = await FileUploadService.UploadImageAsync(stream, file.Name, contentType);
+
+            if (!string.IsNullOrEmpty(url))
+            {
+                if (isMainImage)
+                {
+                    exercise.MainImage = url;
+                    mainImagePreviewUrl = url;
+                }
+                else
+                {
+                    exercise.Image = url;
+                    imagePreviewUrl = url;
+                }
+            }
+            else
+            {
+                Snackbar.Add("Ошибка при загрузке изображения", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка при загрузке изображения: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            if (isMainImage)
+            {
+                isUploadingMainImage = false;
+            }
+            else
+            {
+                isUploadingImage = false;
+            }
+            StateHasChanged();
+        }
     }
 
     private async Task Save()
@@ -135,6 +304,9 @@
 
         try
         {
+            await UploadImageAsync(selectedImageFile!, isMainImage: false);
+            await UploadImageAsync(selectedMainImageFile!, isMainImage: true);
+
             if (exercise.Id == Guid.Empty)
             {
                 exercise.Id = Guid.NewGuid();

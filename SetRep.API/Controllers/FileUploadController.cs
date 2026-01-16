@@ -1,0 +1,149 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using SetRep.API.Options;
+using SetRep.API.Services;
+using System.Security.Claims;
+
+namespace SetRep.API.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+[Authorize]
+public class FileUploadController : ControllerBase
+{
+    private readonly IYandexObjectStorageService _storageService;
+    private readonly FileUploadOptions _fileUploadOptions;
+    private readonly ILogger<FileUploadController> _logger;
+    private static readonly Dictionary<Guid, int> _userUploadCounts = new();
+    private static DateTime _lastResetTime = DateTime.UtcNow;
+    private static readonly object _lockObject = new();
+
+    public FileUploadController(
+        IYandexObjectStorageService storageService,
+        IOptions<FileUploadOptions> fileUploadOptions,
+        ILogger<FileUploadController> logger)
+    {
+        _storageService = storageService;
+        _fileUploadOptions = fileUploadOptions.Value;
+        _logger = logger;
+    }
+
+    /// <summary>
+    /// Загрузить файл изображения
+    /// </summary>
+    [HttpPost("image")]
+    public async Task<IActionResult> UploadImage(IFormFile file)
+    {
+        try
+        {
+            var maxFileSize = _fileUploadOptions.MaxFileSizeBytes;
+            
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+            {
+                return Unauthorized("Не удалось определить пользователя");
+            }
+
+            if (!CheckUploadLimit(userId))
+            {
+                return BadRequest(new { error = "Превышен лимит загрузок. Попробуйте позже." });
+            }
+
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest(new { error = "Файл не был загружен" });
+            }
+
+            if (file.Length > maxFileSize)
+            {
+                return BadRequest(new { error = $"Размер файла превышает {maxFileSize / 1024 / 1024} МБ" });
+            }
+
+            var allowedContentTypes = new[] { "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp" };
+            if (!allowedContentTypes.Contains(file.ContentType.ToLower()))
+            {
+                return BadRequest(new { error = "Разрешены только изображения (JPEG, PNG, GIF, WebP)" });
+            }
+
+            using var stream = file.OpenReadStream();
+            var fileUrl = await _storageService.UploadFileAsync(stream, file.FileName, file.ContentType);
+
+            IncrementUploadCount(userId);
+
+            return Ok(new { url = fileUrl });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка при загрузке файла");
+            return StatusCode(500, new { error = "Ошибка при загрузке файла" });
+        }
+    }
+
+    /// <summary>
+    /// Удалить файл изображения
+    /// </summary>
+    [HttpDelete("image")]
+    public async Task<IActionResult> DeleteImage([FromQuery] string url)
+    {
+        try
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+            {
+                return Unauthorized("Не удалось определить пользователя");
+            }
+
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                return BadRequest(new { error = "URL файла не указан" });
+            }
+
+            await _storageService.DeleteFileAsync(url);
+
+            _logger.LogInformation("Пользователь {UserId} удалил файл {Url}", userId, url);
+
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка при удалении файла");
+            return StatusCode(500, new { error = "Ошибка при удалении файла" });
+        }
+    }
+
+    private bool CheckUploadLimit(Guid userId)
+    {
+        lock (_lockObject)
+        {
+            if (DateTime.UtcNow - _lastResetTime > TimeSpan.FromHours(1))
+            {
+                _userUploadCounts.Clear();
+                _lastResetTime = DateTime.UtcNow;
+            }
+
+            var maxUploads = _fileUploadOptions.MaxUploadsPerUser;
+            if (_userUploadCounts.TryGetValue(userId, out var count))
+            {
+                return count < maxUploads;
+            }
+
+            return true;
+        }
+    }
+
+    private void IncrementUploadCount(Guid userId)
+    {
+        lock (_lockObject)
+        {
+            if (_userUploadCounts.ContainsKey(userId))
+            {
+                _userUploadCounts[userId]++;
+            }
+            else
+            {
+                _userUploadCounts[userId] = 1;
+            }
+        }
+    }
+}

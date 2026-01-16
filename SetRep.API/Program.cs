@@ -1,8 +1,9 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi;
 using Microsoft.OpenApi.Models;
+using SetRep.API.Options;
 using SetRep.API.Services;
 using SetRep.Core.Repositories;
 using SetRep.Infrastructure.Data;
@@ -20,6 +21,18 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
         options.JsonSerializerOptions.WriteIndented = true;
     });
+
+builder.Services.Configure<FileUploadOptions>(
+    builder.Configuration.GetSection(FileUploadOptions.SectionName));
+
+var fileUploadOptions = builder.Configuration.GetSection(FileUploadOptions.SectionName)
+    .Get<FileUploadOptions>() ?? new FileUploadOptions();
+
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = fileUploadOptions.MaxFileSizeBytes;
+});
+
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
@@ -80,11 +93,14 @@ builder.Services.AddScoped<ITelegramWebAppValidationService, TelegramWebAppValid
 // Регистрируем сервис JWT токенов
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 
+// Регистрируем сервис Yandex Object Storage
+builder.Services.AddScoped<IYandexObjectStorageService, YandexObjectStorageService>();
+
 // Регистрируем фоновый сервис для автоматического завершения тренировок
 builder.Services.AddHostedService<WorkoutAutoCompletionService>();
 
 // Настройка JWT аутентификации
-var jwtSecretKey = builder.Configuration["Jwt:SecretKey"] 
+var jwtSecretKey = builder.Configuration["Jwt:SecretKey"]
     ?? throw new InvalidOperationException("Jwt:SecretKey is not configured");
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "SetRep.API";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "SetRep.Client";
