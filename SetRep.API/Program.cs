@@ -20,6 +20,12 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.ReferenceHandler = ReferenceHandler.IgnoreCycles;
         options.JsonSerializerOptions.WriteIndented = true;
     });
+
+// Настройка ограничения размера загружаемых файлов (1 МБ)
+builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = 1048576; // 1 МБ
+});
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
@@ -79,6 +85,9 @@ builder.Services.AddScoped<ITelegramWebAppValidationService, TelegramWebAppValid
 
 // Регистрируем сервис JWT токенов
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
+
+// Регистрируем сервис Yandex Object Storage
+builder.Services.AddScoped<IYandexObjectStorageService, YandexObjectStorageService>();
 
 // Регистрируем фоновый сервис для автоматического завершения тренировок
 builder.Services.AddHostedService<WorkoutAutoCompletionService>();

@@ -4,8 +4,11 @@
 @using SetRep.Core.Entities
 @using SetRep.Core.Enums
 @using SetRep.Core.Extensions
+@using Microsoft.AspNetCore.Components.Forms
 
 @inject IExerciseService ExerciseService
+@inject IFileUploadService FileUploadService
+@inject ISnackbar Snackbar
 
 <MudDialog>
     <TitleContent>
@@ -21,17 +24,44 @@
                           RequiredError="Название обязательно для заполнения"
                           Class="mb-3" />
 
-            <MudTextField T="string" 
-                         Label="Изображение упражнения" 
-                         @bind-Value="exercise.Image"
-                         Variant="Variant.Outlined"
-                         Class="mb-3" />
+            <MudFileUpload T="IBrowserFile" 
+                          Label="Изображение упражнения" 
+                          Accept="image/*"
+                          MaxAllowedSize="1048576"
+                          FilesChanged="OnImageFileChanged"
+                          Class="mb-3">
+                <ActivatorContent>
+                    <MudButton HtmlTag="label" 
+                              Variant="Variant.Outlined" 
+                              Color="Color.Primary" 
+                              StartIcon="@Icons.Material.Filled.CloudUpload">
+                        Загрузить изображение
+                    </MudButton>
+                </ActivatorContent>
+            </MudFileUpload>
+            @if (!string.IsNullOrEmpty(exercise.Image))
+            {
+                <MudText Typo="Typo.caption" Class="mb-3">Текущее изображение: @exercise.Image</MudText>
+            }
 
-            <MudTextField T="string" 
-                         Label="Главная картинка (для карточек)" 
-                         @bind-Value="exercise.MainImage"
-                         Variant="Variant.Outlined"
-                         Class="mb-3" />
+            <MudFileUpload T="IBrowserFile" 
+                          Accept="image/*"
+                          MaxFileSize="1048576"
+                          FilesChanged="OnMainImageFileChanged"
+                          Class="mb-3">
+                <ActivatorContent>
+                    <MudButton HtmlTag="label" 
+                              Variant="Variant.Outlined" 
+                              Color="Color.Primary" 
+                              StartIcon="@Icons.Material.Filled.CloudUpload">
+                        Загрузить главную картинку
+                    </MudButton>
+                </ActivatorContent>
+            </MudFileUpload>
+            @if (!string.IsNullOrEmpty(exercise.MainImage))
+            {
+                <MudText Typo="Typo.caption" Class="mb-3">Текущая главная картинка: @exercise.MainImage</MudText>
+            }
             
             <MudTextField T="string" 
                          Label="Описание" 
@@ -95,7 +125,11 @@
     private MudForm? form;
     private bool isFormValid;
     private bool isSaving = false;
+    private bool isUploadingImage = false;
+    private bool isUploadingMainImage = false;
     private string? errorMessage;
+    private IBrowserFile? selectedImageFile;
+    private IBrowserFile? selectedMainImageFile;
     private Exercise exercise = null!;
 
     protected override void OnInitialized()
@@ -120,6 +154,93 @@
     private void Cancel()
     {
         MudDialog?.Cancel();
+    }
+
+    private async Task OnImageFileChanged(IBrowserFile file)
+    {
+        selectedImageFile = file;
+        await UploadImageAsync(file, isMainImage: false);
+    }
+
+    private async Task OnMainImageFileChanged(IBrowserFile file)
+    {
+        selectedMainImageFile = file;
+        await UploadImageAsync(file, isMainImage: true);
+    }
+
+    private async Task OnImageFileRemoved()
+    {
+        selectedImageFile = null;
+        exercise.Image = string.Empty;
+        await Task.CompletedTask;
+    }
+
+    private async Task OnMainImageFileRemoved()
+    {
+        selectedMainImageFile = null;
+        exercise.MainImage = null;
+        await Task.CompletedTask;
+    }
+
+    private async Task UploadImageAsync(IBrowserFile file, bool isMainImage)
+    {
+        if (file == null) return;
+
+        // Проверка размера файла (1 МБ)
+        if (file.Size > 1048576)
+        {
+            Snackbar.Add("Размер файла превышает 1 МБ", Severity.Error);
+            return;
+        }
+
+        try
+        {
+            if (isMainImage)
+            {
+                isUploadingMainImage = true;
+            }
+            else
+            {
+                isUploadingImage = true;
+            }
+
+            using var stream = file.OpenReadStream(maxAllowedSize: 1048576);
+            var contentType = file.ContentType ?? "image/jpeg";
+            var url = await FileUploadService.UploadImageAsync(stream, file.Name, contentType);
+
+            if (!string.IsNullOrEmpty(url))
+            {
+                if (isMainImage)
+                {
+                    exercise.MainImage = url;
+                }
+                else
+                {
+                    exercise.Image = url;
+                }
+                Snackbar.Add("Изображение успешно загружено", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("Ошибка при загрузке изображения", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка при загрузке изображения: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            if (isMainImage)
+            {
+                isUploadingMainImage = false;
+            }
+            else
+            {
+                isUploadingImage = false;
+            }
+            StateHasChanged();
+        }
     }
 
     private async Task Save()
