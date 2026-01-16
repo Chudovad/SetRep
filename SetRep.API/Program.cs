@@ -1,8 +1,9 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi;
 using Microsoft.OpenApi.Models;
+using SetRep.API.Options;
 using SetRep.API.Services;
 using SetRep.Core.Repositories;
 using SetRep.Infrastructure.Data;
@@ -21,11 +22,17 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.WriteIndented = true;
     });
 
-// Настройка ограничения размера загружаемых файлов (1 МБ)
-builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(options =>
+builder.Services.Configure<FileUploadOptions>(
+    builder.Configuration.GetSection(FileUploadOptions.SectionName));
+
+var fileUploadOptions = builder.Configuration.GetSection(FileUploadOptions.SectionName)
+    .Get<FileUploadOptions>() ?? new FileUploadOptions();
+
+builder.Services.Configure<FormOptions>(options =>
 {
-    options.MultipartBodyLengthLimit = 1048576; // 1 МБ
+    options.MultipartBodyLengthLimit = fileUploadOptions.MaxFileSizeBytes;
 });
+
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
@@ -93,7 +100,7 @@ builder.Services.AddScoped<IYandexObjectStorageService, YandexObjectStorageServi
 builder.Services.AddHostedService<WorkoutAutoCompletionService>();
 
 // Настройка JWT аутентификации
-var jwtSecretKey = builder.Configuration["Jwt:SecretKey"] 
+var jwtSecretKey = builder.Configuration["Jwt:SecretKey"]
     ?? throw new InvalidOperationException("Jwt:SecretKey is not configured");
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "SetRep.API";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "SetRep.Client";

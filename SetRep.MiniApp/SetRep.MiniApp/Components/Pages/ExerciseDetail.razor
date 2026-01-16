@@ -388,8 +388,6 @@ else if (exercise != null)
             var success = await ExerciseService.DeleteExerciseAsync(exercise.Id);
             if (success)
             {
-                Snackbar.Add("Упражнение успешно удалено", Severity.Success);
-                await Task.Delay(500); // Небольшая задержка для показа сообщения
                 Navigation.NavigateTo("/exercises");
             }
             else

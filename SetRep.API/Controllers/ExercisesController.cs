@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SetRep.API.Services;
 using SetRep.Core.Entities;
 using SetRep.Core.Enums;
 using SetRep.Core.Repositories;
@@ -12,15 +13,18 @@ public class ExercisesController : ControllerBase
 {
     private readonly IExerciseRepository _exerciseRepository;
     private readonly IWorkoutExerciseRepository _workoutExerciseRepository;
+    private readonly IYandexObjectStorageService _storageService;
     private readonly ILogger<ExercisesController> _logger;
 
     public ExercisesController(
         IExerciseRepository exerciseRepository,
         IWorkoutExerciseRepository workoutExerciseRepository,
+        IYandexObjectStorageService storageService,
         ILogger<ExercisesController> logger)
     {
         _exerciseRepository = exerciseRepository;
         _workoutExerciseRepository = workoutExerciseRepository;
+        _storageService = storageService;
         _logger = logger;
     }
 
@@ -157,6 +161,9 @@ public class ExercisesController : ControllerBase
             return NotFound();
         }
 
+        var imageUrl = exercise.Image;
+        var mainImageUrl = exercise.MainImage;
+
         var workoutExercises = await _workoutExerciseRepository.GetByExerciseIdAsync(id);
         foreach (var workoutExercise in workoutExercises)
         {
@@ -164,10 +171,46 @@ public class ExercisesController : ControllerBase
         }
 
         await _exerciseRepository.DeleteAsync(exercise);
-
         await _exerciseRepository.SaveChangesAsync();
 
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(imageUrl) && IsCloudStorageUrl(imageUrl))
+            {
+                await _storageService.DeleteFileAsync(imageUrl);
+                _logger.LogInformation("Удалено изображение упражнения: {ImageUrl}", imageUrl);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Не удалось удалить изображение упражнения: {ImageUrl}", imageUrl);
+        }
+
+        try
+        {
+            if (!string.IsNullOrWhiteSpace(mainImageUrl) && IsCloudStorageUrl(mainImageUrl))
+            {
+                await _storageService.DeleteFileAsync(mainImageUrl);
+                _logger.LogInformation("Удалена главная картинка упражнения: {MainImageUrl}", mainImageUrl);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Не удалось удалить главную картинку упражнения: {MainImageUrl}", mainImageUrl);
+        }
+
         return NoContent();
+    }
+
+    private static bool IsCloudStorageUrl(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url))
+            return false;
+
+        // Проверяем, является ли URL облачным хранилищем (не data URL и не относительный путь)
+        return !url.StartsWith("data:", StringComparison.OrdinalIgnoreCase) &&
+               (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase) ||
+                url.StartsWith("https://", StringComparison.OrdinalIgnoreCase));
     }
 }
 

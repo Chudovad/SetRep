@@ -5,10 +5,15 @@
 @using SetRep.Core.Enums
 @using SetRep.Core.Extensions
 @using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Options
+@using SetRep.MiniApp.Options
 
 @inject IExerciseService ExerciseService
 @inject IFileUploadService FileUploadService
 @inject ISnackbar Snackbar
+@inject ILogger<EditExerciseDialog>? Logger
+@inject IOptions<FileUploadOptions> FileUploadOptionsAccessor
 
 <MudDialog>
     <TitleContent>
@@ -25,9 +30,8 @@
                           Class="mb-3" />
 
             <MudFileUpload T="IBrowserFile" 
-                          Label="Изображение упражнения" 
                           Accept="image/*"
-                          MaxAllowedSize="1048576"
+                          MaxFileSize="@maxFileSize"
                           FilesChanged="OnImageFileChanged"
                           Class="mb-3">
                 <ActivatorContent>
@@ -39,10 +43,10 @@
                     </MudButton>
                 </ActivatorContent>
             </MudFileUpload>
-            @if (!string.IsNullOrEmpty(exercise.Image))
+            @if (!string.IsNullOrEmpty(imagePreviewUrl))
             {
                 <div class="mb-3">
-                    <MudImage Src="@exercise.Image" 
+                    <MudImage Src="@imagePreviewUrl" 
                              Alt="Изображение упражнения" 
                              Width="150" 
                              Height="150" 
@@ -53,7 +57,7 @@
 
             <MudFileUpload T="IBrowserFile" 
                           Accept="image/*"
-                          MaxFileSize="1048576"
+                          MaxFileSize="@maxFileSize"
                           FilesChanged="OnMainImageFileChanged"
                           Class="mb-3">
                 <ActivatorContent>
@@ -65,10 +69,10 @@
                     </MudButton>
                 </ActivatorContent>
             </MudFileUpload>
-            @if (!string.IsNullOrEmpty(exercise.MainImage))
+            @if (!string.IsNullOrEmpty(mainImagePreviewUrl))
             {
                 <div class="mb-3">
-                    <MudImage Src="@exercise.MainImage" 
+                    <MudImage Src="@mainImagePreviewUrl" 
                              Alt="Главная картинка упражнения" 
                              Width="150" 
                              Height="150" 
@@ -145,10 +149,14 @@
     private IBrowserFile? selectedImageFile;
     private IBrowserFile? selectedMainImageFile;
     private Exercise exercise = null!;
+    private string? imagePreviewUrl;
+    private string? mainImagePreviewUrl;
+    private long maxFileSize;
 
     protected override void OnInitialized()
     {
-        // Создаем копию упражнения для редактирования
+        maxFileSize = FileUploadOptionsAccessor.Value.MaxFileSizeBytes;
+        
         exercise = new Exercise
         {
             Id = Exercise.Id,
@@ -163,6 +171,9 @@
             CreatedAt = Exercise.CreatedAt,
             UpdatedAt = Exercise.UpdatedAt
         };
+        
+        imagePreviewUrl = exercise.Image;
+        mainImagePreviewUrl = exercise.MainImage;
     }
 
     private void Cancel()
@@ -173,19 +184,22 @@
     private async Task OnImageFileChanged(IBrowserFile file)
     {
         selectedImageFile = file;
-        await UploadImageAsync(file, isMainImage: false);
+        imagePreviewUrl = await CreateImagePreviewUrlAsync(file);
+        StateHasChanged();
     }
 
     private async Task OnMainImageFileChanged(IBrowserFile file)
     {
         selectedMainImageFile = file;
-        await UploadImageAsync(file, isMainImage: true);
+        mainImagePreviewUrl = await CreateImagePreviewUrlAsync(file);
+        StateHasChanged();
     }
 
     private async Task OnImageFileRemoved()
     {
         selectedImageFile = null;
         exercise.Image = string.Empty;
+        imagePreviewUrl = string.Empty;
         await Task.CompletedTask;
     }
 
@@ -193,17 +207,38 @@
     {
         selectedMainImageFile = null;
         exercise.MainImage = null;
+        mainImagePreviewUrl = null;
         await Task.CompletedTask;
+    }
+
+    private async Task<string> CreateImagePreviewUrlAsync(IBrowserFile file)
+    {
+        try
+        {
+            using var stream = file.OpenReadStream(maxAllowedSize: maxFileSize);
+            using var memoryStream = new MemoryStream();
+            await stream.CopyToAsync(memoryStream);
+            var imageBytes = memoryStream.ToArray();
+            var base64String = Convert.ToBase64String(imageBytes);
+            var contentType = file.ContentType ?? "image/jpeg";
+            return $"data:{contentType};base64,{base64String}";
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogError(ex, "Ошибка при создании preview изображения");
+            return string.Empty;
+        }
     }
 
     private async Task UploadImageAsync(IBrowserFile file, bool isMainImage)
     {
         if (file == null) return;
 
-        // Проверка размера файла (1 МБ)
-        if (file.Size > 1048576)
+        // Проверка размера файла
+        if (file.Size > maxFileSize)
         {
-            Snackbar.Add("Размер файла превышает 1 МБ", Severity.Error);
+            var maxSizeMB = maxFileSize / 1024.0 / 1024.0;
+            Snackbar.Add($"Размер файла превышает {maxSizeMB:F1} МБ", Severity.Error);
             return;
         }
 
@@ -218,7 +253,7 @@
                 isUploadingImage = true;
             }
 
-            using var stream = file.OpenReadStream(maxAllowedSize: 1048576);
+            using var stream = file.OpenReadStream(maxAllowedSize: maxFileSize);
             var contentType = file.ContentType ?? "image/jpeg";
             var url = await FileUploadService.UploadImageAsync(stream, file.Name, contentType);
 
@@ -227,12 +262,13 @@
                 if (isMainImage)
                 {
                     exercise.MainImage = url;
+                    mainImagePreviewUrl = url;
                 }
                 else
                 {
                     exercise.Image = url;
+                    imagePreviewUrl = url;
                 }
-                Snackbar.Add("Изображение успешно загружено", Severity.Success);
             }
             else
             {
@@ -269,6 +305,9 @@
 
         try
         {
+            await UploadImageAsync(selectedImageFile!, isMainImage: false);
+            await UploadImageAsync(selectedMainImageFile!, isMainImage: true);
+
             exercise.UpdatedAt = DateTime.UtcNow;
 
             var success = await ExerciseService.UpdateExerciseAsync(exercise);

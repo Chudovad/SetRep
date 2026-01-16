@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using SetRep.API.Options;
 using SetRep.API.Services;
 using System.Security.Claims;
 
@@ -11,7 +13,7 @@ namespace SetRep.API.Controllers;
 public class FileUploadController : ControllerBase
 {
     private readonly IYandexObjectStorageService _storageService;
-    private readonly IConfiguration _configuration;
+    private readonly FileUploadOptions _fileUploadOptions;
     private readonly ILogger<FileUploadController> _logger;
     private static readonly Dictionary<Guid, int> _userUploadCounts = new();
     private static DateTime _lastResetTime = DateTime.UtcNow;
@@ -19,11 +21,11 @@ public class FileUploadController : ControllerBase
 
     public FileUploadController(
         IYandexObjectStorageService storageService,
-        IConfiguration configuration,
+        IOptions<FileUploadOptions> fileUploadOptions,
         ILogger<FileUploadController> logger)
     {
         _storageService = storageService;
-        _configuration = configuration;
+        _fileUploadOptions = fileUploadOptions.Value;
         _logger = logger;
     }
 
@@ -31,11 +33,12 @@ public class FileUploadController : ControllerBase
     /// Загрузить файл изображения
     /// </summary>
     [HttpPost("image")]
-    [RequestSizeLimit(1048576)]
     public async Task<IActionResult> UploadImage(IFormFile file)
     {
         try
         {
+            var maxFileSize = _fileUploadOptions.MaxFileSizeBytes;
+            
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
             if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
             {
@@ -52,11 +55,9 @@ public class FileUploadController : ControllerBase
                 return BadRequest(new { error = "Файл не был загружен" });
             }
 
-            var maxFileSize = _configuration.GetValue<long>("FILE_UPLOAD_MAX_SIZE_BYTES", 
-                _configuration.GetValue<long>("FileUpload:MaxFileSizeBytes", 1048576));
             if (file.Length > maxFileSize)
             {
-                return BadRequest(new { error = $"Размер файла превышает {maxFileSize / 1024} КБ" });
+                return BadRequest(new { error = $"Размер файла превышает {maxFileSize / 1024 / 1024} МБ" });
             }
 
             var allowedContentTypes = new[] { "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp" };
@@ -79,6 +80,38 @@ public class FileUploadController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Удалить файл изображения
+    /// </summary>
+    [HttpDelete("image")]
+    public async Task<IActionResult> DeleteImage([FromQuery] string url)
+    {
+        try
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+            {
+                return Unauthorized("Не удалось определить пользователя");
+            }
+
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                return BadRequest(new { error = "URL файла не указан" });
+            }
+
+            await _storageService.DeleteFileAsync(url);
+
+            _logger.LogInformation("Пользователь {UserId} удалил файл {Url}", userId, url);
+
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Ошибка при удалении файла");
+            return StatusCode(500, new { error = "Ошибка при удалении файла" });
+        }
+    }
+
     private bool CheckUploadLimit(Guid userId)
     {
         lock (_lockObject)
@@ -89,8 +122,7 @@ public class FileUploadController : ControllerBase
                 _lastResetTime = DateTime.UtcNow;
             }
 
-            var maxUploads = _configuration.GetValue<int>("FILE_UPLOAD_MAX_UPLOADS_PER_USER",
-                _configuration.GetValue<int>("FileUpload:MaxUploadsPerUser", 10));
+            var maxUploads = _fileUploadOptions.MaxUploadsPerUser;
             if (_userUploadCounts.TryGetValue(userId, out var count))
             {
                 return count < maxUploads;
