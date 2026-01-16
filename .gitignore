@@ -364,3 +364,5 @@ FodyWeavers.xsd
 /SetRep.Bot/appsettings.Development.json
 /DOCKER_SETUP.md
 /.env
+/SetRep.MiniApp/SetRep.MiniApp/appsettings.Development.json
+/SetRep.API/appsettings.Development.json
