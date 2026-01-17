@@ -77,9 +77,17 @@ else if (workoutHistoryList.Any())
                                 </MudText>
                                 @if (workoutHistory.EndTime.HasValue)
                                 {
-                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-1">
                                         Длительность: @FormatDuration(workoutHistory.EndTime.Value - workoutHistory.StartTime)
                                     </MudText>
+                                    var volume = CalculateVolume(workoutHistory);
+
+                                    @if (volume > 0)
+                                    {
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                            Объём: @volume.ToString("0") кг
+                                        </MudText>
+                                    }
                                 }
                                 else
                                 {
@@ -252,7 +260,7 @@ else
     private string FormatDate(DateTime date)
     {
         var localDate = date.AddHours(3); // UTC+3
-        return localDate.ToString("dd.MM.yyyy HH:mm");
+        return localDate.ToString("dd MMM yyyy");
     }
 
     private string FormatDuration(TimeSpan duration)
@@ -264,8 +272,19 @@ else
         return $"{duration.Minutes}м {duration.Seconds}с";
     }
 
+    private decimal CalculateVolume(WorkoutHistory workoutHistory)
+    {
+        if (workoutHistory.Sets == null || !workoutHistory.Sets.Any())
+            return 0;
+
+        return workoutHistory.Sets
+            .Where(s => s.IsCompleted && s.Weight.HasValue && s.Weight.Value > 0)
+            .Sum(s => s.Weight!.Value * s.Reps);
+    }
+
     public async ValueTask DisposeAsync()
     {
 
     }
 }
+
