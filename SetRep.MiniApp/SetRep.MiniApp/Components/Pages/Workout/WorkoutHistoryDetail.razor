@@ -88,20 +88,25 @@ else if (workoutHistory != null)
                 <MudText Typo="Typo.h5" Class="mb-3">@(workoutHistory.Workout?.Name ?? workoutHistory.WorkoutName ?? "Тренировка")</MudText>
                 
                 <div class="workout-meta">
-                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-1">
-                        <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" Class="mr-2" />
-                        Начало: @FormatDate(workoutHistory.StartTime)
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="meta-row">
+                        <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" Class="meta-icon" />
+                        @FormatDate(workoutHistory.StartTime)
                     </MudText>
                     @if (workoutHistory.EndTime.HasValue)
                     {
-                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-1">
-                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Class="mr-2" />
-                            Окончание: @FormatDate(workoutHistory.EndTime.Value)
-                        </MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">
-                            <MudIcon Icon="@Icons.Material.Filled.Timer" Size="Size.Small" Class="mr-2" />
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="meta-row">
+                            <MudIcon Icon="@Icons.Material.Filled.Timer" Size="Size.Small" Class="meta-icon" />
                             Длительность: @FormatDuration(workoutHistory.EndTime.Value - workoutHistory.StartTime)
                         </MudText>
+                        var volume = CalculateVolume(workoutHistory);
+
+                        @if (volume > 0)
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="meta-row">
+                                <MudIcon Icon="@Icons.Material.Filled.Layers" Class="meta-icon" />
+                                Объём: @volume.ToString("0") кг
+                            </MudText>
+                        }
                     }
                 </div>
 
@@ -258,6 +263,17 @@ else if (workoutHistory != null)
         gap: 16px;
         padding: 8px 0;
     }
+
+    .meta-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 2px;
+    }
+
+    .meta-icon {
+        margin: 0;
+    }
 </style>
 
 @code {
@@ -316,7 +332,7 @@ else if (workoutHistory != null)
     private string FormatDate(DateTime date)
     {
         var localDate = date.AddHours(3); // UTC+3
-        return localDate.ToString("dd.MM.yyyy HH:mm");
+        return localDate.ToString("dd MMM yyyy HH:mm");
     }
 
     private string FormatDuration(TimeSpan duration)
@@ -326,6 +342,16 @@ else if (workoutHistory != null)
             return $"{(int)duration.TotalHours}ч {duration.Minutes}м";
         }
         return $"{duration.Minutes}м {duration.Seconds}с";
+    }
+
+    private decimal CalculateVolume(WorkoutHistory workoutHistory)
+    {
+        if (workoutHistory.Sets == null || !workoutHistory.Sets.Any())
+            return 0;
+
+        return workoutHistory.Sets
+            .Where(s => s.IsCompleted && s.Weight.HasValue && s.Weight.Value > 0)
+            .Sum(s => s.Weight!.Value * s.Reps);
     }
 
     private IEnumerable<IGrouping<Guid, WorkoutHistorySet>> GetOrderedExerciseGroups(WorkoutHistory workoutHistory)

@@ -14,6 +14,7 @@ public class WorkoutHistoryRepository(ApplicationDbContext context) : Repository
     {
         return await _dbSet
             .Include(wh => wh.Workout)
+            .Include(wh => wh.Sets)
             .Where(wh => wh.UserId == userId)
             .OrderByDescending(wh => wh.StartTime)
             .ToListAsync();
