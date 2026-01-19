@@ -40,7 +40,7 @@ public class Exercise
     /// <summary>
     /// Группа мышц
     /// </summary>
-    public MuscleGroup? MuscleGroup { get; set; }
+    public MuscleGroup? MuscleGroup { get; set; } = Enums.MuscleGroup.Other;
 
     /// <summary>
     /// Единица измерения веса (например: "кг", "lbs")

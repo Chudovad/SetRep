@@ -73,15 +73,12 @@
                     <MudCard Elevation="2" Class="mb-3 exercise-item-card">
                         <MudCardContent>
                             <div class="exercise-item-header">
+                                <MudSkeleton Width="64px" Height="64px" Variant="SkeletonVariant.Rectangular" Class="exercise-image-skeleton" />
                                 <div class="exercise-item-info">
-                                    <MudSkeleton Typo="Typo.h6" Width="70%" Height="24px" Class="mb-1" />
-                                    <MudSkeleton Typo="Typo.body2" Width="90%" Height="20px" Class="mb-2" />
-                                    <div class="exercise-item-meta">
-                                        <MudSkeleton Width="80px" Height="24px" Variant="SkeletonVariant.Rounded" />
-                                        <MudSkeleton Width="100px" Height="16px" Class="ml-2" />
-                                    </div>
+                                    <MudSkeleton Typo="Typo.body1" Width="70%" Height="20px" />
+                                    <MudSkeleton Width="100px" Height="16px" />
                                 </div>
-                                <MudSkeleton Width="24px" Height="24px" />
+                                <MudSkeleton Width="24px" Height="24px" Class="exercise-arrow-skeleton" />
                             </div>
                         </MudCardContent>
                     </MudCard>
@@ -122,28 +119,20 @@
                     <MudCard Elevation="2" Class="mb-3 exercise-item-card">
                         <MudCardContent>
                             <div class="exercise-item-header">
-                                <div class="exercise-item-info">
-                                    <MudText Typo="Typo.h6" Class="mb-1">@exercise.Name</MudText>
-                                    @if (!string.IsNullOrWhiteSpace(exercise.Description))
-                                    {
-                                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
-                                            @TruncateDescription(exercise.Description)
-                                        </MudText>
-                                    }
-                                    <div class="exercise-item-meta">
-                                        @if (exercise.MuscleGroup.HasValue)
-                                        {
-                                            <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text">
-                                                @exercise.MuscleGroup.Value.GetDescription()
-                                            </MudChip>
-                                        }
-                                        @if (!exercise.IsSystem)
-                                        {
-                                            <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text">
-                                                Пользовательское
-                                            </MudChip>
-                                        }
+                                @if (!string.IsNullOrWhiteSpace(exercise.MainImage))
+                                {
+                                    <div class="exercise-image-container">
+                                        <img src="@exercise.MainImage" alt="@exercise.Name" class="exercise-image" />
                                     </div>
+                                }
+                                <div class="exercise-item-info @(exercise.IsSystem ? "exercise-item-info-centered" : "") @(string.IsNullOrWhiteSpace(exercise.MainImage) ? "exercise-item-info-no-image" : "")">
+                                    <MudText Typo="Typo.body1" Class="exercise-name">@exercise.Name</MudText>
+                                    @if (!exercise.IsSystem)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Variant="Variant.Text" Class="exercise-tag">
+                                            Пользовательское
+                                        </MudChip>
+                                    }
                                 </div>
                                 <MudIcon Icon="@Icons.Material.Filled.ChevronRight" 
                                          Color="Color.Secondary" 
@@ -255,28 +244,74 @@
         transform: translateY(-2px);
     }
 
+    .exercise-item-card .mud-card-content {
+        padding: 0 !important;
+        min-height: 64px;
+    }
+
     .exercise-item-header {
         display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        gap: 16px;
+        align-items: stretch;
+        gap: 0;
+        min-height: 64px;
+    }
+
+    .exercise-image-container {
+        flex-shrink: 0;
+        width: 64px;
+        align-self: stretch;
+        border-radius: 12px 0 0 12px;
+        overflow: hidden;
+    }
+
+    .exercise-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .exercise-image-skeleton {
+        border-radius: 12px 0 0 12px;
     }
 
     .exercise-item-info {
         flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 4px;
+        padding: 12px;
     }
 
-    .exercise-item-meta {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        align-items: center;
-        margin-top: 8px;
+    .exercise-item-info-no-image {
+        padding-left: 16px;
+    }
+
+    .exercise-item-info-centered {
+        justify-content: center;
+    }
+
+    .exercise-name {
+        line-height: 1.4;
+        margin: 2px;
+    }
+
+    .exercise-tag {
+        align-self: flex-start;
+        width: fit-content;
+        margin: 0;
     }
 
     .exercise-arrow-icon {
         flex-shrink: 0;
-        margin-top: 4px;
+        align-self: center;
+        margin-right: 12px;
+    }
+
+    .exercise-arrow-skeleton {
+        align-self: center;
+        margin-right: 12px;
     }
 
     .empty-state-card {
