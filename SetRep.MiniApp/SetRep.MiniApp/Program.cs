@@ -1,11 +1,16 @@
 using SetRep.MiniApp.Components;
 using SetRep.MiniApp.Extensions;
+using System.Globalization;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddApplicationServices(builder);
 
 var app = builder.Build();
+
+var culture = new CultureInfo("ru-RU");
+CultureInfo.DefaultThreadCurrentCulture = culture;
+CultureInfo.DefaultThreadCurrentUICulture = culture;
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -25,7 +30,6 @@ if (!string.IsNullOrEmpty(httpsPort))
 {
     app.UseHttpsRedirection();
 }
-
 
 app.UseAntiforgery();
 
