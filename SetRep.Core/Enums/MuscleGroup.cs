@@ -40,7 +40,7 @@ public enum MuscleGroup
     /// <summary>
     /// Ноги (квадрицепсы)
     /// </summary>
-    [Description("Ноги")]
+    [Description("Квадрицепсы")]
     Quadriceps = 6,
 
     /// <summary>

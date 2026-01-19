@@ -49,6 +49,11 @@ window.getTelegramWebAppData = function() {
         if (typeof webApp.expand === 'function') {
             webApp.expand();
         }
+
+        // Отключаем вертикальный свайп
+        if (typeof webApp.disableVerticalSwipes === 'function') {
+            webApp.disableVerticalSwipes();
+        }
     }
 })();
 
@@ -107,26 +112,6 @@ window.telegramBackButtonHelper = {
             window.Telegram.WebApp.BackButton.onClick(function () {
                 dotnetHelper.invokeMethodAsync('OnBackButtonClick');
             });
-        }
-    }
-};
-
-window.telegramSwipeHelper = {
-    isReady: function () {
-        return typeof window.Telegram !== 'undefined'
-            && typeof window.Telegram.WebApp !== 'undefined'
-            && typeof window.Telegram.WebApp.disableVerticalSwipes === 'function';
-    },
-
-    disableVerticalSwipes: function () {
-        if (this.isReady()) {
-            window.Telegram.WebApp.disableVerticalSwipes();
-        }
-    },
-
-    enableVerticalSwipes: function () {
-        if (this.isReady() && typeof window.Telegram.WebApp.enableVerticalSwipes === 'function') {
-            window.Telegram.WebApp.enableVerticalSwipes();
         }
     }
 };
