@@ -399,7 +399,7 @@ else if (workout != null && currentExercise != null)
                    FullWidth="true"
                    Class="mt-4"
                    StartIcon="@Icons.Material.Filled.Stop"
-                   OnClick="EndWorkout"
+                   OnClick="OpenEndActiveWorkoutDialog"
                    Disabled="isEndingWorkout">
             @if (isEndingWorkout)
             {
@@ -877,6 +877,31 @@ else if (workout != null && currentExercise != null)
         catch (Exception ex)
         {
             Snackbar.Add($"Ошибка: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task OpenEndActiveWorkoutDialog()
+    {
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { nameof(ConfirmDialog.Title), "Подтверждение завершения" },
+            { nameof(ConfirmDialog.ContentText), $"Вы уверены, что хотите завершить тренировку?" },
+            { nameof(ConfirmDialog.ButtonText), "Завершить" },
+            { nameof(ConfirmDialog.Color), Color.Error }
+        };
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialogReference = await DialogService.ShowAsync<ConfirmDialog>("Подтверждение завершения", parameters, options);
+        var result = await dialogReference.Result;
+
+        if (!result.Canceled)
+        {
+            await EndWorkout();
         }
     }
 

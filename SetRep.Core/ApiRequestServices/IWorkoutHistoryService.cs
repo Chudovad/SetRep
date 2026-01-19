@@ -36,4 +36,9 @@ public interface IWorkoutHistoryService
     /// Получить детали истории тренировки
     /// </summary>
     Task<WorkoutHistory?> GetWorkoutHistoryDetailsAsync(Guid workoutHistoryId);
+
+    /// <summary>
+    /// Удалить запись истории тренировки
+    /// </summary>
+    Task<bool> DeleteWorkoutHistoryAsync(Guid workoutHistoryId);
 }
