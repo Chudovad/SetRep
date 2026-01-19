@@ -2,6 +2,7 @@
 @using SetRep.Core.ApiRequestServices
 @using SetRep.Core.Entities
 @using SetRep.MiniApp.Client.Services
+@using SetRep.MiniApp.Components.Dialog
 @using static SetRep.MiniApp.Client.Services.InitializationHelper
 
 @rendermode InteractiveServer
@@ -13,6 +14,7 @@
 @inject IAppInitializationService AppInitializationService
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 
 <PageTitle>SetRep - Главная</PageTitle>
 
@@ -85,7 +87,7 @@
                                Color="Color.Error" 
                                FullWidth="true" 
                                Class="mt-2"
-                               OnClick="EndActiveWorkout"
+                               OnClick="OpenEndActiveWorkoutDialog"
                                Disabled="isEndingWorkout">
                         @if (isEndingWorkout)
                         {
@@ -373,6 +375,31 @@
         if (activeWorkoutHistory != null)
         {
             Navigation.NavigateTo($"/workouts/{activeWorkoutHistory.WorkoutId}/active/{activeWorkoutHistory.Id}");
+        }
+    }
+
+    private async Task OpenEndActiveWorkoutDialog()
+    {
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { nameof(ConfirmDialog.Title), "Подтверждение завершения" },
+            { nameof(ConfirmDialog.ContentText), $"Вы уверены, что хотите завершить тренировку?" },
+            { nameof(ConfirmDialog.ButtonText), "Завершить" },
+            { nameof(ConfirmDialog.Color), Color.Error }
+        };
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialogReference = await DialogService.ShowAsync<ConfirmDialog>("Подтверждение завершения", parameters, options);
+        var result = await dialogReference.Result;
+
+        if (!result.Canceled)
+        {
+            await EndActiveWorkout();
         }
     }
 
