@@ -102,7 +102,15 @@ else if (exercise != null)
                 </MudCardContent>
             </MudCard>
         }
-        else
+        else if (!string.IsNullOrWhiteSpace(exercise.MainImage))
+        {
+            <MudCard Elevation="2" Class="mb-4 exercise-image-card">
+                <MudCardContent Class="pa-0">
+                    <img src="@exercise.MainImage" alt="@exercise.Name" class="exercise-image" />
+                </MudCardContent>
+            </MudCard>
+        }
+        else 
         {
             <MudCard Elevation="2" Class="mb-4 exercise-image-card">
                 <MudCardContent>
