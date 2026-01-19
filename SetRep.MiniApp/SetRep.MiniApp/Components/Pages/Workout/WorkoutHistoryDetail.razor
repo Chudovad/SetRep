@@ -2,12 +2,16 @@
 @using SetRep.Core.ApiRequestServices
 @using SetRep.Core.Entities
 @using SetRep.MiniApp.Client.Services
+@using SetRep.MiniApp.Components.Dialog
 @using static SetRep.MiniApp.Client.Services.InitializationHelper
+@using MudBlazor
 @rendermode InteractiveServer
 @inject IWorkoutHistoryService WorkoutHistoryService
 @inject NavigationManager Navigation
 @inject ITelegramBackButtonService TelegramBackButtonService
 @inject IAppInitializationService AppInitializationService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
 @implements IAsyncDisposable
 
 <PageTitle>SetRep - Детали тренировки</PageTitle>
@@ -85,7 +89,15 @@ else if (workoutHistory != null)
         <!-- Информация о тренировке -->
         <MudCard Elevation="2" Class="mb-4 workout-info-card">
             <MudCardContent>
-                <MudText Typo="Typo.h5" Class="mb-3">@(workoutHistory.Workout?.Name ?? workoutHistory.WorkoutName ?? "Тренировка")</MudText>
+                <div class="workout-title-row">
+                    <MudText Typo="Typo.h5" Class="mb-3 workout-title">@(workoutHistory.Workout?.Name ?? workoutHistory.WorkoutName ?? "Тренировка")</MudText>
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                   Color="Color.Error" 
+                                   Variant="Variant.Text"
+                                   Size="Size.Small"
+                                   OnClick="ConfirmDeleteWorkoutHistory"
+                                   Class="delete-button" />
+                </div>
                 
                 <div class="workout-meta">
                     <MudText Typo="Typo.body2" Color="Color.Secondary" Class="meta-row">
@@ -274,6 +286,22 @@ else if (workoutHistory != null)
     .meta-icon {
         margin: 0;
     }
+
+    .workout-title-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+    }
+
+    .workout-title {
+        flex: 1;
+        margin-bottom: 0 !important;
+    }
+
+    .delete-button {
+        flex-shrink: 0;
+    }
 </style>
 
 @code {
@@ -282,6 +310,7 @@ else if (workoutHistory != null)
     private WorkoutHistory? workoutHistory;
     private bool isLoading = true;
     private string? errorMessage;
+    private bool isDeleting = false;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -375,6 +404,70 @@ else if (workoutHistory != null)
         }
 
         return groupedSets.OrderBy(g => g.Min(s => s.CompletedAt));
+    }
+
+    private async Task ConfirmDeleteWorkoutHistory()
+    {
+        if (workoutHistory == null || isDeleting)
+        {
+            return;
+        }
+
+        var workoutName = workoutHistory.Workout?.Name ?? workoutHistory.WorkoutName ?? "Тренировка";
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { nameof(ConfirmDialog.Title), "Подтверждение удаления" },
+            { nameof(ConfirmDialog.ContentText), $"Вы уверены, что хотите удалить тренировку \"{workoutName}\" из истории? Это действие нельзя отменить." },
+            { nameof(ConfirmDialog.ButtonText), "Удалить" },
+            { nameof(ConfirmDialog.Color), Color.Error }
+        };
+
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true, 
+            MaxWidth = MaxWidth.Small, 
+            FullWidth = true 
+        };
+
+        var dialogReference = await DialogService.ShowAsync<ConfirmDialog>("Подтверждение удаления", parameters, options);
+        var result = await dialogReference.Result;
+
+        if (!result.Canceled)
+        {
+            await DeleteWorkoutHistory();
+        }
+    }
+
+    private async Task DeleteWorkoutHistory()
+    {
+        if (workoutHistory == null || isDeleting)
+        {
+            return;
+        }
+
+        isDeleting = true;
+        StateHasChanged();
+
+        try
+        {
+            var success = await WorkoutHistoryService.DeleteWorkoutHistoryAsync(WorkoutHistoryId);
+            if (success)
+            {
+                Navigation.NavigateTo("/workout/history");
+            }
+            else
+            {
+                Snackbar.Add("Ошибка при удалении тренировки", Severity.Error);
+                isDeleting = false;
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка при удалении тренировки: {ex.Message}", Severity.Error);
+            isDeleting = false;
+            StateHasChanged();
+        }
     }
 
     public async ValueTask DisposeAsync()

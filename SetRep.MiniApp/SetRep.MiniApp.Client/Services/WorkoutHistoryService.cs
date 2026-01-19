@@ -234,4 +234,19 @@ public class WorkoutHistoryService : IWorkoutHistoryService
         }
     }
 
+    public async Task<bool> DeleteWorkoutHistoryAsync(Guid workoutHistoryId)
+    {
+        try
+        {
+            var request = new HttpRequestMessage(HttpMethod.Delete, $"api/workouthistory/{workoutHistoryId}");
+            request.AddBearerToken(_telegramWebAppStateService);
+            var response = await _httpClient.SendAsync(request);
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
 }
