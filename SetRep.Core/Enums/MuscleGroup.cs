@@ -1,3 +1,4 @@
+using SetRep.Core.Attributes;
 using System.ComponentModel;
 
 namespace SetRep.Core.Enums;
@@ -23,6 +24,7 @@ public enum MuscleGroup
     /// Плечи
     /// </summary>
     [Description("Плечи")]
+    [ImageUrl("https://storage.yandexcloud.net/img/SetRep/MuscleGroup/%D0%9F%D0%BB%D0%B5%D1%87%D0%B8.jpg")]
     Shoulders = 3,
 
     /// <summary>

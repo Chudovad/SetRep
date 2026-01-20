@@ -1,3 +1,4 @@
+using SetRep.Core.Attributes;
 using System.ComponentModel;
 using System.Reflection;
 
@@ -24,5 +25,17 @@ public static class EnumExtensions
         var attribute = fieldInfo.GetCustomAttribute<DescriptionAttribute>();
         
         return attribute?.Description ?? enumValue.ToString();
+    }
+
+    /// <summary>
+    /// Получение ссылки на картинку значения enum из атрибута ImageUrl
+    /// </summary>
+    /// <param name="value">Значение enum</param>
+    /// <returns>Ссылка на картинку</returns>
+    public static string GetImageUrl(this Enum value)
+    {
+        var field = value.GetType().GetField(value.ToString());
+        var attribute = field?.GetCustomAttribute<ImageUrlAttribute>();
+        return attribute?.Url ?? string.Empty;
     }
 }
