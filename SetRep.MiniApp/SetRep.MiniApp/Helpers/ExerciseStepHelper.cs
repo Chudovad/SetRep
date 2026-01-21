@@ -41,7 +41,6 @@ public static class ExerciseStepHelper
             
             // Специальные случаи
             MuscleGroup.Cardio => 0.5m,
-            MuscleGroup.FullBody => 1.0m,
             MuscleGroup.Other => 0.5m,
             
             _ => 0.5m
