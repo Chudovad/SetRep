@@ -37,7 +37,7 @@
                           Lines="3"
                           Class="mb-3" />
 
-            <MudSelect T="MuscleGroup?"
+            <MudSelect T="MuscleGroup ?"
                        Label="Группа мышц"
                        @bind-Value="exercise.MuscleGroup"
                        Variant="Variant.Outlined"
@@ -45,7 +45,7 @@
                        Class="mb-3">
                 @foreach (var muscleGroup in Enum.GetValues<MuscleGroup>())
                 {
-                    <MudSelectItem T="MuscleGroup?" Value="@muscleGroup">@muscleGroup.GetDescription()</MudSelectItem>
+                    <MudSelectItem T="MuscleGroup ?" Value="@muscleGroup">@muscleGroup.GetDescription()</MudSelectItem>
                 }
             </MudSelect>
 
@@ -59,7 +59,14 @@
                                Variant="Variant.Outlined"
                                Color="Color.Primary"
                                StartIcon="@Icons.Material.Filled.CloudUpload">
-                        Загрузить изображение
+                        @if (string.IsNullOrEmpty(mainImagePreviewUrl))
+                        {
+                            <text>Загрузить изображение</text>
+                        }
+                        else
+                        {
+                            <text>Заменить изображение</text>
+                        }
                     </MudButton>
                 </ActivatorContent>
             </MudFileUpload>

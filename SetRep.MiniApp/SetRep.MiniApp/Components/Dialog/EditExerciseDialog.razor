@@ -58,7 +58,14 @@
                                Variant="Variant.Outlined"
                                Color="Color.Primary"
                                StartIcon="@Icons.Material.Filled.CloudUpload">
-                        Загрузить изображение
+                        @if (string.IsNullOrEmpty(mainImagePreviewUrl))
+                        {
+                            <text>Загрузить изображение</text>
+                        }
+                        else
+                        {
+                            <text>Заменить изображение</text>
+                        }
                     </MudButton>
                 </ActivatorContent>
             </MudFileUpload>
