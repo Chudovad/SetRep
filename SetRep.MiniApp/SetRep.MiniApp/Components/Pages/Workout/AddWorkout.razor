@@ -54,6 +54,12 @@
                         var exercise = selectedExercises[i];
                         <MudListItem>
                             <div class="exercise-list-item">
+                                @if (!string.IsNullOrWhiteSpace(exercise.MainImage))
+                                {
+                                    <div class="exercise-image-container">
+                                        <img src="@exercise.MainImage" alt="@exercise.Name" class="exercise-image" />
+                                    </div>
+                                }
                                 <div class="exercise-info">
                                     <MudText Typo="Typo.body1" Class="exercise-name">@exercise.Name</MudText>
                                 </div>
@@ -124,6 +130,21 @@
         align-items: center;
         width: 100%;
         gap: 16px;
+    }
+
+    .exercise-image-container {
+        flex-shrink: 0;
+        width: 48px;
+        height: 48px;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .exercise-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
     }
 
     .exercise-info {

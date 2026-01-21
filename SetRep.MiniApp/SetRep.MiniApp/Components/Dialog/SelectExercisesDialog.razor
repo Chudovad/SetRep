@@ -35,6 +35,23 @@
                           Class="mb-3 search-field"
                           Immediate="true" />
             
+            <!-- Фильтр по группам мышц -->
+            <MudSelect T="MuscleGroup?"
+                       Label="Фильтр по группе мышц"
+                       @bind-Value="selectedMuscleGroupFilter"
+                       Variant="Variant.Outlined"
+                       AnchorOrigin="Origin.BottomCenter"
+                       Clearable="true"
+                       TransformOrigin="Origin.BottomCenter"
+                       Class="mb-3">
+                @foreach (var muscleGroup in availableMuscleGroups)
+                {
+                    <MudSelectItem T="MuscleGroup?" Value="@muscleGroup">
+                        <img src="@muscleGroup.GetImageUrl()" height="14" class="mr-1" /> @muscleGroup.GetDescription()
+                    </MudSelectItem>
+                }
+            </MudSelect>
+            
             @if (filteredExercises.Any())
             {
                 <MudList T="Guid"
@@ -76,9 +93,9 @@
             else
             {
                 <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="py-4">
-                    @if (!string.IsNullOrWhiteSpace(searchQuery))
+                    @if (!string.IsNullOrWhiteSpace(searchQuery) || selectedMuscleGroupFilter.HasValue)
                     {
-                        <text>Ничего не найдено по запросу "@searchQuery"</text>
+                        <text>Ничего не найдено</text>
                     }
                     else
                     {
@@ -169,26 +186,52 @@
 
     private List<Exercise> availableExercises = new();
     private string searchQuery = string.Empty;
+    private MuscleGroup? selectedMuscleGroupFilter;
     private IReadOnlyCollection<Guid> selectedExerciseIds = [];
     private bool isLoading = true;
     private bool isSaving = false;
     private string? errorMessage;
 
+    private IEnumerable<MuscleGroup> availableMuscleGroups
+    {
+        get
+        {
+            return availableExercises
+                .Where(e => e.MuscleGroup.HasValue)
+                .Select(e => e.MuscleGroup!.Value)
+                .Distinct()
+                .OrderBy(mg => mg.GetDescription());
+        }
+    }
+
     private IEnumerable<Exercise> filteredExercises
     {
         get
         {
-            if (string.IsNullOrWhiteSpace(searchQuery))
-                return availableExercises;
+            var exercises = availableExercises;
 
-            var query = searchQuery.Trim().ToLowerInvariant();
-            return availableExercises.Where(e =>
-                e.Name.ToLowerInvariant().Contains(query) ||
-                (!string.IsNullOrWhiteSpace(e.Description) && 
-                 e.Description.ToLowerInvariant().Contains(query)) ||
-                (e.MuscleGroup.HasValue && 
-                 e.MuscleGroup.Value.GetDescription().ToLowerInvariant().Contains(query))
-            );
+            // Фильтр по группе мышц
+            if (selectedMuscleGroupFilter.HasValue)
+            {
+                exercises = exercises.Where(e => 
+                    e.MuscleGroup.HasValue && 
+                    e.MuscleGroup.Value == selectedMuscleGroupFilter.Value).ToList();
+            }
+
+            // Фильтр по текстовому поиску
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+            {
+                var query = searchQuery.Trim().ToLowerInvariant();
+                exercises = exercises.Where(e =>
+                    e.Name.ToLowerInvariant().Contains(query) ||
+                    (!string.IsNullOrWhiteSpace(e.Description) && 
+                     e.Description.ToLowerInvariant().Contains(query)) ||
+                    (e.MuscleGroup.HasValue && 
+                     e.MuscleGroup.Value.GetDescription().ToLowerInvariant().Contains(query))
+                ).ToList();
+            }
+
+            return exercises;
         }
     }
 
