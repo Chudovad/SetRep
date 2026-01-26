@@ -154,16 +154,19 @@ else if (workoutHistory != null)
                                 </MudAvatar>
                             }
                             <div class="exercise-header-content">
-                                <MudText Typo="Typo.h6" Class="md-3">@(exercise?.Name ?? "Неизвестное упражнение")</MudText>
                                 @if (exercise != null)
                                 {
                                     <MudLink Href="@($"/exercises/{exercise.Id}")"
-                                             Typo="Typo.body2"
+                                             Typo="Typo.h6"
                                              Class="md-3"
-                                             Color="Color.Primary"
+                                             Color="Color.Inherit"
                                              Underline="Underline.Hover">
-                                        Подробнее
+                                        @exercise.Name
                                     </MudLink>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.h6" Class="md-3">@(exercise?.Name ?? "Неизвестное упражнение")</MudText>
                                 }
                             </div>
                         </div>
@@ -232,8 +235,7 @@ else if (workoutHistory != null)
         flex-shrink: 0;
         border-radius: 50%;
         overflow: hidden;
-        align-self: center;
-        margin-bottom: 14px;
+        margin-bottom: 12px;
     }
 
         .exercise-header-image img {
@@ -244,7 +246,6 @@ else if (workoutHistory != null)
 
     .exercise-header-content {
         flex: 1;
-        margin-bottom: 15px;
     }
 
     .workout-history-detail-container {
