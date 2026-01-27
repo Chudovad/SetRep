@@ -1,4 +1,4 @@
-﻿@inject NavigationManager Navigation
+@inject NavigationManager Navigation
 @implements IDisposable
 
 <MudPaper Elevation="3" Class="mobile-bottom-nav">
@@ -26,10 +26,10 @@
             <MudText Typo="Typo.caption" Class="nav-label">Статистика</MudText>
         </div>
     </MudButton> *@
-    <MudButton Variant="Variant.Text" Class="@GetNavItemClass("/more", false)" OnClick="@(() => NavigateTo("/more"))" FullWidth="true">
+    <MudButton Variant="Variant.Text" Class="@GetNavItemClass("/profile", false)" OnClick="@(() => NavigateTo("/profile"))" FullWidth="true">
         <div class="nav-content">
-            <MudIcon Icon="@Icons.Material.Filled.MoreVert" Size="Size.Medium" Class="nav-icon" />
-            <MudText Typo="Typo.caption" Class="nav-label">Ещё</MudText>
+            <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Medium" Class="nav-icon" />
+            <MudText Typo="Typo.caption" Class="nav-label">Профиль</MudText>
         </div>
     </MudButton>
 </MudPaper>
