@@ -227,14 +227,7 @@
 </style>
 
 @code {
-
-    private double? CurrentWeight { get; set; } = 75.5;
     private int WeeklyWorkouts { get; set; } = 0;
-    private WorkoutInfo? NextWorkout { get; set; } = new WorkoutInfo 
-    { 
-        Date = DateTime.Now.AddDays(1), 
-        ExerciseCount = 5 
-    };
 
     private WorkoutHistory? activeWorkoutHistory;
     private List<SetRep.Core.Entities.Workout>? workouts;
@@ -456,16 +449,5 @@
     private void AddWorkout()
     {
         Navigation.NavigateTo("/workouts/add");
-    }
-
-    private void RecordWeight()
-    {
-        // TODO: Открыть диалог записи веса
-    }
-
-    private class WorkoutInfo
-    {
-        public DateTime Date { get; set; }
-        public int ExerciseCount { get; set; }
     }
 }

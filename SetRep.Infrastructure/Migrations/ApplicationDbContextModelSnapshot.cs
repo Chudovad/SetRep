@@ -86,6 +86,122 @@ namespace SetRep.Infrastructure.Migrations
                     b.ToTable("Exercises", (string)null);
                 });
 
+            modelBuilder.Entity("SetRep.Core.Entities.MeasurementsHistory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("BodyFatPercentage")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasComment("Содержание жира в процентах");
+
+                    b.Property<decimal?>("BodyWeight")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("numeric(6,2)")
+                        .HasComment("Масса тела в килограммах");
+
+                    b.Property<decimal?>("Buttocks")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("numeric(6,2)")
+                        .HasComment("Обхват ягодиц в сантиметрах");
+
+                    b.Property<decimal?>("Chest")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("numeric(6,2)")
+                        .HasComment("Обхват груди в сантиметрах");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal?>("LeanBodyMass")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("numeric(6,2)")
+                        .HasComment("Сухая мышечная масса в килограммах");
+
+                    b.Property<decimal?>("LeftBicep")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("numeric(6,2)")
+                        .HasComment("Обхват левого бицепса в сантиметрах");
+
+                    b.Property<decimal?>("LeftCalf")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("numeric(6,2)")
+                        .HasComment("Обхват левой икры в сантиметрах");
+
+                    b.Property<decimal?>("LeftForearm")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("numeric(6,2)")
+                        .HasComment("Обхват левого предплечья в сантиметрах");
+
+                    b.Property<decimal?>("LeftThigh")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("numeric(6,2)")
+                        .HasComment("Обхват левого бедра в сантиметрах");
+
+                    b.Property<decimal?>("Neck")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("numeric(6,2)")
+                        .HasComment("Обхват шеи в сантиметрах");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("ProgressImageUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasComment("URL изображения прогресса");
+
+                    b.Property<decimal?>("RightBicep")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("numeric(6,2)")
+                        .HasComment("Обхват правого бицепса в сантиметрах");
+
+                    b.Property<decimal?>("RightCalf")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("numeric(6,2)")
+                        .HasComment("Обхват правой икры в сантиметрах");
+
+                    b.Property<decimal?>("RightForearm")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("numeric(6,2)")
+                        .HasComment("Обхват правого предплечья в сантиметрах");
+
+                    b.Property<decimal?>("RightThigh")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("numeric(6,2)")
+                        .HasComment("Обхват правого бедра в сантиметрах");
+
+                    b.Property<decimal?>("Shoulder")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("numeric(6,2)")
+                        .HasComment("Обхват плеча в сантиметрах");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("Waist")
+                        .HasPrecision(6, 2)
+                        .HasColumnType("numeric(6,2)")
+                        .HasComment("Обхват талии в сантиметрах");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Date");
+
+                    b.HasIndex("UserId", "Date");
+
+                    b.ToTable("MeasurementsHistory", (string)null);
+                });
+
             modelBuilder.Entity("SetRep.Core.Entities.Set", b =>
                 {
                     b.Property<Guid>("Id")
@@ -180,42 +296,6 @@ namespace SetRep.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Users", (string)null);
-                });
-
-            modelBuilder.Entity("SetRep.Core.Entities.WeightHistory", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Notes")
-                        .HasMaxLength(1000)
-                        .HasColumnType("character varying(1000)");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal>("Weight")
-                        .HasPrecision(6, 2)
-                        .HasColumnType("numeric(6,2)")
-                        .HasComment("Вес в килограммах");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Date");
-
-                    b.HasIndex("UserId", "Date");
-
-                    b.ToTable("WeightHistory", (string)null);
                 });
 
             modelBuilder.Entity("SetRep.Core.Entities.Workout", b =>
@@ -426,6 +506,17 @@ namespace SetRep.Infrastructure.Migrations
                     b.ToTable("WorkoutPlans", (string)null);
                 });
 
+            modelBuilder.Entity("SetRep.Core.Entities.MeasurementsHistory", b =>
+                {
+                    b.HasOne("SetRep.Core.Entities.User", "User")
+                        .WithMany("MeasurementsHistory")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SetRep.Core.Entities.Set", b =>
                 {
                     b.HasOne("SetRep.Core.Entities.WorkoutExercise", "WorkoutExercise")
@@ -435,17 +526,6 @@ namespace SetRep.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("WorkoutExercise");
-                });
-
-            modelBuilder.Entity("SetRep.Core.Entities.WeightHistory", b =>
-                {
-                    b.HasOne("SetRep.Core.Entities.User", "User")
-                        .WithMany("WeightHistory")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("SetRep.Core.Entities.Workout", b =>
@@ -540,7 +620,7 @@ namespace SetRep.Infrastructure.Migrations
 
             modelBuilder.Entity("SetRep.Core.Entities.User", b =>
                 {
-                    b.Navigation("WeightHistory");
+                    b.Navigation("MeasurementsHistory");
 
                     b.Navigation("WorkoutPlans");
 

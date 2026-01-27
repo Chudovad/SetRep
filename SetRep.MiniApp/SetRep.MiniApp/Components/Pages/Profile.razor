@@ -6,6 +6,8 @@
 @inject IAppInitializationService AppInitializationService
 @inject ITelegramWebAppStateService TelegramWebAppStateService
 @inject ITelegramBackButtonService TelegramBackButtonService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 @implements IAsyncDisposable
 
 <PageTitle>SetRep - Профиль</PageTitle>
@@ -45,54 +47,35 @@
         </MudCardContent>
     </MudCard>
 
-    <!-- Цель по весу -->
+    <!-- Дополнительно -->
     <MudCard Elevation="2" Class="mb-4 settings-card">
         <MudCardContent>
-            <MudText Typo="Typo.h6" GutterBottom="true">Цель по весу</MudText>
-            <MudNumericField T="double"
-                             @bind-Value="TargetWeight"
-                             Label="Целевой вес (кг)"
-                             Variant="Variant.Outlined"
-                             Adornment="Adornment.End"
-                             AdornmentIcon="@Icons.Material.Filled.Scale"
-                             Class="mb-3" />
-            <MudButton Variant="Variant.Filled"
-                       Color="Color.Primary"
+            <MudText Typo="Typo.h6" GutterBottom="true">Дополнительно</MudText>
+            <MudButton Variant="Variant.Text"
                        FullWidth="true"
-                       OnClick="SaveTargetWeight">
-                Сохранить
+                       StartIcon="@Icons.Material.Filled.Assessment"
+                       OnClick="NavigateToMeasurements"
+                       Class="nav-button">
+                Замеры
+            </MudButton>
+            <MudDivider Class="my-2" />
+            <MudButton Variant="Variant.Text"
+                       FullWidth="true"
+                       StartIcon="@Icons.Material.Filled.History"
+                       OnClick="NavigateToWorkoutHistory"
+                       Class="nav-button">
+                История тренировок
+            </MudButton>
+            <MudDivider Class="my-2" />
+            <MudButton Variant="Variant.Text"
+                       FullWidth="true"
+                       StartIcon="@Icons.Material.Filled.Help"
+                       OnClick="NavigateToHelp"
+                       Class="nav-button">
+                Помощь
             </MudButton>
         </MudCardContent>
     </MudCard>
-
-    <!-- Единицы измерения -->
-    @* <MudCard Elevation="2" Class="mb-4 settings-card">
-        <MudCardContent>
-            <MudText Typo="Typo.h6" GutterBottom="true">Единицы измерения</MudText>
-            <MudSelect T="string"
-                       @bind-Value="WeightUnit"
-                       Label="Единица веса"
-                       Variant="Variant.Outlined"
-                       Class="mb-3">
-                <MudSelectItem T="string" Value="@("kg")">Килограммы (кг)</MudSelectItem>
-                <MudSelectItem T="string" Value="@("lb")">Фунты (lb)</MudSelectItem>
-            </MudSelect>
-        </MudCardContent>
-    </MudCard> *@
-
-    <!-- Дополнительные настройки -->
-    @* <MudCard Elevation="2" Class="mb-4 settings-card">
-        <MudCardContent>
-            <MudText Typo="Typo.h6" GutterBottom="true">Дополнительно</MudText>
-            <MudListItem T="string" Href="exercises" Icon="@Icons.Material.Filled.Notifications" Text="Упражнения" />
-            <MudDivider Class="my-2" />
-            <MudListItem T="string" Href="/workout/history" Icon="@Icons.Material.Filled.History" Text="История тренировок" />
-            <MudDivider Class="my-2" />
-            <MudListItem T="string" Href="#" Icon="@Icons.Material.Filled.Help" Text="Помощь" />
-            <MudDivider Class="my-2" />
-            <MudListItem T="string" Href="#" Icon="@Icons.Material.Filled.Info" Text="О приложении" />
-        </MudCardContent>
-    </MudCard> *@
 </div>
 
 <style>
@@ -122,26 +105,38 @@
     .settings-card {
         border-radius: 12px;
     }
+
+    .nav-button {
+        justify-content: flex-start;
+        text-transform: none;
+        padding: 12px 16px;
+    }
 </style>
 
 @code {
-    private string UserName { get; set; } = "Пользователь";
-    private string UserEmail { get; set; } = "user@example.com";
-    private double TargetWeight { get; set; } = 70.0;
-    private string WeightUnit { get; set; } = "kg";
-
-    private void SaveTargetWeight()
-    {
-        // TODO: Сохранение цели по весу
-    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
             await WaitForInitializationAsync(AppInitializationService);
-            await TelegramBackButtonService.ShowAsync();
+            await TelegramBackButtonService.HideAsync();
         }
+    }
+
+    private void NavigateToMeasurements()
+    {
+        Navigation.NavigateTo("/measurements");
+    }
+
+    private void NavigateToWorkoutHistory()
+    {
+        Navigation.NavigateTo("/workout/history");
+    }
+
+    private async void NavigateToHelp()
+    {
+        await JSRuntime.InvokeVoidAsync("openTelegramLinkHelper.openTelegramLink", "https://t.me/set_rep_helper");
     }
 
     public async ValueTask DisposeAsync()
