@@ -117,7 +117,7 @@ else if (measurementsList.Any())
                               ChartSeries="@chartSeriesList"
                               XAxisLabels="@xAxisLabels"
                               Width="100%"
-                              Height="300px" />
+                              Height="100%" />
                 </div>
             }
             else
@@ -401,7 +401,7 @@ else
             MeasurementParameter.BodyFatPercentage => "Процент жира (%)",
             MeasurementParameter.LeanBodyMass => "Сухая мышечная масса (кг)",
             MeasurementParameter.Neck => "Шея (см)",
-            MeasurementParameter.Shoulder => "Плечо (см)",
+            MeasurementParameter.Shoulder => "Плечевой пояс (см)",
             MeasurementParameter.Chest => "Грудь (см)",
             MeasurementParameter.LeftBicep => "Левый бицепс (см)",
             MeasurementParameter.RightBicep => "Правый бицепс (см)",
@@ -454,20 +454,17 @@ else
                 new ChartSeries
                 {
                     Name = GetParameterName(selectedParameter),
-                    Data = values
+                    Data = values,
+                    ShowDataMarkers = true
                 }
             };
-
-            var interpolationOption = chartData.Count >= 4
-                ? InterpolationOption.NaturalSpline
-                : InterpolationOption.Straight;
 
             chartOptions = new ChartOptions
             {
                 YAxisTicks = 5,
                 XAxisLines = true,
                 YAxisLines = true,
-                InterpolationOption = interpolationOption,
+                InterpolationOption = InterpolationOption.Straight,
                 ChartPalette = new[] { "#6750A4" }
             };
         }
