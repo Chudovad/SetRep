@@ -54,6 +54,20 @@
             
             @if (filteredExercises.Any())
             {
+                @if (selectedMuscleGroupFilter.HasValue)
+                {
+                    var allSelected = filteredExercises.All(ex => selectedExerciseIds.Contains(ex.Id));
+
+                    <MudButton OnClick="@(() => SelectAllFiltered())"
+                               Variant="@(allSelected ? Variant.Filled : Variant.Outlined)"
+                               Color="@(allSelected ? Color.Default : Color.Primary)"
+                               Size="Size.Small"
+                               Class="mb-3">
+                        <MudIcon Icon="@(allSelected? Icons.Material.Filled.Deselect : Icons.Material.Filled.SelectAll)"
+                                 Class="mr-1" />
+                        @(allSelected ? $"Отменить все ({selectedExerciseIds.Count()})" : $"Выбрать все ({filteredExercises.Count()})")
+                    </MudButton>
+                }
                 <MudList T="Guid"
                          @bind-SelectedValues="selectedExerciseIds"
                          SelectionMode="SelectionMode.MultiSelection"
@@ -282,5 +296,15 @@
             .ToList();
 
         MudDialog?.Close(DialogResult.Ok(selectedExercises));
+    }
+
+    private void SelectAllFiltered()
+    {
+        var filteredIds = filteredExercises.Select(e => e.Id).ToList();
+
+        var allSelected = filteredExercises.All(ex => selectedExerciseIds.Contains(ex.Id));
+
+        if (allSelected) selectedExerciseIds = selectedExerciseIds.Except(filteredIds).ToList();
+        else selectedExerciseIds = selectedExerciseIds.Union(filteredIds).ToList();
     }
 }
