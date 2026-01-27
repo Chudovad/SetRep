@@ -43,7 +43,7 @@ public class User
     /// <summary>
     /// Навигационное свойство: история веса пользователя
     /// </summary>
-    public ICollection<WeightHistory> WeightHistory { get; set; } = [];
+    public ICollection<MeasurementsHistory> MeasurementsHistory { get; set; } = [];
 
     /// <summary>
     /// Навигационное свойство: планы тренировок пользователя

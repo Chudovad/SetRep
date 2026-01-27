@@ -6,6 +6,7 @@
 @inject IAppInitializationService AppInitializationService
 @inject ITelegramWebAppStateService TelegramWebAppStateService
 @inject ITelegramBackButtonService TelegramBackButtonService
+@inject NavigationManager Navigation
 @implements IAsyncDisposable
 
 <PageTitle>SetRep - Профиль</PageTitle>
@@ -45,22 +46,15 @@
         </MudCardContent>
     </MudCard>
 
-    <!-- Цель по весу -->
+    <!-- Замеры -->
     <MudCard Elevation="2" Class="mb-4 settings-card">
         <MudCardContent>
-            <MudText Typo="Typo.h6" GutterBottom="true">Цель по весу</MudText>
-            <MudNumericField T="double"
-                             @bind-Value="TargetWeight"
-                             Label="Целевой вес (кг)"
-                             Variant="Variant.Outlined"
-                             Adornment="Adornment.End"
-                             AdornmentIcon="@Icons.Material.Filled.Scale"
-                             Class="mb-3" />
             <MudButton Variant="Variant.Filled"
                        Color="Color.Primary"
                        FullWidth="true"
-                       OnClick="SaveTargetWeight">
-                Сохранить
+                       StartIcon="@Icons.Material.Filled.Assessment"
+                       OnClick="NavigateToMeasurements">
+                Замеры
             </MudButton>
         </MudCardContent>
     </MudCard>
@@ -130,9 +124,9 @@
     private double TargetWeight { get; set; } = 70.0;
     private string WeightUnit { get; set; } = "kg";
 
-    private void SaveTargetWeight()
+    private void NavigateToMeasurements()
     {
-        // TODO: Сохранение цели по весу
+        Navigation.NavigateTo("/measurements");
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
