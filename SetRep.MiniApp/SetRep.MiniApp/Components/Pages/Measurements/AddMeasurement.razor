@@ -25,11 +25,12 @@
         <MudCard Elevation="2" Class="mb-4">
             <MudCardContent>
                 <MudText Typo="Typo.h6" GutterBottom="true">Дата измерения</MudText>
-                <MudDatePicker T="DateTime?"
-                               @bind-Date="selectedDate"
+                <MudDatePicker @bind-Date="selectedDate"
                                Label="Дата"
                                Variant="Variant.Outlined"
                                Required="true"
+                               MaxDate="DateTime.Today"
+                               ShowToolbar="false"
                                Class="mb-3" />
             </MudCardContent>
         </MudCard>
@@ -39,7 +40,7 @@
                 <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="mb-3">
                     <MudText Typo="Typo.h6">Изображение прогресса</MudText>
                 </MudStack>
-                
+
                 <MudFileUpload T="IBrowserFile"
                                Accept="image/*"
                                MaxFileSize="@maxFileSize"
@@ -62,7 +63,7 @@
                         </MudButton>
                     </ActivatorContent>
                 </MudFileUpload>
-                
+
                 @if (!string.IsNullOrEmpty(imagePreviewUrl))
                 {
                     <div class="mb-3">
@@ -87,119 +88,119 @@
         <MudCard Elevation="2" Class="mb-4">
             <MudCardContent>
                 <MudText Typo="Typo.h6" GutterBottom="true">Измерения</MudText>
-                
-                <MudNumericField T="decimal?"
-                                  Label="Масса тела (kg)"
-                                  @bind-Value="measurementDto.BodyWeight"
-                                  Variant="Variant.Outlined"
-                                  Adornment="Adornment.End"
-                                  AdornmentIcon="@Icons.Material.Filled.Scale"
-                                  Class="mb-3" />
 
                 <MudNumericField T="decimal?"
-                                  Label="Талия (cm)"
-                                  @bind-Value="measurementDto.Waist"
-                                  Variant="Variant.Outlined"
-                                  Adornment="Adornment.End"
-                                  Class="mb-3" />
+                                 Label="Масса тела (kg)"
+                                 @bind-Value="measurementDto.BodyWeight"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.End"
+                                 AdornmentIcon="@Icons.Material.Filled.Scale"
+                                 Class="mb-3" />
 
                 <MudNumericField T="decimal?"
-                                  Label="Содержание жира (%)"
-                                  @bind-Value="measurementDto.BodyFatPercentage"
-                                  Variant="Variant.Outlined"
-                                  Adornment="Adornment.End"
-                                  Class="mb-3" />
+                                 Label="Талия (cm)"
+                                 @bind-Value="measurementDto.Waist"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.End"
+                                 Class="mb-3" />
 
                 <MudNumericField T="decimal?"
-                                  Label="Сухая мышечная масса (kg)"
-                                  @bind-Value="measurementDto.LeanBodyMass"
-                                  Variant="Variant.Outlined"
-                                  Adornment="Adornment.End"
-                                  Class="mb-3" />
+                                 Label="Содержание жира (%)"
+                                 @bind-Value="measurementDto.BodyFatPercentage"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.End"
+                                 Class="mb-3" />
 
                 <MudNumericField T="decimal?"
-                                  Label="Шея (cm)"
-                                  @bind-Value="measurementDto.Neck"
-                                  Variant="Variant.Outlined"
-                                  Adornment="Adornment.End"
-                                  Class="mb-3" />
+                                 Label="Сухая мышечная масса (kg)"
+                                 @bind-Value="measurementDto.LeanBodyMass"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.End"
+                                 Class="mb-3" />
 
                 <MudNumericField T="decimal?"
-                                  Label="Плечевой пояс (cm)"
-                                  @bind-Value="measurementDto.Shoulder"
-                                  Variant="Variant.Outlined"
-                                  Adornment="Adornment.End"
-                                  Class="mb-3" />
+                                 Label="Шея (cm)"
+                                 @bind-Value="measurementDto.Neck"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.End"
+                                 Class="mb-3" />
 
                 <MudNumericField T="decimal?"
-                                  Label="Грудная клетка (cm)"
-                                  @bind-Value="measurementDto.Chest"
-                                  Variant="Variant.Outlined"
-                                  Adornment="Adornment.End"
-                                  Class="mb-3" />
+                                 Label="Плечевой пояс (cm)"
+                                 @bind-Value="measurementDto.Shoulder"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.End"
+                                 Class="mb-3" />
 
                 <MudNumericField T="decimal?"
-                                  Label="Левый бицепс (cm)"
-                                  @bind-Value="measurementDto.LeftBicep"
-                                  Variant="Variant.Outlined"
-                                  Adornment="Adornment.End"
-                                  Class="mb-3" />
+                                 Label="Грудная клетка (cm)"
+                                 @bind-Value="measurementDto.Chest"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.End"
+                                 Class="mb-3" />
 
                 <MudNumericField T="decimal?"
-                                  Label="Правый бицепс (cm)"
-                                  @bind-Value="measurementDto.RightBicep"
-                                  Variant="Variant.Outlined"
-                                  Adornment="Adornment.End"
-                                  Class="mb-3" />
+                                 Label="Левый бицепс (cm)"
+                                 @bind-Value="measurementDto.LeftBicep"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.End"
+                                 Class="mb-3" />
 
                 <MudNumericField T="decimal?"
-                                  Label="Левое предплечье (cm)"
-                                  @bind-Value="measurementDto.LeftForearm"
-                                  Variant="Variant.Outlined"
-                                  Adornment="Adornment.End"
-                                  Class="mb-3" />
+                                 Label="Правый бицепс (cm)"
+                                 @bind-Value="measurementDto.RightBicep"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.End"
+                                 Class="mb-3" />
 
                 <MudNumericField T="decimal?"
-                                  Label="Правое предплечье (cm)"
-                                  @bind-Value="measurementDto.RightForearm"
-                                  Variant="Variant.Outlined"
-                                  Adornment="Adornment.End"
-                                  Class="mb-3" />
+                                 Label="Левое предплечье (cm)"
+                                 @bind-Value="measurementDto.LeftForearm"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.End"
+                                 Class="mb-3" />
 
                 <MudNumericField T="decimal?"
-                                  Label="Ягодицы (cm)"
-                                  @bind-Value="measurementDto.Buttocks"
-                                  Variant="Variant.Outlined"
-                                  Adornment="Adornment.End"
-                                  Class="mb-3" />
+                                 Label="Правое предплечье (cm)"
+                                 @bind-Value="measurementDto.RightForearm"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.End"
+                                 Class="mb-3" />
 
                 <MudNumericField T="decimal?"
-                                  Label="Левое бедро (cm)"
-                                  @bind-Value="measurementDto.LeftThigh"
-                                  Variant="Variant.Outlined"
-                                  Adornment="Adornment.End"
-                                  Class="mb-3" />
+                                 Label="Ягодицы (cm)"
+                                 @bind-Value="measurementDto.Buttocks"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.End"
+                                 Class="mb-3" />
 
                 <MudNumericField T="decimal?"
-                                  Label="Правое бедро (cm)"
-                                  @bind-Value="measurementDto.RightThigh"
-                                  Variant="Variant.Outlined"
-                                  Adornment="Adornment.End"
-                                  Class="mb-3" />
+                                 Label="Левое бедро (cm)"
+                                 @bind-Value="measurementDto.LeftThigh"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.End"
+                                 Class="mb-3" />
 
                 <MudNumericField T="decimal?"
-                                  Label="Левая икра (cm)"
-                                  @bind-Value="measurementDto.LeftCalf"
-                                  Variant="Variant.Outlined"
-                                  Adornment="Adornment.End"
-                                  Class="mb-3" />
+                                 Label="Правое бедро (cm)"
+                                 @bind-Value="measurementDto.RightThigh"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.End"
+                                 Class="mb-3" />
 
                 <MudNumericField T="decimal?"
-                                  Label="Правая икра (cm)"
-                                  @bind-Value="measurementDto.RightCalf"
-                                  Variant="Variant.Outlined"
-                                  Adornment="Adornment.End"
-                                  Class="mb-3" />
+                                 Label="Левая икра (cm)"
+                                 @bind-Value="measurementDto.LeftCalf"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.End"
+                                 Class="mb-3" />
+
+                <MudNumericField T="decimal?"
+                                 Label="Правая икра (cm)"
+                                 @bind-Value="measurementDto.RightCalf"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.End"
+                                 Class="mb-3" />
             </MudCardContent>
         </MudCard>
 
@@ -383,7 +384,7 @@
             isUploadingImage = true;
             using var stream = file.OpenReadStream(maxAllowedSize: maxFileSize);
             var fileUrl = await FileUploadService.UploadImageAsync(stream, file.Name, file.ContentType);
-            
+
             if (!string.IsNullOrEmpty(fileUrl))
             {
                 measurementDto.ProgressImageUrl = fileUrl;

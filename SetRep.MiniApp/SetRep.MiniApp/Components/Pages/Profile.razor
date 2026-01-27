@@ -114,9 +114,15 @@
 </style>
 
 @code {
-    private string UserName { get; set; } = "Пользователь";
-    private string UserEmail { get; set; } = "user@example.com";
-    private string WeightUnit { get; set; } = "kg";
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await WaitForInitializationAsync(AppInitializationService);
+            await TelegramBackButtonService.HideAsync();
+        }
+    }
 
     private void NavigateToMeasurements()
     {
@@ -131,15 +137,6 @@
     private async void NavigateToHelp()
     {
         await JSRuntime.InvokeVoidAsync("openTelegramLinkHelper.openTelegramLink", "https://t.me/set_rep_helper");
-    }
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        if (firstRender)
-        {
-            await WaitForInitializationAsync(AppInitializationService);
-            await TelegramBackButtonService.ShowAsync();
-        }
     }
 
     public async ValueTask DisposeAsync()
