@@ -918,7 +918,7 @@ else if (workout != null && currentExercise != null)
             var success = await WorkoutHistoryService.EndWorkoutAsync(WorkoutHistoryId);
             if (success)
             {
-                Navigation.NavigateTo($"/workouts/{WorkoutId}");
+                Navigation.NavigateTo($"/workout/history/{WorkoutHistoryId}");
             }
             else
             {
