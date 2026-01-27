@@ -39,9 +39,9 @@ public class ApplicationDbContext : DbContext
     public DbSet<Set> Sets { get; set; } = null!;
 
     /// <summary>
-    /// История веса пользователей
+    /// История измерений пользователей
     /// </summary>
-    public DbSet<WeightHistory> WeightHistory { get; set; } = null!;
+    public DbSet<MeasurementsHistory> MeasurementsHistory { get; set; } = null!;
 
     /// <summary>
     /// История выполненных тренировок

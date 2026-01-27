@@ -83,7 +83,7 @@ builder.Services.AddScoped<IWorkoutRepository, WorkoutRepository>();
 builder.Services.AddScoped<IWorkoutPlanRepository, WorkoutPlanRepository>();
 builder.Services.AddScoped<IWorkoutExerciseRepository, WorkoutExerciseRepository>();
 builder.Services.AddScoped<ISetRepository, SetRepository>();
-builder.Services.AddScoped<IWeightHistoryRepository, WeightHistoryRepository>();
+builder.Services.AddScoped<IMeasurementsHistoryRepository, MeasurementsHistoryRepository>();
 builder.Services.AddScoped<IWorkoutHistoryRepository, WorkoutHistoryRepository>();
 builder.Services.AddScoped<IWorkoutHistorySetRepository, WorkoutHistorySetRepository>();
 

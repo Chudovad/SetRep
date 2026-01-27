@@ -1,0 +1,277 @@
+@page "/measurements"
+@using SetRep.Core.ApiRequestServices
+@using SetRep.Core.Entities
+@using SetRep.MiniApp.Client.Services
+@using static SetRep.MiniApp.Client.Services.InitializationHelper
+@rendermode InteractiveServer
+@inject IMeasurementsHistoryService MeasurementsHistoryService
+@inject NavigationManager Navigation
+@inject ITelegramBackButtonService TelegramBackButtonService
+@inject ITelegramWebAppStateService TelegramWebAppStateService
+@inject IAppInitializationService AppInitializationService
+@implements IAsyncDisposable
+
+<PageTitle>SetRep - Журнал измерений</PageTitle>
+
+@if (isLoading)
+{
+    <div class="measurements-container">
+        @for (int i = 0; i < 4; i++)
+        {
+            <div class="measurement-card-wrapper">
+                <MudCard Elevation="2" Class="mb-3 measurement-item-card">
+                    <MudCardContent>
+                        <div class="measurement-header">
+                            <div class="measurement-info">
+                                <MudSkeleton Typo="Typo.h6" Width="70%" Height="24px" Class="mb-1" />
+                                <MudSkeleton Typo="Typo.body2" Width="60%" Height="20px" />
+                            </div>
+                            <MudSkeleton Width="24px" Height="24px" />
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </div>
+        }
+    </div>
+}
+else if (errorMessage != null)
+{
+    <div class="measurements-container">
+        <MudCard Elevation="2" Class="error-card">
+            <MudCardContent>
+                <div class="error-state">
+                    <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Large" Color="Color.Error" Class="mb-4" />
+                    <MudText Typo="Typo.h6" Align="Align.Center" Class="mb-2">
+                        Ошибка загрузки
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="mb-4">
+                        @errorMessage
+                    </MudText>
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               StartIcon="@Icons.Material.Filled.Refresh"
+                               OnClick="LoadMeasurements">
+                        Попробовать снова
+                    </MudButton>
+                </div>
+            </MudCardContent>
+        </MudCard>
+    </div>
+}
+else if (measurementsList.Any())
+{
+    <MudButton Variant="Variant.Filled"
+               Color="Color.Primary"
+               FullWidth="true"
+               Class="mb-4"
+               StartIcon="@Icons.Material.Filled.Add"
+               OnClick="AddMeasurement">
+        Добавить измерения
+    </MudButton>
+    <div class="measurements-container">
+        @foreach (var measurement in measurementsList)
+        {
+            <div @onclick="() => ViewMeasurementDetails(measurement.Id)" class="measurement-card-wrapper">
+                <MudCard Elevation="2" Class="mb-3 measurement-item-card">
+                    <MudCardContent>
+                        <div class="measurement-header">
+                            <div class="measurement-info">
+                                <MudText Typo="Typo.h6" Class="mb-1">
+                                    @FormatDate(measurement.Date)
+                                </MudText>
+                                @if (measurement.BodyWeight.HasValue)
+                                {
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-1">
+                                        Масса тела: @measurement.BodyWeight.Value.ToString("0.0") кг
+                                    </MudText>
+                                }
+                                @if (measurement.Waist.HasValue)
+                                {
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                        Талия: @measurement.Waist.Value.ToString("0.0") см
+                                    </MudText>
+                                }
+                            </div>
+                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" 
+                                     Color="Color.Secondary" 
+                                     Class="measurement-arrow-icon" />
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="measurements-container">
+        <MudCard Elevation="2" Class="empty-state-card">
+            <MudCardContent>
+                <div class="empty-state">
+                    <MudIcon Icon="@Icons.Material.Filled.Assessment" Size="Size.Large" Color="Color.Secondary" Class="mb-4" />
+                    <MudText Typo="Typo.h6" Align="Align.Center" Class="mb-2">
+                        Нет записей измерений
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="mb-4">
+                        Добавьте первую запись измерений
+                    </MudText>
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="AddMeasurement">
+                        Добавить замер
+                    </MudButton>
+                </div>
+            </MudCardContent>
+        </MudCard>
+    </div>
+}
+
+<style>
+    .measurements-container {
+        max-width: 100%;
+    }
+
+    .measurement-card-wrapper {
+        cursor: pointer;
+    }
+
+    .measurement-item-card {
+        border-radius: 12px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .measurement-card-wrapper:hover .measurement-item-card {
+        transform: translateY(-2px);
+    }
+
+    .measurement-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .measurement-info {
+        flex: 1;
+    }
+
+    .measurement-arrow-icon {
+        flex-shrink: 0;
+        margin-top: 4px;
+    }
+
+    .empty-state-card {
+        border-radius: 12px;
+        margin-top: 32px;
+    }
+
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px;
+    }
+
+    .error-card {
+        border-radius: 12px;
+        margin-top: 32px;
+    }
+
+    .error-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px;
+    }
+</style>
+
+@code {
+    private List<MeasurementsHistory> measurementsList = new();
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await WaitForInitializationAsync(AppInitializationService);
+            await TelegramBackButtonService.ShowAsync();
+            await LoadMeasurements();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadMeasurements()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            Guid userId = Guid.Empty;
+            if (TelegramWebAppStateService.ValidationResult?.Data?.User != null)
+            {
+                userId = TelegramWebAppStateService.ValidationResult.Data.User.Id;
+            }
+
+            if (userId == Guid.Empty)
+            {
+                errorMessage = "Не удалось определить пользователя";
+                return;
+            }
+
+            var data = await MeasurementsHistoryService.GetMeasurementsHistoryByUserIdAsync(userId);
+            if (data != null)
+            {
+                measurementsList = data.OrderByDescending(m => m.Date).ToList();
+            }
+            else
+            {
+                errorMessage = "Не удалось загрузить записи измерений. Проверьте подключение к API.";
+                measurementsList = new List<MeasurementsHistory>();
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = $"Ошибка сети при подключении к API: {ex.Message}. " +
+                          "Убедитесь, что API сервер запущен и доступен.";
+            measurementsList = new List<MeasurementsHistory>();
+        }
+        catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
+        {
+            errorMessage = "Превышено время ожидания ответа от API. Сервер может быть перегружен или недоступен.";
+            measurementsList = new List<MeasurementsHistory>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Не удалось загрузить записи измерений: {ex.Message}";
+            measurementsList = new List<MeasurementsHistory>();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ViewMeasurementDetails(Guid measurementId)
+    {
+        Navigation.NavigateTo($"/measurements/{measurementId}");
+    }
+
+    private void AddMeasurement()
+    {
+        Navigation.NavigateTo("/measurements/add");
+    }
+
+    private string FormatDate(DateTime date)
+    {
+        var localDate = date.AddHours(3); // UTC+3
+        return localDate.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("ru-RU"));
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+
+    }
+}
