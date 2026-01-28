@@ -3,7 +3,7 @@
 @using MudBlazor
 
 <MudSelect T="MuscleGroup?"
-           Label="Фильтр по группе мышц"
+           Label="@Label"
            @bind-Value="@SelectedMuscleGroup"
            Variant="Variant.Outlined"
            AnchorOrigin="Origin.BottomCenter"
@@ -37,4 +37,5 @@
 
     [Parameter] public EventCallback<MuscleGroup?> SelectedMuscleGroupChanged { get; set; }
     [Parameter] public IEnumerable<MuscleGroup> AvailableMuscleGroups { get; set; } = Enum.GetValues<MuscleGroup>();
+    [Parameter] public string Label { get; set; }
 }

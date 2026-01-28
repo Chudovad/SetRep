@@ -37,8 +37,9 @@
                           Immediate="true" />
 
             <!-- Фильтр по группам мышц -->
-            <MuscleGroupsFilter @bind-SelectedMuscleGroup="selectedMuscleGroupFilter"
-                               AvailableMuscleGroups="availableMuscleGroups" />
+            <MuscleGroupsFilter Label="Фильтр по группе мышц"
+                                @bind-SelectedMuscleGroup="selectedMuscleGroupFilter"
+                                AvailableMuscleGroups="availableMuscleGroups" />
             
             @if (filteredExercises.Any())
             {

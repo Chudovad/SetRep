@@ -37,7 +37,8 @@
                           Lines="3"
                           Class="mb-3" />
 
-            <MuscleGroupsFilter @bind-SelectedMuscleGroup="exercise.MuscleGroup" />
+            <MuscleGroupsFilter Label="Группа мышц" 
+                                @bind-SelectedMuscleGroup="exercise.MuscleGroup" />
 
             <MudFileUpload T="IBrowserFile"
                            Accept="image/*"
