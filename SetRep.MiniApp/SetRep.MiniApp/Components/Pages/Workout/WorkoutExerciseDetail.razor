@@ -177,7 +177,14 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
                 <!-- Название упражнения -->
                 <MudCard Elevation="2" Class="mb-4">
                     <MudCardContent>
-                        <MudText Typo="Typo.h6">@workoutExercise.Exercise.Name</MudText>
+                        <div class="exercise-header-with-actions">
+                            <MudText Typo="Typo.h6" Class="exercise-name-header">@workoutExercise.Exercise.Name</MudText>
+                            <MudIconButton Icon="@Icons.Material.Filled.SwapHoriz"
+                                           Color="Color.Primary"
+                                           Size="Size.Medium"
+                                           OnClick="ReplaceExercise"
+                                           Title="Заменить упражнение" /> 
+                        </div>
                     </MudCardContent>
                 </MudCard>
 
@@ -368,6 +375,17 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
 }
 
 <style>
+    .exercise-header-with-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .exercise-name-header {
+        flex: 1;
+    }
+
     .workout-exercise-detail-container {
         max-width: 100%;
         padding-bottom: 20px;
@@ -785,6 +803,88 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
     public async ValueTask DisposeAsync()
     {
 
+    }
+
+    private async Task ReplaceExercise()
+    {
+        if (workoutExercise == null || workout == null)
+            return;
+
+        // Получаем список ID упражнений, которые уже есть в тренировке (кроме текущего)
+        var excludedExerciseIds = workout.WorkoutExercises?
+            .Where(we => we.Id != workoutExercise.Id)
+            .Select(we => we.ExerciseId)
+            .ToList() ?? new List<Guid>();
+
+        var parameters = new DialogParameters<ReplaceExerciseDialog>
+        {
+            { nameof(ReplaceExerciseDialog.CurrentWorkoutExercise), workoutExercise },
+            { nameof(ReplaceExerciseDialog.ExcludedExerciseIds), excludedExerciseIds }
+        };
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        };
+
+        var dialogReference = await DialogService.ShowAsync<ReplaceExerciseDialog>("Заменить упражнение", parameters, options);
+        var result = await dialogReference.Result;
+
+        if (result != null && !result.Canceled && result.Data is Exercise selectedExercise)
+        {
+            // Проверяем, что выбранное упражнение не совпадает с текущим
+            if (selectedExercise.Id == workoutExercise.ExerciseId)
+            {
+                Snackbar.Add("Выбрано то же самое упражнение", Severity.Info);
+                return;
+            }
+
+            // Проверяем, что выбранное упражнение еще не добавлено в тренировку
+            var existingExerciseIds = workout.WorkoutExercises?
+                .Where(we => we.Id != workoutExercise.Id)
+                .Select(we => we.ExerciseId)
+                .ToHashSet() ?? new HashSet<Guid>();
+
+            if (existingExerciseIds.Contains(selectedExercise.Id))
+            {
+                Snackbar.Add("Это упражнение уже есть в тренировке", Severity.Warning);
+                return;
+            }
+
+            await ReplaceCurrentExercise(selectedExercise);
+        }
+    }
+
+    private async Task ReplaceCurrentExercise(Exercise newExercise)
+    {
+        if (workoutExercise == null || workout == null)
+            return;
+
+        try
+        {
+            var updateDto = new CreateWorkoutExerciseDto
+            {
+                WorkoutId = workoutExercise.WorkoutId,
+                ExerciseId = newExercise.Id,
+                Order = workoutExercise.Order,
+                Notes = workoutExercise.Notes
+            };
+
+            var success = await WorkoutExerciseService.UpdateWorkoutExerciseAsync(workoutExercise.Id, updateDto);
+            if (success)
+            {
+                await LoadWorkout();
+            }
+            else
+            {
+                Snackbar.Add("Ошибка при замене упражнения", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка при замене упражнения: {ex.Message}", Severity.Error);
+        }
     }
 }
 
