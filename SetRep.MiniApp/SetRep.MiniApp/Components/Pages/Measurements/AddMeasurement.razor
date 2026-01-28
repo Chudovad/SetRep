@@ -1,6 +1,7 @@
 @page "/measurements/add"
 @page "/measurements/{Id:guid}/edit"
 @using SetRep.Core.ApiRequestServices
+@using SetRep.Core.Entities
 @using SetRep.Shared.DTO
 @using SetRep.MiniApp.Client.Services
 @using static SetRep.MiniApp.Client.Services.InitializationHelper
@@ -95,6 +96,7 @@
                                  Variant="Variant.Outlined"
                                  Adornment="Adornment.End"
                                  AdornmentIcon="@Icons.Material.Filled.Scale"
+                                 Placeholder="@GetPlaceholder(lastMeasurement?.BodyWeight)"
                                  Class="mb-3" />
 
                 <MudNumericField T="decimal?"
@@ -102,6 +104,7 @@
                                  @bind-Value="measurementDto.Waist"
                                  Variant="Variant.Outlined"
                                  Adornment="Adornment.End"
+                                 Placeholder="@GetPlaceholder(lastMeasurement?.Waist)"
                                  Class="mb-3" />
 
                 <MudNumericField T="decimal?"
@@ -109,6 +112,7 @@
                                  @bind-Value="measurementDto.BodyFatPercentage"
                                  Variant="Variant.Outlined"
                                  Adornment="Adornment.End"
+                                 Placeholder="@GetPlaceholder(lastMeasurement?.BodyFatPercentage)"
                                  Class="mb-3" />
 
                 <MudNumericField T="decimal?"
@@ -116,6 +120,7 @@
                                  @bind-Value="measurementDto.LeanBodyMass"
                                  Variant="Variant.Outlined"
                                  Adornment="Adornment.End"
+                                 Placeholder="@GetPlaceholder(lastMeasurement?.LeanBodyMass)"
                                  Class="mb-3" />
 
                 <MudNumericField T="decimal?"
@@ -123,6 +128,7 @@
                                  @bind-Value="measurementDto.Neck"
                                  Variant="Variant.Outlined"
                                  Adornment="Adornment.End"
+                                 Placeholder="@GetPlaceholder(lastMeasurement?.Neck)"
                                  Class="mb-3" />
 
                 <MudNumericField T="decimal?"
@@ -130,6 +136,7 @@
                                  @bind-Value="measurementDto.Shoulder"
                                  Variant="Variant.Outlined"
                                  Adornment="Adornment.End"
+                                 Placeholder="@GetPlaceholder(lastMeasurement?.Shoulder)"
                                  Class="mb-3" />
 
                 <MudNumericField T="decimal?"
@@ -137,6 +144,7 @@
                                  @bind-Value="measurementDto.Chest"
                                  Variant="Variant.Outlined"
                                  Adornment="Adornment.End"
+                                 Placeholder="@GetPlaceholder(lastMeasurement?.Chest)"
                                  Class="mb-3" />
 
                 <MudNumericField T="decimal?"
@@ -144,6 +152,7 @@
                                  @bind-Value="measurementDto.LeftBicep"
                                  Variant="Variant.Outlined"
                                  Adornment="Adornment.End"
+                                 Placeholder="@GetPlaceholder(lastMeasurement?.LeftBicep)"
                                  Class="mb-3" />
 
                 <MudNumericField T="decimal?"
@@ -151,6 +160,7 @@
                                  @bind-Value="measurementDto.RightBicep"
                                  Variant="Variant.Outlined"
                                  Adornment="Adornment.End"
+                                 Placeholder="@GetPlaceholder(lastMeasurement?.RightBicep)"
                                  Class="mb-3" />
 
                 <MudNumericField T="decimal?"
@@ -158,6 +168,7 @@
                                  @bind-Value="measurementDto.LeftForearm"
                                  Variant="Variant.Outlined"
                                  Adornment="Adornment.End"
+                                 Placeholder="@GetPlaceholder(lastMeasurement?.LeftForearm)"
                                  Class="mb-3" />
 
                 <MudNumericField T="decimal?"
@@ -165,6 +176,7 @@
                                  @bind-Value="measurementDto.RightForearm"
                                  Variant="Variant.Outlined"
                                  Adornment="Adornment.End"
+                                 Placeholder="@GetPlaceholder(lastMeasurement?.RightForearm)"
                                  Class="mb-3" />
 
                 <MudNumericField T="decimal?"
@@ -172,6 +184,7 @@
                                  @bind-Value="measurementDto.Buttocks"
                                  Variant="Variant.Outlined"
                                  Adornment="Adornment.End"
+                                 Placeholder="@GetPlaceholder(lastMeasurement?.Buttocks)"
                                  Class="mb-3" />
 
                 <MudNumericField T="decimal?"
@@ -179,6 +192,7 @@
                                  @bind-Value="measurementDto.LeftThigh"
                                  Variant="Variant.Outlined"
                                  Adornment="Adornment.End"
+                                 Placeholder="@GetPlaceholder(lastMeasurement?.LeftThigh)"
                                  Class="mb-3" />
 
                 <MudNumericField T="decimal?"
@@ -186,6 +200,7 @@
                                  @bind-Value="measurementDto.RightThigh"
                                  Variant="Variant.Outlined"
                                  Adornment="Adornment.End"
+                                 Placeholder="@GetPlaceholder(lastMeasurement?.RightThigh)"
                                  Class="mb-3" />
 
                 <MudNumericField T="decimal?"
@@ -193,6 +208,7 @@
                                  @bind-Value="measurementDto.LeftCalf"
                                  Variant="Variant.Outlined"
                                  Adornment="Adornment.End"
+                                 Placeholder="@GetPlaceholder(lastMeasurement?.LeftCalf)"
                                  Class="mb-3" />
 
                 <MudNumericField T="decimal?"
@@ -200,6 +216,7 @@
                                  @bind-Value="measurementDto.RightCalf"
                                  Variant="Variant.Outlined"
                                  Adornment="Adornment.End"
+                                 Placeholder="@GetPlaceholder(lastMeasurement?.RightCalf)"
                                  Class="mb-3" />
             </MudCardContent>
         </MudCard>
@@ -251,6 +268,7 @@
     private IBrowserFile? selectedImageFile;
     private string? imagePreviewUrl;
     private long maxFileSize;
+    private MeasurementsHistory? lastMeasurement;
 
     private CreateMeasurementsHistoryDto measurementDto = new()
     {
@@ -278,6 +296,10 @@
         if (IsEditMode)
         {
             await LoadMeasurement();
+        }
+        else
+        {
+            await LoadLastMeasurement();
         }
     }
 
@@ -331,6 +353,37 @@
         {
             errorMessage = $"Не удалось загрузить запись: {ex.Message}";
         }
+    }
+
+    private async Task LoadLastMeasurement()
+    {
+        try
+        {
+            Guid userId = Guid.Empty;
+            if (TelegramWebAppStateService.ValidationResult?.Data?.User != null)
+            {
+                userId = TelegramWebAppStateService.ValidationResult.Data.User.Id;
+            }
+
+            if (userId != Guid.Empty)
+            {
+                var measurements = await WeightHistoryService.GetMeasurementsHistoryByUserIdAsync(userId);
+                if (measurements != null && measurements.Any())
+                {
+                    lastMeasurement = measurements.OrderByDescending(m => m.Date).FirstOrDefault();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Игнорируем ошибку загрузки последнего замера, чтобы не блокировать создание нового
+            System.Diagnostics.Debug.WriteLine($"Не удалось загрузить последний замер: {ex.Message}");
+        }
+    }
+
+    private string? GetPlaceholder(decimal? value)
+    {
+        return value.HasValue ? value.Value.ToString("F2") : null;
     }
 
     private async Task OnImageFileChanged(IBrowserFile file)
