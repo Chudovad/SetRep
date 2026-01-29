@@ -40,45 +40,11 @@
             <MuscleGroupsFilter Label="Группа мышц" 
                                 @bind-SelectedMuscleGroup="exercise.MuscleGroup" />
 
-            <MudFileUpload T="IBrowserFile"
-                           Accept="image/*"
-                           MaxFileSize="@maxFileSize"
-                           FilesChanged="OnMainImageFileChanged"
-                           Class="mb-3">
-                <ActivatorContent>
-                    <MudButton HtmlTag="label"
-                               Variant="Variant.Outlined"
-                               Color="Color.Primary"
-                               StartIcon="@Icons.Material.Filled.CloudUpload">
-                        @if (string.IsNullOrEmpty(mainImagePreviewUrl))
-                        {
-                            <text>Загрузить изображение</text>
-                        }
-                        else
-                        {
-                            <text>Заменить изображение</text>
-                        }
-                    </MudButton>
-                </ActivatorContent>
-            </MudFileUpload>
-            @if (!string.IsNullOrEmpty(mainImagePreviewUrl))
-            {
-                <div class="mb-3">
-                    <MudImage Src="@mainImagePreviewUrl"
-                              Alt="Главная картинка упражнения"
-                              Fluid="true"
-                              ObjectFit="ObjectFit.Cover"
-                              Class="border rounded" />
-                    <MudButton Variant="Variant.Text"
-                               Color="Color.Error"
-                               Size="Size.Small"
-                               StartIcon="@Icons.Material.Filled.Delete"
-                               OnClick="RemoveImage"
-                               Class="mt-2">
-                        Удалить изображение
-                    </MudButton>
-                </div>
-            }
+            <ImageUpload ImageUrl="@exercise.MainImage"
+                         ImageAlt="Главная картинка упражнения"
+                         OnBeforeFileSelected="OnBeforeMainImageSelected"
+                         OnFileSelected="OnMainImageFileSelected"
+                         OnRemoveRequested="RemoveImage" />
 
         </MudForm>
 
@@ -119,7 +85,6 @@
     private string? errorMessage;
     private IBrowserFile? selectedMainImageFile;
     private Exercise exercise = null!;
-    private string? mainImagePreviewUrl;
     private long maxFileSize;
 
     protected override void OnInitialized()
@@ -140,8 +105,6 @@
             CreatedAt = Exercise.CreatedAt,
             UpdatedAt = Exercise.UpdatedAt
         };
-
-        mainImagePreviewUrl = exercise.MainImage;
     }
 
     private void Cancel()
@@ -149,39 +112,14 @@
         MudDialog?.Cancel();
     }
 
-    private async Task OnMainImageFileChanged(IBrowserFile file)
+    private async Task OnBeforeMainImageSelected()
     {
         await RemoveImageFromStorage();
+    }
+
+    private void OnMainImageFileSelected(IBrowserFile file)
+    {
         selectedMainImageFile = file;
-        mainImagePreviewUrl = await CreateImagePreviewUrlAsync(file);
-        StateHasChanged();
-    }
-
-    private async Task OnMainImageFileRemoved()
-    {
-        selectedMainImageFile = null;
-        exercise.MainImage = null;
-        mainImagePreviewUrl = null;
-        await Task.CompletedTask;
-    }
-
-    private async Task<string> CreateImagePreviewUrlAsync(IBrowserFile file)
-    {
-        try
-        {
-            using var stream = file.OpenReadStream(maxAllowedSize: maxFileSize);
-            using var memoryStream = new MemoryStream();
-            await stream.CopyToAsync(memoryStream);
-            var imageBytes = memoryStream.ToArray();
-            var base64String = Convert.ToBase64String(imageBytes);
-            var contentType = file.ContentType ?? "image/jpeg";
-            return $"data:{contentType};base64,{base64String}";
-        }
-        catch (Exception ex)
-        {
-            Logger?.LogError(ex, "Ошибка при создании preview изображения");
-            return string.Empty;
-        }
     }
 
     private async Task UploadImageAsync(IBrowserFile file, bool isMainImage)
@@ -216,7 +154,6 @@
                 if (isMainImage)
                 {
                     exercise.MainImage = url;
-                    mainImagePreviewUrl = url;
                 }
                 else
                 {
@@ -258,7 +195,8 @@
 
         try
         {
-            await UploadImageAsync(selectedMainImageFile!, isMainImage: true);
+            if (selectedMainImageFile != null)
+                await UploadImageAsync(selectedMainImageFile, isMainImage: true);
 
             exercise.UpdatedAt = DateTime.UtcNow;
 
@@ -289,11 +227,8 @@
     private async Task RemoveImage()
     {
         await RemoveImageFromStorage();
-
-        // Очищаем локальные переменные независимо от результата удаления из облака
         selectedMainImageFile = null;
         exercise.MainImage = null;
-        mainImagePreviewUrl = null;
         StateHasChanged();
     }
 

@@ -1,0 +1,123 @@
+@namespace SetRep.MiniApp.Components.ImageUpload
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Options
+@using SetRep.MiniApp.Options
+
+@inject IOptions<FileUploadOptions> FileUploadOptionsAccessor
+@inject ILogger<ImageUpload>? Logger
+
+<MudFileUpload T="IBrowserFile"
+               Accept="image/*"
+               MaxFileSize="@_effectiveMaxFileSize"
+               FilesChanged="OnFileChanged"
+               Class="@Class">
+    <ActivatorContent>
+        <MudButton HtmlTag="label"
+                   Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   StartIcon="@UploadIcon"
+                   FullWidth="@FullWidth">
+            @if (string.IsNullOrEmpty(DisplayUrl))
+            {
+                @UploadLabel
+            }
+            else
+            {
+                @ReplaceLabel
+            }
+        </MudButton>
+    </ActivatorContent>
+</MudFileUpload>
+@if (!string.IsNullOrEmpty(DisplayUrl))
+{
+    <div class="@PreviewWrapperClass">
+        <MudImage Src="@DisplayUrl"
+                  Alt="@ImageAlt"
+                  Fluid="true"
+                  ObjectFit="ObjectFit.Cover"
+                  Class="border rounded" />
+        <MudButton Variant="Variant.Text"
+                   Color="Color.Error"
+                   Size="Size.Small"
+                   StartIcon="@Icons.Material.Filled.Delete"
+                   OnClick="OnRemoveClick"
+                   Class="mt-2">
+            @RemoveLabel
+        </MudButton>
+    </div>
+}
+
+@code {
+    /// <summary>Текущий URL изображения (например, с бэкенда). Отображается как превью, если нет выбранного файла.</summary>
+    [Parameter] public string? ImageUrl { get; set; }
+
+    /// <summary>Максимальный размер файла в байтах. По умолчанию из FileUploadOptions.</summary>
+    [Parameter] public long? MaxFileSize { get; set; }
+
+    [Parameter] public string UploadLabel { get; set; } = "Загрузить изображение";
+    [Parameter] public string ReplaceLabel { get; set; } = "Заменить изображение";
+    [Parameter] public string RemoveLabel { get; set; } = "Удалить изображение";
+    [Parameter] public string ImageAlt { get; set; } = "Изображение";
+    [Parameter] public string UploadIcon { get; set; } = Icons.Material.Filled.CloudUpload;
+    [Parameter] public bool FullWidth { get; set; }
+    [Parameter] public string Class { get; set; } = "mb-3";
+    [Parameter] public string PreviewWrapperClass { get; set; } = "mb-3";
+
+    /// <summary>Вызывается перед установкой нового файла (например, для удаления старого из хранилища).</summary>
+    [Parameter] public EventCallback OnBeforeFileSelected { get; set; }
+
+    [Parameter] public EventCallback<IBrowserFile> OnFileSelected { get; set; }
+    [Parameter] public EventCallback OnRemoveRequested { get; set; }
+
+    private string? _localPreviewDataUrl;
+    private long _effectiveMaxFileSize;
+
+    private string? DisplayUrl => _localPreviewDataUrl ?? ImageUrl;
+
+    protected override void OnInitialized()
+    {
+        _effectiveMaxFileSize = MaxFileSize ?? FileUploadOptionsAccessor.Value.MaxFileSizeBytes;
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (MaxFileSize.HasValue)
+            _effectiveMaxFileSize = MaxFileSize.Value;
+        else
+            _effectiveMaxFileSize = FileUploadOptionsAccessor.Value.MaxFileSizeBytes;
+    }
+
+    private async Task OnFileChanged(IBrowserFile file)
+    {
+        await OnBeforeFileSelected.InvokeAsync();
+        _localPreviewDataUrl = await CreatePreviewDataUrlAsync(file);
+        await OnFileSelected.InvokeAsync(file);
+        StateHasChanged();
+    }
+
+    private async Task OnRemoveClick()
+    {
+        _localPreviewDataUrl = null;
+        await OnRemoveRequested.InvokeAsync();
+        StateHasChanged();
+    }
+
+    private async Task<string> CreatePreviewDataUrlAsync(IBrowserFile file)
+    {
+        try
+        {
+            using var stream = file.OpenReadStream(maxAllowedSize: _effectiveMaxFileSize);
+            using var ms = new MemoryStream();
+            await stream.CopyToAsync(ms);
+            var base64 = Convert.ToBase64String(ms.ToArray());
+            var contentType = file.ContentType ?? "image/jpeg";
+            return $"data:{contentType};base64,{base64}";
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogError(ex, "Ошибка при создании превью изображения");
+            return string.Empty;
+        }
+    }
+}
