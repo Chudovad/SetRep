@@ -42,47 +42,14 @@
                     <MudText Typo="Typo.h6">Изображение прогресса</MudText>
                 </MudStack>
 
-                <MudFileUpload T="IBrowserFile"
-                               Accept="image/*"
-                               MaxFileSize="@maxFileSize"
-                               FilesChanged="OnImageFileChanged"
-                               Class="mb-3">
-                    <ActivatorContent>
-                        <MudButton HtmlTag="label"
-                                   Variant="Variant.Outlined"
-                                   Color="Color.Primary"
-                                   StartIcon="@Icons.Material.Filled.CameraAlt"
-                                   FullWidth="true">
-                            @if (string.IsNullOrEmpty(imagePreviewUrl))
-                            {
-                                <text>Добавить изображение</text>
-                            }
-                            else
-                            {
-                                <text>Заменить изображение</text>
-                            }
-                        </MudButton>
-                    </ActivatorContent>
-                </MudFileUpload>
-
-                @if (!string.IsNullOrEmpty(imagePreviewUrl))
-                {
-                    <div class="mb-3">
-                        <MudImage Src="@imagePreviewUrl"
-                                  Alt="Изображение прогресса"
-                                  Fluid="true"
-                                  ObjectFit="ObjectFit.Cover"
-                                  Class="border rounded" />
-                        <MudButton Variant="Variant.Text"
-                                   Color="Color.Error"
-                                   Size="Size.Small"
-                                   StartIcon="@Icons.Material.Filled.Delete"
-                                   OnClick="RemoveImage"
-                                   Class="mt-2">
-                            Удалить изображение
-                        </MudButton>
-                    </div>
-                }
+                <ImageUpload ImageUrl="@measurementDto.ProgressImageUrl"
+                             ImageAlt="Изображение прогресса"
+                             UploadLabel="Добавить изображение"
+                             ReplaceLabel="Заменить изображение"
+                             UploadIcon="@Icons.Material.Filled.CameraAlt"
+                             FullWidth="true"
+                             OnFileSelected="OnImageFileSelected"
+                             OnRemoveRequested="RemoveImage" />
             </MudCardContent>
         </MudCard>
 
@@ -279,7 +246,6 @@
     private bool isUploadingImage = false;
     private string? errorMessage;
     private IBrowserFile? selectedImageFile;
-    private string? imagePreviewUrl;
     private long maxFileSize;
 
     private CreateMeasurementsHistoryDto measurementDto = new()
@@ -354,11 +320,6 @@
                     RightCalf = measurement.RightCalf,
                     Notes = measurement.Notes
                 };
-
-                if (!string.IsNullOrEmpty(measurement.ProgressImageUrl))
-                {
-                    imagePreviewUrl = measurement.ProgressImageUrl;
-                }
             }
         }
         catch (Exception ex)
@@ -398,11 +359,6 @@
                     measurementDto.RightThigh = allEntries.RightThigh;
                     measurementDto.LeftCalf = allEntries.LeftCalf;
                     measurementDto.RightCalf = allEntries.RightCalf;
-                    measurementDto.ProgressImageUrl = allEntries.ProgressImageUrl;
-                    if (!string.IsNullOrEmpty(allEntries.ProgressImageUrl))
-                    {
-                        imagePreviewUrl = allEntries.ProgressImageUrl;
-                    }
                 }
             }
         }
@@ -413,39 +369,16 @@
         }
     }
 
-    private async Task OnImageFileChanged(IBrowserFile file)
+    private void OnImageFileSelected(IBrowserFile file)
     {
         selectedImageFile = file;
-        imagePreviewUrl = await CreateImagePreviewUrlAsync(file);
-        StateHasChanged();
     }
 
-    private async Task RemoveImage()
+    private void RemoveImage()
     {
         selectedImageFile = null;
         measurementDto.ProgressImageUrl = null;
-        imagePreviewUrl = null;
-        await Task.CompletedTask;
         StateHasChanged();
-    }
-
-    private async Task<string> CreateImagePreviewUrlAsync(IBrowserFile file)
-    {
-        try
-        {
-            using var stream = file.OpenReadStream(maxAllowedSize: maxFileSize);
-            using var memoryStream = new MemoryStream();
-            await stream.CopyToAsync(memoryStream);
-            var imageBytes = memoryStream.ToArray();
-            var base64String = Convert.ToBase64String(imageBytes);
-            var contentType = file.ContentType ?? "image/jpeg";
-            return $"data:{contentType};base64,{base64String}";
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"Ошибка при создании preview изображения: {ex.Message}";
-            return string.Empty;
-        }
     }
 
     private async Task UploadImageAsync(IBrowserFile file)

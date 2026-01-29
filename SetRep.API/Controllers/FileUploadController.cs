@@ -4,6 +4,9 @@ using Microsoft.Extensions.Options;
 using SetRep.API.Options;
 using SetRep.API.Services;
 using System.Security.Claims;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Formats.Webp;
 
 namespace SetRep.API.Controllers;
 
@@ -17,7 +20,7 @@ public class FileUploadController : ControllerBase
     private readonly ILogger<FileUploadController> _logger;
     private static readonly Dictionary<Guid, int> _userUploadCounts = new();
     private static DateTime _lastResetTime = DateTime.UtcNow;
-    private static readonly object _lockObject = new();
+    private static readonly Lock _lockObject = new();
 
     public FileUploadController(
         IYandexObjectStorageService storageService,
@@ -66,8 +69,14 @@ public class FileUploadController : ControllerBase
                 return BadRequest(new { error = "Разрешены только изображения (JPEG, PNG, GIF, WebP)" });
             }
 
-            using var stream = file.OpenReadStream();
-            var fileUrl = await _storageService.UploadFileAsync(stream, file.FileName, file.ContentType);
+            using var originalStream = file.OpenReadStream();
+            using var compressedStream = await CompressImageAsync(originalStream, file.ContentType);
+            
+            // Определяем новый content type (всегда JPEG после сжатия, кроме WebP)
+            var outputContentType = file.ContentType.ToLower() == "image/webp" ? "image/webp" : "image/jpeg";
+            var outputFileName = Path.ChangeExtension(file.FileName, outputContentType == "image/webp" ? ".webp" : ".jpg");
+            
+            var fileUrl = await _storageService.UploadFileAsync(compressedStream, outputFileName, outputContentType);
 
             IncrementUploadCount(userId);
 
@@ -136,14 +145,81 @@ public class FileUploadController : ControllerBase
     {
         lock (_lockObject)
         {
-            if (_userUploadCounts.ContainsKey(userId))
+            if (_userUploadCounts.TryGetValue(userId, out int value))
             {
-                _userUploadCounts[userId]++;
+                _userUploadCounts[userId] = ++value;
             }
             else
             {
                 _userUploadCounts[userId] = 1;
             }
         }
+    }
+
+    /// <summary>
+    /// Сжимает изображение до качества ~80% и размера 300-800 КБ
+    /// </summary>
+    private async Task<MemoryStream> CompressImageAsync(Stream inputStream, string contentType)
+    {
+        const int minSizeBytes = 300 * 1024; // 300 КБ
+        const int maxSizeBytes = 800 * 1024; // 800 КБ
+        const int initialQuality = 80; // Начальное качество 80%
+
+        using var image = await Image.LoadAsync(inputStream);
+        
+        // Определяем формат вывода
+        var isWebP = contentType.ToLower() == "image/webp";
+        
+        // Для WebP сохраняем в WebP, для остальных - конвертируем в JPEG
+        var outputStream = new MemoryStream();
+        int quality = initialQuality;
+        int attempts = 0;
+        const int maxAttempts = 10;
+
+        while (attempts < maxAttempts)
+        {
+            outputStream.SetLength(0);
+            outputStream.Position = 0;
+
+            if (isWebP)
+            {
+                var encoder = new WebpEncoder
+                {
+                    Quality = quality,
+                    Method = WebpEncodingMethod.BestQuality
+                };
+                await image.SaveAsync(outputStream, encoder);
+            }
+            else
+            {
+                var encoder = new JpegEncoder
+                {
+                    Quality = quality
+                };
+                await image.SaveAsync(outputStream, encoder);
+            }
+
+            var compressedSize = outputStream.Length;
+
+            // Если размер в нужном диапазоне или меньше минимального (для очень маленьких изображений), возвращаем результат
+            if (compressedSize <= maxSizeBytes)
+            {
+                _logger.LogInformation(
+                    "Изображение сжато до {Size} байт с качеством {Quality}%",
+                    compressedSize, quality);
+                break;
+            }
+
+            // Если размер больше максимального, уменьшаем качество
+            quality = Math.Max(50, quality - 5); // Минимум 50%
+            attempts++;
+        }
+
+        outputStream.Position = 0;
+        var result = new MemoryStream();
+        await outputStream.CopyToAsync(result);
+        result.Position = 0;
+        
+        return result;
     }
 }

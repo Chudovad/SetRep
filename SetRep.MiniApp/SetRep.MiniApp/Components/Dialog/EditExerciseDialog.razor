@@ -8,7 +8,6 @@
 @using Microsoft.Extensions.Logging
 @using Microsoft.Extensions.Options
 @using SetRep.MiniApp.Options
-@using SetRep.MiniApp.Components.Filters
 
 @inject IExerciseService ExerciseService
 @inject IFileUploadService FileUploadService
@@ -40,38 +39,11 @@
             <MuscleGroupsFilter Label="Группа мышц" 
                                 @bind-SelectedMuscleGroup="exercise.MuscleGroup" />
 
-            <MudFileUpload T="IBrowserFile"
-                           Accept="image/*"
-                           MaxFileSize="@maxFileSize"
-                           FilesChanged="OnMainImageFileChanged"
-                           Class="mb-3">
-                <ActivatorContent>
-                    <MudButton HtmlTag="label"
-                               Variant="Variant.Outlined"
-                               Color="Color.Primary"
-                               StartIcon="@Icons.Material.Filled.CloudUpload">
-                        @if (string.IsNullOrEmpty(mainImagePreviewUrl))
-                        {
-                            <text>Загрузить изображение</text>
-                        }
-                        else
-                        {
-                            <text>Заменить изображение</text>
-                        }
-                    </MudButton>
-                </ActivatorContent>
-            </MudFileUpload>
-            @if (!string.IsNullOrEmpty(mainImagePreviewUrl))
-            {
-                <div class="mb-3">
-                    <MudImage Src="@mainImagePreviewUrl"
-                              Alt="Главная картинка упражнения"
-                              Width="150"
-                              Height="150"
-                              ObjectFit="ObjectFit.Cover"
-                              Class="border rounded" />
-                </div>
-            }
+            <ImageUpload ImageUrl="@exercise.MainImage"
+                         ImageAlt="Главная картинка упражнения"
+                         OnBeforeFileSelected="OnBeforeMainImageSelected"
+                         OnFileSelected="OnMainImageFileSelected"
+                         OnRemoveRequested="RemoveImage" />
 
         </MudForm>
 
@@ -100,6 +72,7 @@
 </MudDialog>
 
 @code {
+
     [CascadingParameter] IMudDialogInstance? MudDialog { get; set; }
     [Parameter] public Exercise Exercise { get; set; } = null!;
 
@@ -111,7 +84,6 @@
     private string? errorMessage;
     private IBrowserFile? selectedMainImageFile;
     private Exercise exercise = null!;
-    private string? mainImagePreviewUrl;
     private long maxFileSize;
 
     protected override void OnInitialized()
@@ -132,8 +104,6 @@
             CreatedAt = Exercise.CreatedAt,
             UpdatedAt = Exercise.UpdatedAt
         };
-
-        mainImagePreviewUrl = exercise.MainImage;
     }
 
     private void Cancel()
@@ -141,38 +111,14 @@
         MudDialog?.Cancel();
     }
 
-    private async Task OnMainImageFileChanged(IBrowserFile file)
+    private async Task OnBeforeMainImageSelected()
+    {
+        await RemoveImageFromStorage();
+    }
+
+    private void OnMainImageFileSelected(IBrowserFile file)
     {
         selectedMainImageFile = file;
-        mainImagePreviewUrl = await CreateImagePreviewUrlAsync(file);
-        StateHasChanged();
-    }
-
-    private async Task OnMainImageFileRemoved()
-    {
-        selectedMainImageFile = null;
-        exercise.MainImage = null;
-        mainImagePreviewUrl = null;
-        await Task.CompletedTask;
-    }
-
-    private async Task<string> CreateImagePreviewUrlAsync(IBrowserFile file)
-    {
-        try
-        {
-            using var stream = file.OpenReadStream(maxAllowedSize: maxFileSize);
-            using var memoryStream = new MemoryStream();
-            await stream.CopyToAsync(memoryStream);
-            var imageBytes = memoryStream.ToArray();
-            var base64String = Convert.ToBase64String(imageBytes);
-            var contentType = file.ContentType ?? "image/jpeg";
-            return $"data:{contentType};base64,{base64String}";
-        }
-        catch (Exception ex)
-        {
-            Logger?.LogError(ex, "Ошибка при создании preview изображения");
-            return string.Empty;
-        }
     }
 
     private async Task UploadImageAsync(IBrowserFile file, bool isMainImage)
@@ -207,7 +153,6 @@
                 if (isMainImage)
                 {
                     exercise.MainImage = url;
-                    mainImagePreviewUrl = url;
                 }
                 else
                 {
@@ -249,7 +194,8 @@
 
         try
         {
-            await UploadImageAsync(selectedMainImageFile!, isMainImage: true);
+            if (selectedMainImageFile != null)
+                await UploadImageAsync(selectedMainImageFile, isMainImage: true);
 
             exercise.UpdatedAt = DateTime.UtcNow;
 
@@ -274,6 +220,39 @@
         finally
         {
             isSaving = false;
+        }
+    }
+
+    private async Task RemoveImage()
+    {
+        await RemoveImageFromStorage();
+        selectedMainImageFile = null;
+        exercise.MainImage = null;
+        StateHasChanged();
+    }
+
+    private async Task RemoveImageFromStorage()
+    {
+        // Сохраняем текущий URL изображения перед очисткой
+        var imageUrlToDelete = exercise.MainImage;
+
+        // Удаляем изображение из облака, если это существующий URL (не preview)
+        if (!string.IsNullOrEmpty(imageUrlToDelete) && !imageUrlToDelete.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var deleted = await FileUploadService.DeleteImageAsync(imageUrlToDelete);
+                if (!deleted)
+                {
+                    Logger?.LogWarning("Не удалось удалить изображение из облака: {Url}", imageUrlToDelete);
+                    Snackbar.Add("Не удалось удалить изображение из облака", Severity.Warning);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Ошибка при удалении изображения из облака: {Url}", imageUrlToDelete);
+                Snackbar.Add("Ошибка при удалении изображения из облака", Severity.Error);
+            }
         }
     }
 }
