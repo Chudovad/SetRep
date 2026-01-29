@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using SetRep.Core.Entities;
 using SetRep.Core.Repositories;
 using SetRep.Infrastructure.Data;
+using static SetRep.Core.Constants;
 
 namespace SetRep.Infrastructure.Repositories;
 
@@ -13,7 +14,7 @@ public class MeasurementsHistoryRepository(ApplicationDbContext context) : Repos
     public async Task<IEnumerable<MeasurementsHistory>> GetByUserIdAsync(Guid userId)
     {
         return await _dbSet
-            .Where(wh => wh.UserId == userId)
+            .Where(wh => wh.UserId == userId && wh.Notes != AllEntriesNotes)
             .OrderByDescending(wh => wh.Date)
             .ToListAsync();
     }
@@ -21,7 +22,7 @@ public class MeasurementsHistoryRepository(ApplicationDbContext context) : Repos
     public async Task<IEnumerable<MeasurementsHistory>> GetByUserIdAndDateRangeAsync(Guid userId, DateTime startDate, DateTime endDate)
     {
         return await _dbSet
-            .Where(wh => wh.UserId == userId && wh.Date >= startDate && wh.Date <= endDate)
+            .Where(wh => wh.UserId == userId && wh.Notes != AllEntriesNotes && wh.Date >= startDate && wh.Date <= endDate)
             .OrderByDescending(wh => wh.Date)
             .ToListAsync();
     }

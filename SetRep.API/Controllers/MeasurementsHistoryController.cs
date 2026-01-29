@@ -4,6 +4,7 @@ using SetRep.API.Services;
 using SetRep.Core.Entities;
 using SetRep.Core.Repositories;
 using SetRep.Shared.DTO;
+using static SetRep.Core.Constants;
 
 namespace SetRep.API.Controllers;
 
@@ -12,11 +13,6 @@ namespace SetRep.API.Controllers;
 [Authorize]
 public class MeasurementsHistoryController : ControllerBase
 {
-    /// <summary>
-    /// Специальная запись, в которой хранятся последние значения по каждому полю из всех замеров пользователя.
-    /// </summary>
-    public const string AllEntriesNotes = "AllEntries";
-
     private readonly IMeasurementsHistoryRepository _measurementsHistoryRepository;
     private readonly ILogger<MeasurementsHistoryController> _logger;
     private readonly IYandexObjectStorageService _storageService;

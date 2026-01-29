@@ -143,13 +143,13 @@ else if (measurementsList.Any())
                                 @if (measurement.BodyWeight.HasValue)
                                 {
                                     <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-1">
-                                        Масса тела: @measurement.BodyWeight.Value.ToString("0.0") кг
+                                        Масса тела: @measurement.BodyWeight.Value.ToString("0.################") кг
                                     </MudText>
                                 }
                                 @if (measurement.Waist.HasValue)
                                 {
                                     <MudText Typo="Typo.body2" Color="Color.Secondary">
-                                        Талия: @measurement.Waist.Value.ToString("0.0") см
+                                        Талия: @measurement.Waist.Value.ToString("0.################") см
                                     </MudText>
                                 }
                             </div>
