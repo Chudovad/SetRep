@@ -107,6 +107,7 @@
 </MudDialog>
 
 @code {
+
     [CascadingParameter] IMudDialogInstance? MudDialog { get; set; }
     [Parameter] public Exercise Exercise { get; set; } = null!;
 
@@ -150,6 +151,7 @@
 
     private async Task OnMainImageFileChanged(IBrowserFile file)
     {
+        await RemoveImageFromStorage();
         selectedMainImageFile = file;
         mainImagePreviewUrl = await CreateImagePreviewUrlAsync(file);
         StateHasChanged();
@@ -286,10 +288,37 @@
 
     private async Task RemoveImage()
     {
+        await RemoveImageFromStorage();
+
+        // Очищаем локальные переменные независимо от результата удаления из облака
         selectedMainImageFile = null;
         exercise.MainImage = null;
         mainImagePreviewUrl = null;
-        await Task.CompletedTask;
         StateHasChanged();
+    }
+
+    private async Task RemoveImageFromStorage()
+    {
+        // Сохраняем текущий URL изображения перед очисткой
+        var imageUrlToDelete = exercise.MainImage;
+
+        // Удаляем изображение из облака, если это существующий URL (не preview)
+        if (!string.IsNullOrEmpty(imageUrlToDelete) && !imageUrlToDelete.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var deleted = await FileUploadService.DeleteImageAsync(imageUrlToDelete);
+                if (!deleted)
+                {
+                    Logger?.LogWarning("Не удалось удалить изображение из облака: {Url}", imageUrlToDelete);
+                    Snackbar.Add("Не удалось удалить изображение из облака", Severity.Warning);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Ошибка при удалении изображения из облака: {Url}", imageUrlToDelete);
+                Snackbar.Add("Ошибка при удалении изображения из облака", Severity.Error);
+            }
+        }
     }
 }

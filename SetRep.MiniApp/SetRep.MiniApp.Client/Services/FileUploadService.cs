@@ -72,6 +72,51 @@ public class FileUploadService : IFileUploadService
         }
     }
 
+    public async Task<bool> DeleteImageAsync(string url)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(url))
+            {
+                return false;
+            }
+
+            var request = new HttpRequestMessage(HttpMethod.Delete, $"api/fileupload/image?url={Uri.EscapeDataString(url)}");
+            request.AddBearerToken(_telegramWebAppStateService);
+
+            var response = await _httpClient.SendAsync(request);
+            if (response.IsSuccessStatusCode)
+            {
+                _logger?.LogInformation("Изображение успешно удалено: {Url}", url);
+                return true;
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger?.LogError("Ошибка удаления файла. Status: {Status}, Error: {Error}", 
+                    response.StatusCode, errorContent);
+                
+                // Пытаемся извлечь сообщение об ошибке из JSON
+                try
+                {
+                    var errorObj = await response.Content.ReadFromJsonAsync<ErrorResponse>();
+                    _logger?.LogError("Ошибка: {Error}", errorObj?.Error);
+                }
+                catch
+                {
+                    // Игнорируем ошибку парсинга
+                }
+                
+                return false;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Ошибка при удалении файла {Url}", url);
+            return false;
+        }
+    }
+
     private class UploadResponse
     {
         public string? Url { get; set; }
