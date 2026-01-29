@@ -91,6 +91,7 @@
                 <MudText Typo="Typo.h6" GutterBottom="true">Измерения</MudText>
 
                 <MudNumericField T="decimal?"
+                                 Step="0.2m"
                                  Label="Масса тела (kg)"
                                  @bind-Value="measurementDto.BodyWeight"
                                  Variant="Variant.Outlined"
@@ -101,6 +102,7 @@
 
                 <MudNumericField T="decimal?"
                                  Label="Талия (cm)"
+                                 Step="0.5m"
                                  @bind-Value="measurementDto.Waist"
                                  Variant="Variant.Outlined"
                                  Adornment="Adornment.End"
@@ -125,6 +127,7 @@
 
                 <MudNumericField T="decimal?"
                                  Label="Шея (cm)"
+                                 Step="0.2m"
                                  @bind-Value="measurementDto.Neck"
                                  Variant="Variant.Outlined"
                                  Adornment="Adornment.End"
@@ -149,6 +152,7 @@
 
                 <MudNumericField T="decimal?"
                                  Label="Левый бицепс (cm)"
+                                 Step="0.5m"
                                  @bind-Value="measurementDto.LeftBicep"
                                  Variant="Variant.Outlined"
                                  Adornment="Adornment.End"
@@ -157,6 +161,7 @@
 
                 <MudNumericField T="decimal?"
                                  Label="Правый бицепс (cm)"
+                                 Step="0.5m"
                                  @bind-Value="measurementDto.RightBicep"
                                  Variant="Variant.Outlined"
                                  Adornment="Adornment.End"
@@ -165,6 +170,7 @@
 
                 <MudNumericField T="decimal?"
                                  Label="Левое предплечье (cm)"
+                                 Step="0.2m"
                                  @bind-Value="measurementDto.LeftForearm"
                                  Variant="Variant.Outlined"
                                  Adornment="Adornment.End"
@@ -173,6 +179,7 @@
 
                 <MudNumericField T="decimal?"
                                  Label="Правое предплечье (cm)"
+                                 Step="0.2m"
                                  @bind-Value="measurementDto.RightForearm"
                                  Variant="Variant.Outlined"
                                  Adornment="Adornment.End"
@@ -205,6 +212,7 @@
 
                 <MudNumericField T="decimal?"
                                  Label="Левая икра (cm)"
+                                 Step="0.2m"
                                  @bind-Value="measurementDto.LeftCalf"
                                  Variant="Variant.Outlined"
                                  Adornment="Adornment.End"
@@ -213,6 +221,7 @@
 
                 <MudNumericField T="decimal?"
                                  Label="Правая икра (cm)"
+                                 Step="0.2m"
                                  @bind-Value="measurementDto.RightCalf"
                                  Variant="Variant.Outlined"
                                  Adornment="Adornment.End"
@@ -367,11 +376,7 @@
 
             if (userId != Guid.Empty)
             {
-                var measurements = await WeightHistoryService.GetMeasurementsHistoryByUserIdAsync(userId);
-                if (measurements != null && measurements.Any())
-                {
-                    lastMeasurement = measurements.OrderByDescending(m => m.Date).FirstOrDefault();
-                }
+                lastMeasurement = await WeightHistoryService.GetLastMeasurementsHistoryAsync(userId);
             }
         }
         catch (Exception ex)

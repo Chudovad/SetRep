@@ -64,6 +64,27 @@ public class MeasurementsHistoryService : IMeasurementsHistoryService
         }
     }
 
+    public async Task<MeasurementsHistory?> GetLastMeasurementsHistoryAsync(Guid userId)
+    {
+        try
+        {
+            var request = new HttpRequestMessage(HttpMethod.Get, $"api/measurementshistory/user/{userId}/last");
+            request.AddBearerToken(_telegramWebAppStateService);
+            var response = await _httpClient.SendAsync(request);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadFromJsonAsync<MeasurementsHistory>();
+            }
+            
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
     public async Task<MeasurementsHistory?> CreateMeasurementsHistoryAsync(CreateMeasurementsHistoryDto dto)
     {
         try

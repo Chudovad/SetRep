@@ -21,5 +21,10 @@ public interface IMeasurementsHistoryRepository : IRepository<MeasurementsHistor
     /// Получить последнюю запись измерений пользователя
     /// </summary>
     Task<MeasurementsHistory?> GetLastByUserIdAsync(Guid userId);
+
+    /// <summary>
+    /// Получить запись измерений пользователя по Notes
+    /// </summary>
+    Task<MeasurementsHistory?> GetByUserIdAndNotesAsync(Guid userId, string notes);
 }
 

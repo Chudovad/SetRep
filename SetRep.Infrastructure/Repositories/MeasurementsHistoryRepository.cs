@@ -33,5 +33,12 @@ public class MeasurementsHistoryRepository(ApplicationDbContext context) : Repos
             .OrderByDescending(wh => wh.Date)
             .FirstOrDefaultAsync();
     }
+
+    public async Task<MeasurementsHistory?> GetByUserIdAndNotesAsync(Guid userId, string notes)
+    {
+        return await _dbSet
+            .Where(wh => wh.UserId == userId && wh.Notes == notes)
+            .FirstOrDefaultAsync();
+    }
 }
 
