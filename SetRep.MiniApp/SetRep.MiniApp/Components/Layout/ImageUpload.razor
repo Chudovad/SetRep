@@ -1,4 +1,5 @@
 @namespace SetRep.MiniApp.Components.ImageUpload
+@using System.IO
 @using Microsoft.AspNetCore.Components.Forms
 @using Microsoft.Extensions.Logging
 @using Microsoft.Extensions.Options
@@ -93,9 +94,36 @@
     private async Task OnFileChanged(IBrowserFile file)
     {
         await OnBeforeFileSelected.InvokeAsync();
-        _localPreviewDataUrl = await CreatePreviewDataUrlAsync(file);
-        await OnFileSelected.InvokeAsync(file);
+
+        IBrowserFile fileToSend = file;
+        if (ImageConversionService != null && ImageConversionService.IsHeicFormat(file))
+        {
+            var convertedStream = await ImageConversionService.ConvertToJpegIfNeededAsync(file);
+            if (convertedStream != null)
+            {
+                try
+                {
+                    var jpegFileName = Path.ChangeExtension(file.Name, ".jpg") ?? file.Name + ".jpg";
+                    fileToSend = await StreamToBrowserFileAsync(convertedStream, jpegFileName, file.LastModified);
+                }
+                finally
+                {
+                    await convertedStream.DisposeAsync();
+                }
+            }
+        }
+
+        _localPreviewDataUrl = await CreatePreviewDataUrlAsync(fileToSend);
+        await OnFileSelected.InvokeAsync(fileToSend);
         StateHasChanged();
+    }
+
+    private static async Task<IBrowserFile> StreamToBrowserFileAsync(Stream stream, string fileName, DateTimeOffset lastModified)
+    {
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+        var bytes = ms.ToArray();
+        return new StreamBrowserFile(bytes, fileName, "image/jpeg", lastModified);
     }
 
     private async Task OnRemoveClick()
@@ -140,6 +168,32 @@
         {
             Logger?.LogError(ex, "Ошибка при создании превью изображения");
             return string.Empty;
+        }
+    }
+
+    private sealed class StreamBrowserFile : IBrowserFile
+    {
+        private readonly byte[] _data;
+
+        public StreamBrowserFile(byte[] data, string name, string contentType, DateTimeOffset lastModified)
+        {
+            _data = data;
+            Name = name;
+            LastModified = lastModified;
+            Size = data.Length;
+            ContentType = contentType;
+        }
+
+        public string Name { get; }
+        public DateTimeOffset LastModified { get; }
+        public long Size { get; }
+        public string ContentType { get; }
+
+        public Stream OpenReadStream(long maxAllowedSize = 512000, CancellationToken cancellationToken = default)
+        {
+            if (_data.Length > maxAllowedSize)
+                throw new InvalidOperationException($"Размер файла ({_data.Length}) превышает допустимый ({maxAllowedSize}).");
+            return new MemoryStream(_data, writable: false);
         }
     }
 }

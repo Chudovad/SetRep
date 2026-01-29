@@ -444,7 +444,7 @@
                 return Enumerable.Empty<Exercise>();
 
             var query = searchQuery.Trim().ToLowerInvariant();
-            
+
             Guid? currentUserId = null;
             if (TelegramWebAppStateService?.ValidationResult?.Data?.User != null)
             {
@@ -535,8 +535,7 @@
 
         if (!result.Canceled && result.Data is Exercise createdExercise)
         {
-            allExercises.Insert(0, createdExercise);
-            StateHasChanged();
+            ViewExercise(createdExercise.Id);
         }
     }
 
