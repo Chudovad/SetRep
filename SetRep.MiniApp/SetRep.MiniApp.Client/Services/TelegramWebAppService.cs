@@ -33,6 +33,7 @@ public class TelegramWebAppService : ITelegramWebAppService
                 var tgWebAppData = await _jsRuntime.InvokeAsync<string>("getTelegramWebAppData");
                 if (!string.IsNullOrWhiteSpace(tgWebAppData))
                 {
+                    await SaveToLocalStorageAsync(tgWebAppData);
                     return tgWebAppData;
                 }
             }
@@ -47,6 +48,7 @@ public class TelegramWebAppService : ITelegramWebAppService
             
             if (!string.IsNullOrWhiteSpace(tgWebAppDataFromUrl))
             {
+                await SaveToLocalStorageAsync(tgWebAppDataFromUrl);
                 return tgWebAppDataFromUrl;
             }
 
@@ -56,15 +58,50 @@ public class TelegramWebAppService : ITelegramWebAppService
             
             if (!string.IsNullOrWhiteSpace(tgWebAppDataFromTelegram))
             {
+                await SaveToLocalStorageAsync(tgWebAppDataFromTelegram);
                 return tgWebAppDataFromTelegram;
             }
 
-            _logger.LogWarning("tgWebAppData не найден в URL или window.Telegram.WebApp.initData");
+            // Пробуем получить из local storage
+            var tgWebAppDataFromStorage = await GetFromLocalStorageAsync();
+            if (!string.IsNullOrWhiteSpace(tgWebAppDataFromStorage))
+            {
+                return tgWebAppDataFromStorage;
+            }
+
+            _logger.LogWarning("tgWebAppData не найден в URL, window.Telegram.WebApp.initData или local storage");
             return null;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Ошибка при получении tgWebAppData");
+            return null;
+        }
+    }
+
+    private async Task SaveToLocalStorageAsync(string tgWebAppData)
+    {
+        try
+        {
+            await _jsRuntime.InvokeVoidAsync("localStorage.setItem", "tgWebAppData", tgWebAppData);
+        }
+        catch (Exception ex)
+        {
+            // Игнорируем ошибки при сохранении в localStorage
+            _logger.LogWarning(ex, "Не удалось сохранить tgWebAppData в local storage");
+        }
+    }
+
+    private async Task<string?> GetFromLocalStorageAsync()
+    {
+        try
+        {
+            return await _jsRuntime.InvokeAsync<string>("localStorage.getItem", "tgWebAppData");
+        }
+        catch (Exception ex)
+        {
+            // Игнорируем ошибки при загрузке из localStorage
+            _logger.LogWarning(ex, "Не удалось загрузить tgWebAppData из local storage");
             return null;
         }
     }
