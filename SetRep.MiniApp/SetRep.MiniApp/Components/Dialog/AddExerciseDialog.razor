@@ -67,10 +67,17 @@
                 <div class="mb-3">
                     <MudImage Src="@mainImagePreviewUrl"
                               Alt="Главная картинка упражнения"
-                              Width="150"
-                              Height="150"
+                              Fluid="true"
                               ObjectFit="ObjectFit.Cover"
                               Class="border rounded" />
+                    <MudButton Variant="Variant.Text"
+                               Color="Color.Error"
+                               Size="Size.Small"
+                               StartIcon="@Icons.Material.Filled.Delete"
+                               OnClick="RemoveImage"
+                               Class="mt-2">
+                        Удалить изображение
+                    </MudButton>
                 </div>
             }
         </MudForm>
@@ -282,6 +289,15 @@
         {
             isSaving = false;
         }
+    }
+
+    private async Task RemoveImage()
+    {
+        selectedMainImageFile = null;
+        exercise.MainImage = null;
+        mainImagePreviewUrl = null;
+        await Task.CompletedTask;
+        StateHasChanged();
     }
 }
 
