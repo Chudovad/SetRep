@@ -13,6 +13,7 @@
     <ProjectReference Include="..\..\SetRep.Shared\SetRep.Shared.csproj" />
     <ProjectReference Include="..\SetRep.MiniApp.Client\SetRep.MiniApp.Client.csproj" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="9.*" />
+    <PackageReference Include="Magick.NET-Q16-AnyCPU" Version="14.10.2" />
   </ItemGroup>
 
 </Project>

@@ -3,9 +3,11 @@
 @using Microsoft.Extensions.Logging
 @using Microsoft.Extensions.Options
 @using SetRep.MiniApp.Options
+@using SetRep.MiniApp.Services
 
 @inject IOptions<FileUploadOptions> FileUploadOptionsAccessor
 @inject ILogger<ImageUpload>? Logger
+@inject IImageConversionService? ImageConversionService
 
 <MudFileUpload T="IBrowserFile"
                Accept="image/*"
@@ -107,11 +109,31 @@
     {
         try
         {
+            string contentType = "image/jpeg";
+
+            // Проверяем, нужно ли конвертировать HEIC/HEIF файл
+            if (ImageConversionService != null && ImageConversionService.IsHeicFormat(file))
+            {
+                // Конвертируем HEIC в JPEG
+                var convertedStream = await ImageConversionService.ConvertToJpegIfNeededAsync(file);
+                if (convertedStream != null)
+                {
+                    using (convertedStream)
+                    {
+                        using var memoryStream = new MemoryStream();
+                        await convertedStream.CopyToAsync(memoryStream);
+                        var base64String = Convert.ToBase64String(memoryStream.ToArray());
+                        return $"data:{contentType};base64,{base64String}";
+                    }
+                }
+            }
+
+            // Если конвертация не была выполнена или не требуется, используем исходный файл
             using var stream = file.OpenReadStream(maxAllowedSize: _effectiveMaxFileSize);
             using var ms = new MemoryStream();
             await stream.CopyToAsync(ms);
             var base64 = Convert.ToBase64String(ms.ToArray());
-            var contentType = file.ContentType ?? "image/jpeg";
+            contentType = file.ContentType ?? "image/jpeg";
             return $"data:{contentType};base64,{base64}";
         }
         catch (Exception ex)

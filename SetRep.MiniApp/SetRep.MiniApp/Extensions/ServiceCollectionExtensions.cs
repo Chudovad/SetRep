@@ -1,6 +1,7 @@
 using MudBlazor.Services;
 using SetRep.Core.ApiRequestServices;
 using SetRep.MiniApp.Client.Services;
+using SetRep.MiniApp.Services;
 
 namespace SetRep.MiniApp.Extensions;
 
@@ -51,6 +52,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IMeasurementsHistoryService, MeasurementsHistoryService>();
         services.AddTransient<IFileUploadService, FileUploadService>();
         services.AddScoped<IAppInitializationService, AppInitializationService>();
+        services.AddScoped<IImageConversionService, ImageConversionService>();
 
         services.Configure<Options.FileUploadOptions>(
             builder.Configuration.GetSection(Options.FileUploadOptions.SectionName));
