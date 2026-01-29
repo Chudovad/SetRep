@@ -2,6 +2,7 @@
 @using SetRep.Core.Enums
 @using SetRep.Core.Extensions
 @using SetRep.MiniApp.Client.Services
+@using SetRep.MiniApp.Components.Filters
 
 @inject IExerciseService ExerciseService
 
@@ -34,23 +35,11 @@
                           IconSize="Size.Medium"
                           Class="mb-3 search-field"
                           Immediate="true" />
-            
+
             <!-- Фильтр по группам мышц -->
-            <MudSelect T="MuscleGroup?"
-                       Label="Фильтр по группе мышц"
-                       @bind-Value="selectedMuscleGroupFilter"
-                       Variant="Variant.Outlined"
-                       AnchorOrigin="Origin.BottomCenter"
-                       Clearable="true"
-                       TransformOrigin="Origin.BottomCenter"
-                       Class="mb-3">
-                @foreach (var muscleGroup in availableMuscleGroups)
-                {
-                    <MudSelectItem T="MuscleGroup?" Value="@muscleGroup">
-                        <img src="@muscleGroup.GetImageUrl()" height="14" class="mr-1" /> @muscleGroup.GetDescription()
-                    </MudSelectItem>
-                }
-            </MudSelect>
+            <MuscleGroupsFilter Label="Фильтр по группе мышц"
+                                @bind-SelectedMuscleGroup="selectedMuscleGroupFilter"
+                                AvailableMuscleGroups="availableMuscleGroups" />
             
             @if (filteredExercises.Any())
             {

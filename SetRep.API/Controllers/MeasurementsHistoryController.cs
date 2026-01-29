@@ -4,6 +4,7 @@ using SetRep.API.Services;
 using SetRep.Core.Entities;
 using SetRep.Core.Repositories;
 using SetRep.Shared.DTO;
+using static SetRep.Core.Constants;
 
 namespace SetRep.API.Controllers;
 
@@ -74,12 +75,12 @@ public class MeasurementsHistoryController : ControllerBase
     }
 
     /// <summary>
-    /// Получить последнюю запись веса пользователя
+    /// Получить запись AllEntries — последние значения по каждому полю из всех замеров пользователя.
     /// </summary>
     [HttpGet("user/{userId}/last")]
     public async Task<ActionResult<MeasurementsHistory>> GetLast(Guid userId)
     {
-        var record = await _measurementsHistoryRepository.GetLastByUserIdAsync(userId);
+        var record = await _measurementsHistoryRepository.GetByUserIdAndNotesAsync(userId, AllEntriesNotes);
         if (record == null)
         {
             return NotFound();
@@ -122,7 +123,72 @@ public class MeasurementsHistoryController : ControllerBase
         await _measurementsHistoryRepository.AddAsync(measurementsHistory);
         await _measurementsHistoryRepository.SaveChangesAsync();
 
+        await CreateOrUpdateAllEntriesAsync(dto.UserId, dto);
+
         return CreatedAtAction(nameof(GetById), new { id = measurementsHistory.Id }, measurementsHistory);
+    }
+
+    /// <summary>
+    /// Создаёт или обновляет запись AllEntries — агрегат последних значений по каждому полю из всех замеров пользователя.
+    /// </summary>
+    private async Task CreateOrUpdateAllEntriesAsync(Guid userId, CreateMeasurementsHistoryDto dto)
+    {
+        var allEntries = await _measurementsHistoryRepository.GetByUserIdAndNotesAsync(userId, AllEntriesNotes);
+
+        if (allEntries == null)
+        {
+            allEntries = new MeasurementsHistory
+            {
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                Date = dto.Date,
+                ProgressImageUrl = dto.ProgressImageUrl,
+                BodyWeight = dto.BodyWeight,
+                Waist = dto.Waist,
+                BodyFatPercentage = dto.BodyFatPercentage,
+                LeanBodyMass = dto.LeanBodyMass,
+                Neck = dto.Neck,
+                Shoulder = dto.Shoulder,
+                Chest = dto.Chest,
+                LeftBicep = dto.LeftBicep,
+                RightBicep = dto.RightBicep,
+                LeftForearm = dto.LeftForearm,
+                RightForearm = dto.RightForearm,
+                Buttocks = dto.Buttocks,
+                LeftThigh = dto.LeftThigh,
+                RightThigh = dto.RightThigh,
+                LeftCalf = dto.LeftCalf,
+                RightCalf = dto.RightCalf,
+                Notes = AllEntriesNotes,
+                CreatedAt = DateTime.UtcNow
+            };
+            await _measurementsHistoryRepository.AddAsync(allEntries);
+        }
+        else
+        {
+            allEntries.Date = dto.Date;
+            if (dto.ProgressImageUrl != null) allEntries.ProgressImageUrl = dto.ProgressImageUrl;
+            if (dto.BodyWeight.HasValue) allEntries.BodyWeight = dto.BodyWeight;
+            if (dto.Waist.HasValue) allEntries.Waist = dto.Waist;
+            if (dto.BodyFatPercentage.HasValue) allEntries.BodyFatPercentage = dto.BodyFatPercentage;
+            if (dto.LeanBodyMass.HasValue) allEntries.LeanBodyMass = dto.LeanBodyMass;
+            if (dto.Neck.HasValue) allEntries.Neck = dto.Neck;
+            if (dto.Shoulder.HasValue) allEntries.Shoulder = dto.Shoulder;
+            if (dto.Chest.HasValue) allEntries.Chest = dto.Chest;
+            if (dto.LeftBicep.HasValue) allEntries.LeftBicep = dto.LeftBicep;
+            if (dto.RightBicep.HasValue) allEntries.RightBicep = dto.RightBicep;
+            if (dto.LeftForearm.HasValue) allEntries.LeftForearm = dto.LeftForearm;
+            if (dto.RightForearm.HasValue) allEntries.RightForearm = dto.RightForearm;
+            if (dto.Buttocks.HasValue) allEntries.Buttocks = dto.Buttocks;
+            if (dto.LeftThigh.HasValue) allEntries.LeftThigh = dto.LeftThigh;
+            if (dto.RightThigh.HasValue) allEntries.RightThigh = dto.RightThigh;
+            if (dto.LeftCalf.HasValue) allEntries.LeftCalf = dto.LeftCalf;
+            if (dto.RightCalf.HasValue) allEntries.RightCalf = dto.RightCalf;
+            allEntries.UpdatedAt = DateTime.UtcNow;
+            await _measurementsHistoryRepository.UpdateAsync(allEntries);
+        }
+
+        await _measurementsHistoryRepository.SaveChangesAsync();
     }
 
     /// <summary>

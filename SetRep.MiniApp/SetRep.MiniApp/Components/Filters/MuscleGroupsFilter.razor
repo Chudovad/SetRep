@@ -1,0 +1,41 @@
+﻿@using SetRep.Core.Enums
+@using SetRep.Core.Extensions
+@using MudBlazor
+
+<MudSelect T="MuscleGroup?"
+           Label="@Label"
+           @bind-Value="@SelectedMuscleGroup"
+           Variant="Variant.Outlined"
+           AnchorOrigin="Origin.BottomCenter"
+           Clearable="true"
+           TransformOrigin="Origin.BottomCenter"
+           Class="mb-3">
+    @foreach (var muscleGroup in AvailableMuscleGroups)
+    {
+        <MudSelectItem T="MuscleGroup?" Value="@muscleGroup">
+            <img src="@muscleGroup.GetImageUrl()" height="14" class="mr-1" /> @muscleGroup.GetDescription()
+        </MudSelectItem>
+    }
+</MudSelect>
+
+@code {
+    private MuscleGroup? _selectedMuscleGroup;
+
+    [Parameter]
+    public MuscleGroup? SelectedMuscleGroup
+    {
+        get => _selectedMuscleGroup;
+        set
+        {
+            if (_selectedMuscleGroup != value)
+            {
+                _selectedMuscleGroup = value;
+                SelectedMuscleGroupChanged.InvokeAsync(value);
+            }
+        }
+    }
+
+    [Parameter] public EventCallback<MuscleGroup?> SelectedMuscleGroupChanged { get; set; }
+    [Parameter] public IEnumerable<MuscleGroup> AvailableMuscleGroups { get; set; } = Enum.GetValues<MuscleGroup>();
+    [Parameter] public string Label { get; set; }
+}

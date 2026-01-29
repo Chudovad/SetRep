@@ -18,6 +18,11 @@ public interface IMeasurementsHistoryService
     Task<MeasurementsHistory?> GetMeasurementsHistoryByIdAsync(Guid id);
 
     /// <summary>
+    /// Получить запись AllEntries — последние значения по каждому полю из всех замеров пользователя.
+    /// </summary>
+    Task<MeasurementsHistory?> GetLastMeasurementsHistoryAsync(Guid userId);
+
+    /// <summary>
     /// Создать новую запись измерений
     /// </summary>
     Task<MeasurementsHistory?> CreateMeasurementsHistoryAsync(Shared.DTO.CreateMeasurementsHistoryDto dto);

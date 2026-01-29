@@ -3,6 +3,7 @@
 @using SetRep.Core.Extensions
 @using SetRep.MiniApp.Client.Services
 @using Microsoft.AspNetCore.Components
+@using SetRep.MiniApp.Components.Filters
 
 @inject IExerciseService ExerciseService
 
@@ -35,8 +36,13 @@
                           IconSize="Size.Medium"
                           Class="mb-3 search-field"
                           Immediate="true" />
-            
-            @if (filteredAllExercises.Any())
+
+            <!-- Фильтр по группам мышц -->
+            <MuscleGroupsFilter Label="Фильтр по группе мышц"
+                                @bind-SelectedMuscleGroup="selectedMuscleGroupFilter"
+                                AvailableMuscleGroups="availableMuscleGroups" />
+
+            @if (filteredExercises.Any())
             {
                 <div class="exercise-list-container">
                     <MudList T="Guid"
@@ -46,74 +52,33 @@
                              CheckBoxColor="Color.Primary"
                              Dense="true"
                              Class="exercise-list">
-                        @if (filteredSameGroupExercises.Any())
+                        @foreach (var exercise in filteredExercises)
                         {
-                            <MudText Typo="Typo.subtitle1" Class="mb-2 mt-2 section-title px-4">
-                                Из той же группы мышц
-                            </MudText>
-                            @foreach (var exercise in filteredSameGroupExercises)
-                            {
-                                <MudListItem @key="exercise.Id" Value="@exercise.Id">
-                                    <div class="exercise-item">
-                                        <div class="exercise-item-content">
-                                            @if (!string.IsNullOrWhiteSpace(exercise.MainImage))
+                            <MudListItem @key="exercise.Id" Value="@exercise.Id">
+                                <div class="exercise-item">
+                                    <div class="exercise-item-content">
+                                        @if (!string.IsNullOrWhiteSpace(exercise.MainImage))
+                                        {
+                                            <MudAvatar Size="Size.Large" Class="exercise-image-avatar">
+                                                <img src="@exercise.MainImage" alt="@exercise.Name" />
+                                            </MudAvatar>
+                                        }
+                                        <div class="exercise-item-info">
+                                            <MudText Typo="Typo.body1" Class="exercise-name">@exercise.Name</MudText>
+                                            @if (exercise.MuscleGroup.HasValue)
                                             {
-                                                <MudAvatar Size="Size.Large" Class="exercise-image-avatar">
-                                                    <img src="@exercise.MainImage" alt="@exercise.Name" />
-                                                </MudAvatar>
+                                                <MudChip T="string"
+                                                         Size="Size.Small"
+                                                         Color="Color.Primary"
+                                                         Variant="Variant.Text"
+                                                         Class="mt-1">
+                                                    @exercise.MuscleGroup.Value.GetDescription()
+                                                </MudChip>
                                             }
-                                            <div class="exercise-item-info">
-                                                <MudText Typo="Typo.body1" Class="exercise-name">@exercise.Name</MudText>
-                                                @if (exercise.MuscleGroup.HasValue)
-                                                {
-                                                    <MudChip T="string"
-                                                             Size="Size.Small"
-                                                             Color="Color.Primary"
-                                                             Variant="Variant.Text"
-                                                             Class="mt-1">
-                                                        @exercise.MuscleGroup.Value.GetDescription()
-                                                    </MudChip>
-                                                }
-                                            </div>
                                         </div>
                                     </div>
-                                </MudListItem>
-                            }
-                        }
-
-                        @if (filteredOtherExercises.Any())
-                        {
-                            <MudText Typo="Typo.subtitle1" Class="mb-2 mt-2 section-title px-4">
-                                Все упражнения
-                            </MudText>
-                            @foreach (var exercise in filteredOtherExercises)
-                            {
-                                <MudListItem @key="exercise.Id" Value="@exercise.Id">
-                                    <div class="exercise-item">
-                                        <div class="exercise-item-content">
-                                            @if (!string.IsNullOrWhiteSpace(exercise.MainImage))
-                                            {
-                                                <MudAvatar Size="Size.Small" Class="exercise-image-avatar">
-                                                    <img src="@exercise.MainImage" alt="@exercise.Name" />
-                                                </MudAvatar>
-                                            }
-                                            <div class="exercise-item-info">
-                                                <MudText Typo="Typo.body1" Class="exercise-name">@exercise.Name</MudText>
-                                                @if (exercise.MuscleGroup.HasValue)
-                                                {
-                                                    <MudChip T="string"
-                                                             Size="Size.Small"
-                                                             Color="Color.Primary"
-                                                             Variant="Variant.Text"
-                                                             Class="mt-1">
-                                                        @exercise.MuscleGroup.Value.GetDescription()
-                                                    </MudChip>
-                                                }
-                                            </div>
-                                        </div>
-                                    </div>
-                                </MudListItem>
-                            }
+                                </div>
+                            </MudListItem>
                         }
                     </MudList>
                 </div>
@@ -219,59 +184,52 @@
     [Parameter] public List<Guid>? ExcludedExerciseIds { get; set; }
 
     private List<Exercise> allExercises = new();
-    private List<Exercise> sameGroupExercises = new();
-    private List<Exercise> otherExercises = new();
     private string searchQuery = string.Empty;
     private Guid selectedExerciseId = Guid.Empty;
     private bool isLoading = true;
     private bool isSaving = false;
     private string? errorMessage;
+    private MuscleGroup? selectedMuscleGroupFilter;
 
-    private IEnumerable<Exercise> filteredSameGroupExercises
+    private IEnumerable<MuscleGroup> availableMuscleGroups
     {
         get
         {
-            var exercises = sameGroupExercises;
+            return allExercises
+                .Where(e => e.MuscleGroup.HasValue)
+                .Select(e => e.MuscleGroup!.Value)
+                .Distinct()
+                .OrderBy(mg => mg.GetDescription());
+        }
+    }
+
+    private IEnumerable<Exercise> filteredExercises
+    {
+        get
+        {
+            var exercises = allExercises;
+
+            if (selectedMuscleGroupFilter.HasValue)
+            {
+                exercises = exercises.Where(e =>
+                    e.MuscleGroup.HasValue &&
+                    e.MuscleGroup.Value == selectedMuscleGroupFilter.Value).ToList();
+            }
+
+            // Фильтр по текстовому поиску
             if (!string.IsNullOrWhiteSpace(searchQuery))
             {
                 var query = searchQuery.Trim().ToLowerInvariant();
                 exercises = exercises.Where(e =>
                     e.Name.ToLowerInvariant().Contains(query) ||
-                    (!string.IsNullOrWhiteSpace(e.Description) && 
+                    (!string.IsNullOrWhiteSpace(e.Description) &&
                      e.Description.ToLowerInvariant().Contains(query)) ||
-                    (e.MuscleGroup.HasValue && 
+                    (e.MuscleGroup.HasValue &&
                      e.MuscleGroup.Value.GetDescription().ToLowerInvariant().Contains(query))
                 ).ToList();
             }
-            return exercises;
-        }
-    }
 
-    private IEnumerable<Exercise> filteredOtherExercises
-    {
-        get
-        {
-            var exercises = otherExercises;
-            if (!string.IsNullOrWhiteSpace(searchQuery))
-            {
-                var query = searchQuery.Trim().ToLowerInvariant();
-                exercises = exercises.Where(e =>
-                    e.Name.ToLowerInvariant().Contains(query) ||
-                    (!string.IsNullOrWhiteSpace(e.Description) && 
-                     e.Description.ToLowerInvariant().Contains(query)) ||
-                    (e.MuscleGroup.HasValue && 
-                     e.MuscleGroup.Value.GetDescription().ToLowerInvariant().Contains(query))
-                ).ToList();
-            }
             return exercises;
-        }
-    }
-
-    private IEnumerable<Exercise> filteredAllExercises
-    {
-        get
-        {
-            return filteredSameGroupExercises.Concat(filteredOtherExercises);
         }
     }
 
@@ -293,27 +251,15 @@
                 excludedIds.Add(CurrentWorkoutExercise.ExerciseId);
             }
 
+            if (CurrentWorkoutExercise?.Exercise?.MuscleGroup != null)
+            {
+                selectedMuscleGroupFilter = CurrentWorkoutExercise.Exercise.MuscleGroup.Value;
+            }
+
             var data = await ExerciseService.GetExercisesAsync();
             if (data != null)
             {
                 allExercises = data.Where(e => !excludedIds.Contains(e.Id)).ToList();
-
-                // Разделяем на упражнения из той же группы мышц и остальные
-                if (CurrentWorkoutExercise?.Exercise?.MuscleGroup != null)
-                {
-                    var currentMuscleGroup = CurrentWorkoutExercise.Exercise.MuscleGroup.Value;
-                    sameGroupExercises = allExercises
-                        .Where(e => e.MuscleGroup == currentMuscleGroup)
-                        .ToList();
-                    otherExercises = allExercises
-                        .Where(e => e.MuscleGroup != currentMuscleGroup)
-                        .ToList();
-                }
-                else
-                {
-                    sameGroupExercises = new List<Exercise>();
-                    otherExercises = allExercises;
-                }
             }
             else
             {
