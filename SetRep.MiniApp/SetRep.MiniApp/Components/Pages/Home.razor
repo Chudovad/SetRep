@@ -3,12 +3,14 @@
 @using SetRep.Core.Entities
 @using SetRep.MiniApp.Client.Services
 @using SetRep.MiniApp.Components.Dialog
+@using SetRep.Shared.DTO
 @using static SetRep.MiniApp.Client.Services.InitializationHelper
 
 @rendermode InteractiveServer
 
 @inject IWorkoutHistoryService WorkoutHistoryService
 @inject IWorkoutService WorkoutService
+@inject IMeasurementsHistoryService MeasurementsHistoryService
 @inject ITelegramWebAppStateService TelegramWebAppStateService
 @inject ITelegramBackButtonService TelegramBackButtonService
 @inject IAppInitializationService AppInitializationService
@@ -19,18 +21,6 @@
 <PageTitle>SetRep - Главная</PageTitle>
 
 <div class="home-container">
-    <!-- Карточка текущего веса -->
-    @* <MudCard Elevation="2" Class="mb-4 stat-card">
-        <MudCardContent>
-            <div class="stat-header">
-                <MudIcon Icon="@Icons.Material.Filled.MonitorWeight" Size="Size.Large" Color="Color.Primary" />
-                <div class="stat-content">
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">Текущий вес</MudText>
-                    <MudText Typo="Typo.h4" Class="mt-1">@(CurrentWeight?.ToString("F1") ?? "--") кг</MudText>
-                </div>
-            </div>
-        </MudCardContent>
-    </MudCard> *@
 
     <!-- Карточка тренировок за неделю -->
     <MudCard Elevation="2" Class="mb-4 stat-card">
@@ -42,6 +32,37 @@
                     <MudText Typo="Typo.h4" Class="mt-1">@WeeklyWorkouts</MudText>
                 </div>
             </div>
+        </MudCardContent>
+    </MudCard>
+
+    <!-- Карточка записи веса -->
+    <MudCard Elevation="2" Class="mb-4">
+        <MudCardContent>
+            <MudStack Row AlignItems="AlignItems.Center">
+                <MudNumericField T="decimal?"
+                                 Step="0.1m"
+                                 Label="Текущий вес (кг)"
+                                 @bind-Value="currentWeightInput"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.End"
+                                 AdornmentIcon="@Icons.Material.Filled.Scale" />
+                <MudButton Variant="Variant.Filled"
+                           Size="Size.Small"
+                           Color="Color.Primary"
+                           Disabled="isSavingWeight"
+                           Style="height: 56px;"
+                           OnClick="RecordWeightAsync">
+                    @if (isSavingWeight)
+                    {
+                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                        <span class="ms-2">Сохранение...</span>
+                    }
+                    else
+                    {
+                        <span>Записать</span>
+                    }
+                </MudButton>
+            </MudStack>
         </MudCardContent>
     </MudCard>
 
@@ -145,20 +166,6 @@
             </MudCardContent>
         </MudCard>
     }
-
-    <!-- Быстрые действия -->
-    @* <MudText Typo="Typo.h6" Class="mb-3 mt-4">Быстрые действия</MudText>
-    
-    <div class="quick-actions">
-        <MudButton Variant="Variant.Outlined" 
-                   Color="Color.Primary" 
-                   FullWidth="true" 
-                   Class="quick-action-btn"
-                   StartIcon="@Icons.Material.Filled.Scale"
-                   OnClick="RecordWeight">
-            Записать вес
-        </MudButton>
-    </div> *@
 </div>
 
 <style>
@@ -191,13 +198,6 @@
 
     .quick-actions {
         margin-top: 8px;
-    }
-
-    .quick-action-btn {
-        height: 48px;
-        border-radius: 12px;
-        text-transform: none;
-        font-weight: 500;
     }
 
     .loading-state-small {
@@ -237,6 +237,9 @@
     private Guid? selectedWorkoutId;
     private string? selectedWorkoutName;
 
+    private decimal? currentWeightInput;
+    private bool isSavingWeight = false;
+
     private bool _isDataLoaded = false;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -272,12 +275,28 @@
             var activeWorkoutTask = WorkoutHistoryService.GetActiveWorkoutAsync(userId);
             var workoutsTask = WorkoutService.GetWorkoutsAsync(userId);
             var workoutHistoryTask = WorkoutHistoryService.GetWorkoutHistoryByUserIdAsync(userId);
+            var measurementsTask = MeasurementsHistoryService.GetMeasurementsHistoryByUserIdAsync(userId);
 
-            await Task.WhenAll(activeWorkoutTask, workoutsTask, workoutHistoryTask);
+            await Task.WhenAll(activeWorkoutTask, workoutsTask, workoutHistoryTask, measurementsTask);
 
             activeWorkoutHistory = await activeWorkoutTask;
             workouts = await workoutsTask;
             var workoutHistory = await workoutHistoryTask;
+            var measurements = await measurementsTask;
+
+            // Предыдущий вес в поле ввода
+            if (measurements != null && measurements.Any())
+            {
+                var lastWithWeight = measurements
+                    .Where(m => m.BodyWeight.HasValue)
+                    .OrderByDescending(m => m.Date)
+                    .FirstOrDefault();
+                currentWeightInput = lastWithWeight?.BodyWeight;
+            }
+            else
+            {
+                currentWeightInput = null;
+            }
 
             // Подсчет тренировок за последние 7 дней
             if (workoutHistory != null)
@@ -390,7 +409,7 @@
         var dialogReference = await DialogService.ShowAsync<ConfirmDialog>("Подтверждение завершения", parameters, options);
         var result = await dialogReference.Result;
 
-        if (!result.Canceled)
+        if (result != null && !result.Canceled)
         {
             await EndActiveWorkout();
         }
@@ -449,5 +468,64 @@
     private void AddWorkout()
     {
         Navigation.NavigateTo("/workouts/add");
+    }
+
+    private async Task RecordWeightAsync()
+    {
+        if (isSavingWeight)
+        {
+            return;
+        }
+
+        Guid userId = Guid.Empty;
+        if (TelegramWebAppStateService.ValidationResult?.Data?.User != null)
+        {
+            userId = TelegramWebAppStateService.ValidationResult.Data.User.Id;
+        }
+
+        if (userId == Guid.Empty)
+        {
+            Snackbar.Add("Не удалось определить пользователя", Severity.Error);
+            return;
+        }
+
+        if (!currentWeightInput.HasValue || currentWeightInput.Value <= 0)
+        {
+            Snackbar.Add("Введите корректный текущий вес", Severity.Warning);
+            return;
+        }
+
+        isSavingWeight = true;
+        StateHasChanged();
+
+        try
+        {
+            var dto = new CreateMeasurementsHistoryDto
+            {
+                UserId = userId,
+                Date = DateTime.UtcNow.Date,
+                BodyWeight = currentWeightInput
+            };
+
+            var created = await MeasurementsHistoryService.CreateMeasurementsHistoryAsync(dto);
+
+            if (created != null)
+            {
+                Snackbar.Add("Текущий вес успешно записан", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("Не удалось записать вес. Попробуйте еще раз.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка при записи веса: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSavingWeight = false;
+            StateHasChanged();
+        }
     }
 }
