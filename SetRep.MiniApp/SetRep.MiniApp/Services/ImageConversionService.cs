@@ -1,6 +1,5 @@
 using ImageMagick;
 using Microsoft.AspNetCore.Components.Forms;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SetRep.MiniApp.Options;
 
@@ -37,7 +36,6 @@ public class ImageConversionService : IImageConversionService
     {
         try
         {
-            // Если файл не в формате HEIC/HEIF, возвращаем null (конвертация не требуется)
             if (!IsHeicFormat(file))
             {
                 return null;
@@ -53,7 +51,7 @@ public class ImageConversionService : IImageConversionService
 
             // Конвертируем HEIC в JPEG с помощью Magick.NET
             using var image = new MagickImage(memoryStream);
-            
+
             // Настраиваем параметры конвертации
             image.Format = MagickFormat.Jpeg;
             image.Quality = 90; // Качество JPEG (0-100)

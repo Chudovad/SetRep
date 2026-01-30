@@ -8,12 +8,13 @@
 
 @inject IOptions<FileUploadOptions> FileUploadOptionsAccessor
 @inject ILogger<ImageUpload>? Logger
-@inject IImageConversionService? ImageConversionService
+@inject IImageConversionService ImageConversionService
 
 <MudFileUpload T="IBrowserFile"
                Accept="image/*"
                MaxFileSize="@_effectiveMaxFileSize"
                FilesChanged="OnFileChanged"
+               Disabled="_isImageLoad"
                Class="@Class">
     <ActivatorContent>
         <MudButton HtmlTag="label"
@@ -21,13 +22,21 @@
                    Color="Color.Primary"
                    StartIcon="@UploadIcon"
                    FullWidth="@FullWidth">
-            @if (string.IsNullOrEmpty(DisplayUrl))
+            @if (_isImageLoad)
             {
-                @UploadLabel
+                <MudProgressCircular Class="ms-n1 mr-2 ml-2" Size="Size.Small" Indeterminate="true" />
+                <span>Загрузка изображения</span>
             }
             else
             {
-                @ReplaceLabel
+                @if (string.IsNullOrEmpty(DisplayUrl))
+                {
+                    @UploadLabel
+                }
+                else
+                {
+                    @ReplaceLabel
+                }
             }
         </MudButton>
     </ActivatorContent>
@@ -75,6 +84,7 @@
 
     private string? _localPreviewDataUrl;
     private long _effectiveMaxFileSize;
+    private bool _isImageLoad = false;
 
     private string? DisplayUrl => _localPreviewDataUrl ?? ImageUrl;
 
@@ -93,28 +103,30 @@
 
     private async Task OnFileChanged(IBrowserFile file)
     {
+        _isImageLoad = true;
+
         await OnBeforeFileSelected.InvokeAsync();
 
         IBrowserFile fileToSend = file;
-        if (ImageConversionService != null && ImageConversionService.IsHeicFormat(file))
+        var convertedStream = await ImageConversionService.ConvertToJpegIfNeededAsync(file);
+        if (convertedStream != null)
         {
-            var convertedStream = await ImageConversionService.ConvertToJpegIfNeededAsync(file);
-            if (convertedStream != null)
+            try
             {
-                try
-                {
-                    var jpegFileName = Path.ChangeExtension(file.Name, ".jpg") ?? file.Name + ".jpg";
-                    fileToSend = await StreamToBrowserFileAsync(convertedStream, jpegFileName, file.LastModified);
-                }
-                finally
-                {
-                    await convertedStream.DisposeAsync();
-                }
+                var jpegFileName = Path.ChangeExtension(file.Name, ".jpg") ?? file.Name + ".jpg";
+                fileToSend = await StreamToBrowserFileAsync(convertedStream, jpegFileName, file.LastModified);
+            }
+            finally
+            {
+                await convertedStream.DisposeAsync();
             }
         }
 
         _localPreviewDataUrl = await CreatePreviewDataUrlAsync(fileToSend);
         await OnFileSelected.InvokeAsync(fileToSend);
+
+        _isImageLoad = false;
+        
         StateHasChanged();
     }
 
@@ -139,24 +151,18 @@
         {
             string contentType = "image/jpeg";
 
-            // Проверяем, нужно ли конвертировать HEIC/HEIF файл
-            if (ImageConversionService != null && ImageConversionService.IsHeicFormat(file))
+            var convertedStream = await ImageConversionService.ConvertToJpegIfNeededAsync(file);
+            if (convertedStream != null)
             {
-                // Конвертируем HEIC в JPEG
-                var convertedStream = await ImageConversionService.ConvertToJpegIfNeededAsync(file);
-                if (convertedStream != null)
+                using (convertedStream)
                 {
-                    using (convertedStream)
-                    {
-                        using var memoryStream = new MemoryStream();
-                        await convertedStream.CopyToAsync(memoryStream);
-                        var base64String = Convert.ToBase64String(memoryStream.ToArray());
-                        return $"data:{contentType};base64,{base64String}";
-                    }
+                    using var memoryStream = new MemoryStream();
+                    await convertedStream.CopyToAsync(memoryStream);
+                    var base64String = Convert.ToBase64String(memoryStream.ToArray());
+                    return $"data:{contentType};base64,{base64String}";
                 }
             }
 
-            // Если конвертация не была выполнена или не требуется, используем исходный файл
             using var stream = file.OpenReadStream(maxAllowedSize: _effectiveMaxFileSize);
             using var ms = new MemoryStream();
             await stream.CopyToAsync(ms);
