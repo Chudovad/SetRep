@@ -1,8 +1,7 @@
 @inject NavigationManager Navigation
 @implements IDisposable
 
-<MudAppBar Bottom Fixed Elevation="3" Color="Color.Surface" Class="pt-2 rounded-pill border-solid border mud-border-inherit mobile-bottom-nav"
-           Style="height: auto; min-height: 60px; margin: 0 12px 30px 12px; width: calc(100% - 24px); left: 0; right: 0; background-color: rgba(var(--mud-palette-surface-rgb), 0.2) !important; backdrop-filter: blur(10px);">
+<MudAppBar Bottom Fixed Elevation="3" Color="Color.Surface" Class="pt-2 rounded-pill border-solid border mud-border-inherit mobile-bottom-nav">
     <MudStack Row Justify="Justify.SpaceAround" AlignItems="AlignItems.Center" Style="width: 100%;">
         <MudStack Spacing="0" AlignItems="AlignItems.Center" Style="cursor: pointer;" @onclick="@(() => NavigateTo("/"))">
             <MudIcon Icon="@Icons.Material.Filled.Home"
