@@ -1,4 +1,4 @@
-@page "/measurements"
+@page "/profile/measurements"
 @using SetRep.Core.ApiRequestServices
 @using SetRep.Core.Entities
 @using SetRep.MiniApp.Client.Services
@@ -378,12 +378,12 @@ else
 
     private void ViewMeasurementDetails(Guid measurementId)
     {
-        Navigation.NavigateTo($"/measurements/{measurementId}");
+        Navigation.NavigateTo($"/profile/measurements/{measurementId}");
     }
 
     private void AddMeasurement()
     {
-        Navigation.NavigateTo("/measurements/add");
+        Navigation.NavigateTo("/profile/measurements/add");
     }
 
     private string FormatDate(DateTime date)

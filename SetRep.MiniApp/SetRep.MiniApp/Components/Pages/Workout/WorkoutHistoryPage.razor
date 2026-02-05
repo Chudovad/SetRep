@@ -1,4 +1,4 @@
-@page "/workout/history"
+@page "/workouts/history"
 @using SetRep.Core.ApiRequestServices
 @using SetRep.Core.Entities
 @using SetRep.MiniApp.Client.Services
@@ -254,7 +254,7 @@ else
 
     private void ViewWorkoutHistoryDetails(Guid workoutHistoryId)
     {
-        Navigation.NavigateTo($"/workout/history/{workoutHistoryId}");
+        Navigation.NavigateTo($"/workouts/history/{workoutHistoryId}");
     }
 
     private string FormatDate(DateTime date)

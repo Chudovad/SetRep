@@ -1,4 +1,4 @@
-@page "/measurements/{Id:guid}"
+@page "/profile/measurements/{Id:guid}"
 @using SetRep.Core.ApiRequestServices
 @using SetRep.Core.Entities
 @using SetRep.MiniApp.Client.Services
@@ -404,7 +404,7 @@ else if (measurement != null)
 
     private void EditMeasurement()
     {
-        Navigation.NavigateTo($"/measurements/{Id}/edit");
+        Navigation.NavigateTo($"/profile/measurements/{Id}/edit");
     }
 
     private async Task ConfirmDeleteMeasurement()
@@ -455,7 +455,7 @@ else if (measurement != null)
             if (success)
             {
                 Snackbar.Add("Запись измерений успешно удалена", Severity.Success);
-                Navigation.NavigateTo("/measurements");
+                Navigation.NavigateTo("/profile/measurements");
             }
             else
             {

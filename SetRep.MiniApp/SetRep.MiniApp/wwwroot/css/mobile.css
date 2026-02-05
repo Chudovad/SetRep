@@ -12,6 +12,12 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
+@media (max-height: 500px) {
+    .mobile-bottom-nav {
+        display: none !important;
+    }
+}
+
 /* Ограничение ширины контента для мобильных устройств */
 @media (min-width: 421px) {
     .mobile-layout {
