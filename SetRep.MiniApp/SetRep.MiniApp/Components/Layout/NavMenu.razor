@@ -1,122 +1,45 @@
 @inject NavigationManager Navigation
 @implements IDisposable
 
-<MudPaper Elevation="3" Class="mobile-bottom-nav">
-    <MudButton Variant="Variant.Text" Class="@GetNavItemClass("/", true)" OnClick="@(() => NavigateTo("/"))" FullWidth="true">
-        <div class="nav-content">
-            <MudIcon Icon="@Icons.Material.Filled.Home" Size="Size.Medium" Class="nav-icon" />
-            <MudText Typo="Typo.caption" Class="nav-label">Главная</MudText>
-        </div>
-    </MudButton>
-    <MudButton Variant="Variant.Text" Class="@GetNavItemClass("/workouts", false)" OnClick="@(() => NavigateTo("/workouts"))" FullWidth="true">
-        <div class="nav-content">
-            <MudIcon Icon="@Icons.Material.Filled.FitnessCenter" Size="Size.Medium" Class="nav-icon" />
-            <MudText Typo="Typo.caption" Class="nav-label">Тренировки</MudText>
-        </div>
-    </MudButton>
-    <MudButton Variant="Variant.Text" Class="@GetNavItemClass("/exercises", false)" OnClick="@(() => NavigateTo("/exercises"))" FullWidth="true">
-        <div class="nav-content">
-            <MudIcon Icon="@Icons.Material.Filled.List" Size="Size.Medium" Class="nav-icon" />
-            <MudText Typo="Typo.caption" Class="nav-label">Упражнения</MudText>
-        </div>
-    </MudButton>
-    @* <MudButton Variant="Variant.Text" Class="@GetNavItemClass("/statistics", false)" OnClick="@(() => NavigateTo("/statistics"))" FullWidth="true">
-        <div class="nav-content">
-            <MudIcon Icon="@Icons.Material.Filled.BarChart" Size="Size.Medium" Class="nav-icon" />
-            <MudText Typo="Typo.caption" Class="nav-label">Статистика</MudText>
-        </div>
-    </MudButton> *@
-    <MudButton Variant="Variant.Text" Class="@GetNavItemClass("/profile", false)" OnClick="@(() => NavigateTo("/profile"))" FullWidth="true">
-        <div class="nav-content">
-            <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Medium" Class="nav-icon" />
-            <MudText Typo="Typo.caption" Class="nav-label">Профиль</MudText>
-        </div>
-    </MudButton>
-</MudPaper>
+<MudAppBar Bottom Fixed Elevation="3" Color="Color.Surface" Class="pt-2 rounded-pill border-solid border mud-border-inherit mobile-bottom-nav">
+    <MudStack Row Justify="Justify.SpaceAround" AlignItems="AlignItems.Center" Style="width: 100%;">
+        <MudStack Spacing="0" AlignItems="AlignItems.Center" Style="cursor: pointer;" @onclick="@(() => NavigateTo("/"))">
+            <MudIcon Icon="@Icons.Material.Filled.Home"
+                     Color="@(GetNavItemColor("/", true))"
+                     Size="Size.Medium" />
+            <MudText Typo="Typo.caption" Color="@(GetNavItemColor("/", true))" Style="font-size: 0.7rem; margin-top: 2px;">
+                Главная
+            </MudText>
+        </MudStack>
 
-<style>
-    .mobile-bottom-nav {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        z-index: 1000;
-        display: flex;
-        justify-content: space-around;
-        align-items: center;
-        padding: 0;
-        padding-bottom: env(safe-area-inset-bottom, 15px); /* Учитываем безопасную зону для iOS */
-        background: var(--mud-palette-surface);
-        border-top: 1px solid var(--mud-palette-divider);
-        box-shadow: 0 -2px 8px rgba(0,0,0,0.1);
-        height: 79px;
-    }
+        <MudStack Spacing="0" AlignItems="AlignItems.Center" Style="cursor: pointer;" @onclick="@(() => NavigateTo("/workouts"))">
+            <MudIcon Icon="@Icons.Material.Filled.FitnessCenter"
+                     Color="@(GetNavItemColor("/workouts", false))"
+                     Size="Size.Medium" />
+            <MudText Typo="Typo.caption" Color="@(GetNavItemColor("/workouts", false))" Style="font-size: 0.7rem; margin-top: 2px;">
+                Тренировки
+            </MudText>
+        </MudStack>
 
-    /* Скрываем меню при появлении клавиатуры */
-    @@media (max-height: 500px) {
-        .mobile-bottom-nav {
-            display: none;
-        }
+        <MudStack Spacing="0" AlignItems="AlignItems.Center" Style="cursor: pointer;" @onclick="@(() => NavigateTo("/exercises"))">
+            <MudIcon Icon="@Icons.Material.Filled.List"
+                     Color="@(GetNavItemColor("/exercises", false))"
+                     Size="Size.Medium" />
+            <MudText Typo="Typo.caption" Color="@(GetNavItemColor("/exercises", false))" Style="font-size: 0.7rem; margin-top: 2px;">
+                Упражнения
+            </MudText>
+        </MudStack>
 
-        body {
-            padding-bottom: 0;
-        }
-    }
-
-    .nav-item {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        text-decoration: none;
-        color: var(--mud-palette-text-secondary);
-        transition: color 0.2s ease;
-        border-radius: 0;
-        flex: 1;
-        height: 100%;
-        padding: 0;
-        min-width: 0;
-        text-transform: none;
-    }
-
-    .nav-content {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 4px;
-        padding: 8px 4px;
-    }
-
-    .nav-item:hover {
-        color: var(--mud-palette-primary);
-    }
-
-    .nav-item-active {
-        color: var(--mud-palette-primary);
-    }
-
-        .nav-item-active .nav-icon {
-            color: var(--mud-palette-primary);
-        }
-
-    .nav-icon {
-        font-size: 24px;
-    }
-
-    .nav-label {
-        font-size: 0.7rem;
-        text-align: center;
-        white-space: nowrap;
-        line-height: 1.2;
-        font-weight: 400;
-    }
-
-    @@media (max-width: 420px) {
-        .nav-label {
-            font-size: 0.65rem;
-        }
-    }
-</style>
+        <MudStack Spacing="0" AlignItems="AlignItems.Center" Style="cursor: pointer;" @onclick="@(() => NavigateTo("/profile"))">
+            <MudIcon Icon="@Icons.Material.Filled.Person"
+                     Color="@(GetNavItemColor("/profile", false))"
+                     Size="Size.Medium" />
+            <MudText Typo="Typo.caption" Color="@(GetNavItemColor("/profile", false))" Style="font-size: 0.7rem; margin-top: 2px;">
+                Профиль
+            </MudText>
+        </MudStack>
+    </MudStack>
+</MudAppBar>
 
 @code {
     protected override void OnInitialized()
@@ -135,7 +58,7 @@
         Navigation.NavigateTo(route);
     }
 
-    private string GetNavItemClass(string route, bool exactMatch)
+    private Color GetNavItemColor(string route, bool exactMatch)
     {
         var currentUri = Navigation.ToBaseRelativePath(Navigation.Uri);
         var routePath = route.TrimStart('/');
@@ -150,7 +73,7 @@
             isActive = !string.IsNullOrEmpty(routePath) && currentUri.StartsWith(routePath, StringComparison.OrdinalIgnoreCase);
         }
 
-        return isActive ? "nav-item nav-item-active" : "nav-item";
+        return isActive ? Color.Primary : Color.Default;
     }
 
     public void Dispose()

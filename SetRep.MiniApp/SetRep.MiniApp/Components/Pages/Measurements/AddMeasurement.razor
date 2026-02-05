@@ -1,5 +1,5 @@
-@page "/measurements/add"
-@page "/measurements/{Id:guid}/edit"
+@page "/profile/measurements/add"
+@page "/profile/measurements/{Id:guid}/edit"
 @using SetRep.Core.ApiRequestServices
 @using SetRep.Core.Entities
 @using SetRep.Shared.DTO
@@ -419,7 +419,7 @@
 
     private void Cancel()
     {
-        Navigation.NavigateTo("/measurements");
+        Navigation.NavigateTo("/profile/measurements");
     }
 
     private async Task Save()
@@ -457,7 +457,7 @@
                 if (success)
                 {
                     Snackbar.Add("Замер успешно обновлен", Severity.Success);
-                    Navigation.NavigateTo("/measurements");
+                    Navigation.NavigateTo("/profile/measurements");
                 }
                 else
                 {
@@ -469,7 +469,7 @@
                 var created = await WeightHistoryService.CreateMeasurementsHistoryAsync(measurementDto);
                 if (created != null)
                 {
-                    Navigation.NavigateTo("/measurements");
+                    Navigation.NavigateTo("/profile/measurements");
                 }
                 else
                 {

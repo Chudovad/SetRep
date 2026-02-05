@@ -12,6 +12,12 @@ body {
     -moz-osx-font-smoothing: grayscale;
 }
 
+@media (max-height: 500px) {
+    .mobile-bottom-nav {
+        display: none !important;
+    }
+}
+
 /* Ограничение ширины контента для мобильных устройств */
 @media (min-width: 421px) {
     .mobile-layout {
@@ -19,6 +25,16 @@ body {
     }
 }
 
+.mobile-bottom-nav {
+    height: auto;
+    min-height: 60px;
+    margin: 0 12px 30px 12px;
+    width: calc(100% - 24px);
+    left: 0;
+    right: 0;
+    background-color: rgba(var(--mud-palette-surface-rgb), 0.2) !important;
+    backdrop-filter: blur(10px);
+}
 /* Улучшение скролла на мобильных */
 .mobile-content {
     -webkit-overflow-scrolling: touch;

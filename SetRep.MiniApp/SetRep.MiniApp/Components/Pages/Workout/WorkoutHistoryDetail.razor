@@ -1,4 +1,4 @@
-@page "/workout/history/{WorkoutHistoryId:guid}"
+@page "/workouts/history/{WorkoutHistoryId:guid}"
 @using SetRep.Core.ApiRequestServices
 @using SetRep.Core.Entities
 @using SetRep.MiniApp.Client.Services
@@ -499,7 +499,7 @@ else if (workoutHistory != null)
             var success = await WorkoutHistoryService.DeleteWorkoutHistoryAsync(WorkoutHistoryId);
             if (success)
             {
-                Navigation.NavigateTo("/workout/history");
+                Navigation.NavigateTo("/workouts/history");
             }
             else
             {
