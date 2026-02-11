@@ -116,6 +116,7 @@ else if (measurementsList.Any())
                               ChartOptions="@chartOptions"
                               ChartSeries="@chartSeriesList"
                               XAxisLabels="@xAxisLabels"
+                              AxisChartOptions="@axisChartOptions"
                               Width="100%"
                               Height="100%" />
                 </div>
@@ -282,6 +283,7 @@ else
     private TimePeriod selectedPeriod = TimePeriod.AllTime;
     private List<ChartDataPoint> chartData = new();
     private ChartOptions chartOptions = new();
+    private AxisChartOptions axisChartOptions = new();
     private List<ChartSeries> chartSeriesList = new();
     private string[] xAxisLabels = Array.Empty<string>();
 
@@ -446,7 +448,8 @@ else
 
         if (chartData.Any())
         {
-            xAxisLabels = chartData.Select(d => FormatChartDate(d.Date)).ToArray();
+            const int maxVisibleLabels = 15;
+            xAxisLabels = BuildXAxisLabels(chartData, maxVisibleLabels);
             var values = chartData.Select(d => (double)d.Value).ToArray();
 
             chartSeriesList = new List<ChartSeries>
@@ -465,7 +468,17 @@ else
                 XAxisLines = true,
                 YAxisLines = true,
                 InterpolationOption = InterpolationOption.Straight,
-                ChartPalette = new[] { "#6750A4" }
+                ChartPalette = new[] { "#6750A4" },
+            };
+
+            var manyPoints = chartData.Count > maxVisibleLabels;
+
+            axisChartOptions = new AxisChartOptions
+            {
+                // при большом количестве точек чуть поворачиваем подписи,
+                // при небольшом — оставляем горизонтальными
+                XAxisLabelRotation = manyPoints ? 45 : 0,
+                MatchBoundsToSize = true
             };
         }
         else
@@ -529,6 +542,32 @@ else
         }
 
         return dataPoints;
+    }
+
+    private static string[] BuildXAxisLabels(List<ChartDataPoint> data, int maxLabels)
+    {
+        if (data.Count <= maxLabels)
+        {
+            return data.Select(d => d.Date)
+                       .Select(FormatChartDateStatic)
+                       .ToArray();
+        }
+
+        var labels = new string[data.Count];
+        var step = (int)Math.Ceiling(data.Count / (double)maxLabels);
+
+        for (var i = 0; i < data.Count; i++)
+        {
+            labels[i] = i % step == 0 ? FormatChartDateStatic(data[i].Date) : string.Empty;
+        }
+
+        return labels;
+    }
+
+    private static string FormatChartDateStatic(DateTime date)
+    {
+        var localDate = date.AddHours(3); // UTC+3
+        return localDate.ToString("dd.MM", new System.Globalization.CultureInfo("ru-RU"));
     }
 
     private string FormatChartDate(DateTime date)
