@@ -229,6 +229,8 @@ public class MeasurementsHistoryController : ControllerBase
         await _measurementsHistoryRepository.UpdateAsync(existing);
         await _measurementsHistoryRepository.SaveChangesAsync();
 
+        await CreateOrUpdateAllEntriesAsync(dto.UserId, dto);
+
         try
         {
             var newImageUrl = dto.ProgressImageUrl;
