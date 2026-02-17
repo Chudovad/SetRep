@@ -11,9 +11,7 @@
 @inject IWorkoutHistoryService WorkoutHistoryService
 @inject IActiveWorkoutService ActiveWorkoutService
 @inject IWorkoutHistorySetService WorkoutHistorySetService
-@inject IWorkoutExerciseService WorkoutExerciseService
 @inject IExerciseService ExerciseService
-@inject ISetService SetService
 @inject NavigationManager Navigation
 @inject ITelegramBackButtonService TelegramBackButtonService
 @inject IAppInitializationService AppInitializationService
@@ -56,15 +54,6 @@
                     <MudSkeleton Width="40px" Height="40px" Variant="SkeletonVariant.Circular" />
                 </div>
                 <MudSkeleton Typo="Typo.body2" Width="100%" Height="60px" Class="mt-2" />
-            </MudCardContent>
-        </MudCard>
-
-        @* Скелетон формы добавления подхода *@
-        <MudCard Elevation="2" Class="mb-4">
-            <MudCardContent>
-                <MudSkeleton Width="100%" Height="40px" Class="mb-2" />
-                <MudSkeleton Width="100%" Height="40px" Class="mb-2" />
-                <MudSkeleton Width="100%" Height="48px" Variant="SkeletonVariant.Rounded" />
             </MudCardContent>
         </MudCard>
 
@@ -155,23 +144,23 @@ else if (workout != null && currentExercise != null)
             <!-- Таб 1: Подходы -->
             <MudTabPanel Text="Подходы">
                 <!-- Картинка упражнения -->
-                @if (!string.IsNullOrWhiteSpace(currentExercise.Exercise.Image))
+                @if (!string.IsNullOrWhiteSpace(DisplayExercise.Image))
                 {
                     <MudCard Elevation="2" Class="mb-4 mt-4 exercise-image-card">
                         <MudCardContent Class="pa-0">
-                            @if (currentExercise.Exercise.Image.EndsWith(".mp4"))
+                            @if (DisplayExercise.Image.EndsWith(".mp4"))
                             {
-                                <video src="@currentExercise.Exercise.Image"
+                                <video src="@DisplayExercise.Image"
                                        autoplay
                                        loop
                                        playsinline
                                        muted
                                        class="exercise-video"
-                                       title="@currentExercise.Exercise.Name"></video>
+                                       title="@DisplayExercise.Name"></video>
                             }
                             else
                             {
-                                <img src="@currentExercise.Exercise.Image" alt="@currentExercise.Exercise.Name" class="exercise-image" />
+                                <img src="@DisplayExercise.Image" alt="@DisplayExercise.Name" class="exercise-image" />
                             }
                         </MudCardContent>
                     </MudCard>
@@ -191,7 +180,7 @@ else if (workout != null && currentExercise != null)
                 <MudCard Elevation="2" Class="mb-4">
                     <MudCardContent>
                         <div class="exercise-header-with-actions">
-                            <MudText Typo="Typo.h6" Class="exercise-name-header">@currentExercise.Exercise.Name</MudText>
+                            <MudText Typo="Typo.h6" Class="exercise-name-header">@DisplayExercise.Name</MudText>
                             <MudIconButton Icon="@Icons.Material.Filled.SwapHoriz"
                                            Color="Color.Primary"
                                            Size="Size.Medium"
@@ -210,16 +199,6 @@ else if (workout != null && currentExercise != null)
                         </MudExpansionPanel>
                     </MudExpansionPanels>
                 }
-
-                <!-- Форма добавления подхода -->
-                <AddSetForm WeightLabel="@weightLabel"
-                            Weight="@newSetWeight"
-                            WeightChanged="@((decimal? value) => newSetWeight = value)"
-                            Reps="@newSetReps"
-                            RepsChanged="@((int value) => newSetReps = value)"
-                            IsAddingSet="@isAddingSet"
-                            OnAddSet="@AddSet"
-                            WeightStep="@GetWeightStep()" />
 
                 <!-- Таблица подходов -->
                 @if (currentSets != null && currentSets.Any())
@@ -265,7 +244,7 @@ else if (workout != null && currentExercise != null)
                                             <span @onclick="() => StartEditing(context.Id, weightString, context.Weight)" style="cursor: pointer;">
                                                 @if (context.Weight.HasValue)
                                                 {
-                                                    @context.Weight.Value.ToString("0.##")@(currentExercise.Exercise.WeightUnit)
+                                                    @context.Weight.Value.ToString("0.##")@(DisplayExercise.WeightUnit)
                                                 }
                                                 else
                                                 {
@@ -316,11 +295,6 @@ else if (workout != null && currentExercise != null)
                                             }
                                             else
                                             {
-                                                <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
-                                                               Color="Color.Primary"
-                                                               Size="Size.Small"
-                                                               OnClick="() => DuplicateSet(context.Id)"
-                                                               Title="Дублировать подход" />
                                                 <MudIconButton Icon="@Icons.Material.Filled.Delete"
                                                                Color="Color.Error"
                                                                Size="Size.Small"
@@ -330,6 +304,23 @@ else if (workout != null && currentExercise != null)
                                     </MudTd>
                                 </RowTemplate>
                             </MudTable>
+                            <MudButton Variant="Variant.Outlined"
+                                       Color="Color.Primary"
+                                       FullWidth="true"
+                                       StartIcon="@Icons.Material.Filled.Add"
+                                       OnClick="AddSet"
+                                       Disabled="@isAddingSet"
+                                       Class="mt-2">
+                                @if (isAddingSet)
+                                {
+                                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                    <span class="ms-2">Добавление...</span>
+                                }
+                                else
+                                {
+                                    <span>Добавить подход</span>
+                                }
+                            </MudButton>
                         </MudCardContent>
                     </MudCard>
                 }
@@ -338,9 +329,24 @@ else if (workout != null && currentExercise != null)
                     <MudCard Elevation="2" Class="empty-state-card">
                         <MudCardContent>
                             <div class="empty-state">
-                                <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
-                                    Нет подходов. Добавьте первый подход выше.
+                                <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="mb-4">
+                                    Нет подходов. Добавьте первый подход.
                                 </MudText>
+                                <MudButton Variant="Variant.Outlined"
+                                           Color="Color.Primary"
+                                           StartIcon="@Icons.Material.Filled.Add"
+                                           OnClick="AddSet"
+                                           Disabled="@isAddingSet">
+                                    @if (isAddingSet)
+                                    {
+                                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                        <span class="ms-2">Добавление...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Добавить подход</span>
+                                    }
+                                </MudButton>
                             </div>
                         </MudCardContent>
                     </MudCard>
@@ -357,17 +363,17 @@ else if (workout != null && currentExercise != null)
                 </MudCard>
 
                 <!-- Видео как делать упражнение -->
-                @if (!string.IsNullOrEmpty(currentExercise.Exercise.VideoUrl))
+                @if (!string.IsNullOrEmpty(DisplayExercise.VideoUrl))
                 {
                     <MudCard Elevation="2" Class="mb-4">
                         <MudCardContent Class="pa-0">
-                            <video src="@currentExercise.Exercise.VideoUrl"
+                            <video src="@DisplayExercise.VideoUrl"
                                    loop
                                    playsinline
                                    muted
                                    controls
                                    class="exercise-video"
-                                   title="@currentExercise.Exercise.Name"></video>
+                                   title="@DisplayExercise.Name"></video>
                         </MudCardContent>
                     </MudCard>
                 }
@@ -375,7 +381,7 @@ else if (workout != null && currentExercise != null)
                 <!-- Название упражнения -->
                 <MudCard Elevation="2" Class="mb-4">
                     <MudCardContent>
-                        <MudText Typo="Typo.h6">@currentExercise.Exercise.Name</MudText>
+                        <MudText Typo="Typo.h6">@DisplayExercise.Name</MudText>
                     </MudCardContent>
                 </MudCard>
 
@@ -385,7 +391,7 @@ else if (workout != null && currentExercise != null)
                     <MudCard Elevation="2" Class="mb-4">
                         <MudCardContent>
                             <MudText Typo="Typo.body2" Color="Color.Secondary" Style="white-space: pre-wrap;">
-                                @currentExercise.Exercise.Description
+                                @DisplayExercise.Description
                             </MudText>
                         </MudCardContent>
                     </MudCard>
@@ -537,12 +543,12 @@ else if (workout != null && currentExercise != null)
     private int currentExerciseIndex = 0;
     private List<WorkoutHistorySet> currentSets = new();
     private TimeSpan workoutDuration = TimeSpan.Zero;
+
+    private Dictionary<Guid, Exercise> exerciseReplacementsInHistory = new();
     private bool isLoading = true;
     private bool isAddingSet = false;
     private bool isEndingWorkout = false;
     private string? errorMessage;
-    private decimal? newSetWeight;
-    private int newSetReps;
     private string weightLabel = "Вес (кг)";
     private string weightString = "weight";
     private string repsString = "reps";
@@ -600,17 +606,17 @@ else if (workout != null && currentExercise != null)
             
             currentExercise = exercises[currentExerciseIndex];
 
-            if (currentExercise?.Exercise != null)
-            {
-                weightLabel = $"Вес ({currentExercise.Exercise.WeightUnit})";
-            }
-
             workoutHistory = await WorkoutHistoryService.GetWorkoutHistoryDetailsAsync(WorkoutHistoryId);
             if (workoutHistory != null)
             {
                 workoutDuration = ActiveWorkoutService.GetWorkoutDuration(workoutHistory);
             }
 
+            await LoadExerciseReplacementsFromStorage();
+            if (currentExercise != null)
+            {
+                weightLabel = $"Вес ({DisplayExercise.WeightUnit})";
+            }
             await LoadSetsForCurrentExercise();
         }
         catch (Exception ex)
@@ -623,6 +629,15 @@ else if (workout != null && currentExercise != null)
         }
     }
 
+    private Guid GetEffectiveExerciseId(WorkoutExercise we)
+    {
+        return exerciseReplacementsInHistory.TryGetValue(we.Id, out var ex) ? ex.Id : we.ExerciseId;
+    }
+
+    private Exercise DisplayExercise => currentExercise != null && exerciseReplacementsInHistory.TryGetValue(currentExercise.Id, out var ex)
+        ? ex
+        : currentExercise!.Exercise;
+
     private async Task LoadSetsForCurrentExercise()
     {
         if (currentExercise == null)
@@ -632,7 +647,8 @@ else if (workout != null && currentExercise != null)
 
         try
         {
-            var sets = await WorkoutHistorySetService.GetSetsByWorkoutHistoryAndExerciseAsync(WorkoutHistoryId, currentExercise.ExerciseId);
+            var effectiveExerciseId = GetEffectiveExerciseId(currentExercise);
+            var sets = await WorkoutHistorySetService.GetSetsByWorkoutHistoryAndExerciseAsync(WorkoutHistoryId, effectiveExerciseId);
             currentSets = sets?.OrderBy(s => s.SetNumber).ToList() ?? new List<WorkoutHistorySet>();
         }
         catch
@@ -647,10 +663,7 @@ else if (workout != null && currentExercise != null)
         {
             currentExerciseIndex--;
             currentExercise = exercises[currentExerciseIndex];
-            if (currentExercise?.Exercise != null)
-            {
-                weightLabel = $"Вес ({currentExercise.Exercise.WeightUnit})";
-            }
+            weightLabel = $"Вес ({DisplayExercise.WeightUnit})";
             await SaveExerciseIndex();
             await LoadSetsForCurrentExercise();
             CancelEditing();
@@ -663,10 +676,7 @@ else if (workout != null && currentExercise != null)
         {
             currentExerciseIndex++;
             currentExercise = exercises[currentExerciseIndex];
-            if (currentExercise?.Exercise != null)
-            {
-                weightLabel = $"Вес ({currentExercise.Exercise.WeightUnit})";
-            }
+            weightLabel = $"Вес ({DisplayExercise.WeightUnit})";
             await SaveExerciseIndex();
             await LoadSetsForCurrentExercise();
             CancelEditing();
@@ -675,7 +685,7 @@ else if (workout != null && currentExercise != null)
 
     private async Task AddSet()
     {
-        if (currentExercise == null || newSetReps <= 0)
+        if (currentExercise == null)
         {
             return;
         }
@@ -685,15 +695,18 @@ else if (workout != null && currentExercise != null)
         try
         {
             var nextSetNumber = currentSets.Any() ? currentSets.Max(s => s.SetNumber) + 1 : 1;
+            var lastSet = currentSets.OrderBy(s => s.SetNumber).LastOrDefault();
+            var reps = lastSet?.Reps ?? 0;
+            var weight = lastSet?.Weight;
 
             var createSetDto = new CreateWorkoutHistorySetDto
             {
                 WorkoutHistoryId = WorkoutHistoryId,
-                ExerciseId = currentExercise.ExerciseId,
+                ExerciseId = GetEffectiveExerciseId(currentExercise),
                 SetNumber = nextSetNumber,
-                Reps = newSetReps,
-                Weight = newSetWeight,
-                IsCompleted = true,
+                Reps = reps,
+                Weight = weight,
+                IsCompleted = false,
                 CompletedAt = DateTime.UtcNow
             };
 
@@ -701,8 +714,6 @@ else if (workout != null && currentExercise != null)
             if (createdSet != null)
             {
                 await LoadSetsForCurrentExercise();
-                newSetWeight = null;
-                newSetReps = 0;
             }
             else
             {
@@ -760,7 +771,7 @@ else if (workout != null && currentExercise != null)
             var updateDto = new CreateWorkoutHistorySetDto
             {
                 WorkoutHistoryId = WorkoutHistoryId,
-                ExerciseId = currentExercise.ExerciseId,
+                ExerciseId = GetEffectiveExerciseId(currentExercise),
                 SetNumber = set.SetNumber,
                 Reps = editingField == "reps" ? editingReps : set.Reps,
                 Weight = editingField == "weight" ? editingWeight : set.Weight,
@@ -785,7 +796,7 @@ else if (workout != null && currentExercise != null)
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Ошибка: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Ошибка: {ex.Message}", Severity.Error);  
         }
     }
 
@@ -831,55 +842,6 @@ else if (workout != null && currentExercise != null)
         }
     }
 
-    private async Task DuplicateSet(Guid setId)
-    {
-        if (currentExercise == null)
-        {
-            return;
-        }
-
-        try
-        {
-            var set = currentSets.FirstOrDefault(s => s.Id == setId);
-            if (set == null)
-            {
-                Snackbar.Add("Подход не найден", Severity.Error);
-                return;
-            }
-
-            var nextSetNumber = currentSets.Any() ? currentSets.Max(s => s.SetNumber) + 1 : 1;
-
-            var createSetDto = new CreateWorkoutHistorySetDto
-            {
-                WorkoutHistoryId = WorkoutHistoryId,
-                ExerciseId = currentExercise.ExerciseId,
-                SetNumber = nextSetNumber,
-                Reps = set.Reps,
-                Weight = set.Weight,
-                DurationSeconds = set.DurationSeconds,
-                DistanceMeters = set.DistanceMeters,
-                RestSeconds = set.RestSeconds,
-                IsCompleted = false,
-                Notes = set.Notes,
-                CompletedAt = DateTime.UtcNow
-            };
-
-            var createdSet = await WorkoutHistorySetService.CreateSetAsync(createSetDto);
-            if (createdSet != null)
-            {
-                await LoadSetsForCurrentExercise();
-            }
-            else
-            {
-                Snackbar.Add("Ошибка при дублировании подхода", Severity.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Ошибка: {ex.Message}", Severity.Error);
-        }
-    }
-
     private async Task OpenEndActiveWorkoutDialog()
     {
         var parameters = new DialogParameters<ConfirmDialog>
@@ -912,12 +874,10 @@ else if (workout != null && currentExercise != null)
 
         try
         {
-            // Обновляем подходы тренировки перед завершением
-            await UpdateWorkoutSetsIfNeeded();
-
             var success = await WorkoutHistoryService.EndWorkoutAsync(WorkoutHistoryId);
             if (success)
             {
+                await ClearWorkoutDataFromStorage();
                 Navigation.NavigateTo($"/workouts/history/{WorkoutHistoryId}");
             }
             else
@@ -932,120 +892,6 @@ else if (workout != null && currentExercise != null)
         finally
         {
             isEndingWorkout = false;
-        }
-    }
-
-    private async Task UpdateWorkoutSetsIfNeeded()
-    {
-        if (workout == null || workout.WorkoutExercises == null)
-        {
-            return;
-        }
-
-        try
-        {
-            // Получаем все подходы из истории тренировки
-            var historySets = await WorkoutHistorySetService.GetSetsByWorkoutHistoryIdAsync(WorkoutHistoryId);
-            if (historySets == null || !historySets.Any())
-            {
-                return;
-            }
-
-            // Получаем детали тренировки с подходами
-            var workoutDetails = await WorkoutService.GetWorkoutDetailsAsync(WorkoutId);
-            if (workoutDetails?.WorkoutExercises == null)
-            {
-                return;
-            }
-
-            // Группируем подходы истории по ExerciseId и SetNumber
-            var historySetsByExercise = historySets
-                .Where(s => s.IsCompleted)
-                .GroupBy(s => s.ExerciseId)
-                .ToDictionary(g => g.Key, g => g.ToList());
-
-            // Для каждого упражнения в тренировке
-            foreach (var workoutExercise in workoutDetails.WorkoutExercises)
-            {
-                if (!historySetsByExercise.TryGetValue(workoutExercise.ExerciseId, out var exerciseHistorySets))
-                {
-                    continue;
-                }
-
-                // Получаем подходы тренировки для этого упражнения
-                var workoutSets = await SetService.GetSetsByWorkoutExerciseIdAsync(workoutExercise.Id);
-                if (workoutSets == null || !workoutSets.Any())
-                {
-                    continue;
-                }
-
-                // Находим максимальные значения веса и повторений для каждого номера подхода
-                var maxValuesBySetNumber = exerciseHistorySets
-                    .GroupBy(s => s.SetNumber)
-                    .ToDictionary(
-                        g => g.Key,
-                        g => new
-                        {
-                            MaxWeight = g.Where(s => s.Weight.HasValue).Max(s => s.Weight),
-                            MaxReps = g.Max(s => s.Reps)
-                        });
-
-                // Для каждого подхода в тренировке
-                foreach (var workoutSet in workoutSets)
-                {
-                    if (!maxValuesBySetNumber.TryGetValue(workoutSet.SetNumber, out var maxValues))
-                    {
-                        continue;
-                    }
-
-                    // Проверяем, нужно ли обновить подход
-                    bool needsUpdate = false;
-                    decimal? newWeight = workoutSet.Weight;
-                    int newReps = workoutSet.Reps;
-
-                    // Если максимальный вес больше текущего, обновляем
-                    if (maxValues.MaxWeight.HasValue)
-                    {
-                        if (!workoutSet.Weight.HasValue || maxValues.MaxWeight.Value > workoutSet.Weight.Value)
-                        {
-                            newWeight = maxValues.MaxWeight.Value;
-                            needsUpdate = true;
-                        }
-                    }
-
-                    // Если максимальное количество повторений больше текущего, обновляем
-                    if (maxValues.MaxReps > workoutSet.Reps)
-                    {
-                        newReps = maxValues.MaxReps;
-                        needsUpdate = true;
-                    }
-
-                    // Обновляем подход, если нужно
-                    if (needsUpdate)
-                    {
-                        var updateDto = new CreateSetDto
-                        {
-                            WorkoutExerciseId = workoutSet.WorkoutExerciseId,
-                            SetNumber = workoutSet.SetNumber,
-                            Reps = newReps,
-                            Weight = newWeight,
-                            DurationSeconds = workoutSet.DurationSeconds,
-                            DistanceMeters = workoutSet.DistanceMeters,
-                            RestSeconds = workoutSet.RestSeconds,
-                            IsCompleted = workoutSet.IsCompleted,
-                            Notes = workoutSet.Notes,
-                            CompletedAt = workoutSet.CompletedAt
-                        };
-
-                        await SetService.UpdateSetAsync(workoutSet.Id, updateDto);
-                    }
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            // Логируем ошибку, но не прерываем завершение тренировки
-            Console.WriteLine($"Ошибка при обновлении подходов тренировки: {ex.Message}");
         }
     }
 
@@ -1087,7 +933,7 @@ else if (workout != null && currentExercise != null)
 
     private decimal GetWeightStep()
     {
-        return ExerciseStepHelper.GetWeightStep(currentExercise?.Exercise?.MuscleGroup);
+        return ExerciseStepHelper.GetWeightStep(DisplayExercise?.MuscleGroup);
     }
 
     private string GetRowClass(WorkoutHistorySet set, int rowNumber)
@@ -1100,10 +946,10 @@ else if (workout != null && currentExercise != null)
         if (currentExercise == null || workout == null)
             return;
 
-        // Получаем список ID упражнений, которые уже есть в тренировке (кроме текущего)
+        // Получаем список ID упражнений, которые уже есть в тренировке — с учётом замен в истории
         var excludedExerciseIds = workout.WorkoutExercises?
-            .Where(we => we.Id != currentExercise.Id)
-            .Select(we => we.ExerciseId)
+            .Select(we => GetEffectiveExerciseId(we))
+            .Distinct()
             .ToList() ?? new List<Guid>();
 
         var parameters = new DialogParameters<ReplaceExerciseDialog>
@@ -1123,17 +969,17 @@ else if (workout != null && currentExercise != null)
 
         if (result != null && !result.Canceled && result.Data is Exercise selectedExercise)
         {
-            // Проверяем, что выбранное упражнение не совпадает с текущим
-            if (selectedExercise.Id == currentExercise.ExerciseId)
+            // Проверяем, что выбранное упражнение не совпадает с текущим (с учётом замены)
+            if (selectedExercise.Id == GetEffectiveExerciseId(currentExercise))
             {
                 Snackbar.Add("Выбрано то же самое упражнение", Severity.Info);
                 return;
             }
 
-            // Проверяем, что выбранное упражнение еще не добавлено в тренировку
+            // Проверяем, что выбранное упражнение еще не добавлено в тренировку (с учётом замен)
             var existingExerciseIds = workout.WorkoutExercises?
                 .Where(we => we.Id != currentExercise.Id)
-                .Select(we => we.ExerciseId)
+                .Select(we => GetEffectiveExerciseId(we))
                 .ToHashSet() ?? new HashSet<Guid>();
 
             if (existingExerciseIds.Contains(selectedExercise.Id))
@@ -1148,33 +994,90 @@ else if (workout != null && currentExercise != null)
 
     private async Task ReplaceCurrentExercise(Exercise newExercise)
     {
-        if (currentExercise == null || workout == null)
+        if (currentExercise == null)
             return;
 
         try
         {
-            var updateDto = new CreateWorkoutExerciseDto
+            // Обновляем только подходы в истории, не трогая шаблон тренировки
+            var oldExerciseId = GetEffectiveExerciseId(currentExercise);
+            foreach (var set in currentSets)
             {
-                WorkoutId = currentExercise.WorkoutId,
-                ExerciseId = newExercise.Id,
-                Order = currentExercise.Order,
-                Notes = currentExercise.Notes
-            };
+                var updateDto = new CreateWorkoutHistorySetDto
+                {
+                    WorkoutHistoryId = WorkoutHistoryId,
+                    ExerciseId = newExercise.Id,
+                    SetNumber = set.SetNumber,
+                    Reps = set.Reps,
+                    Weight = set.Weight,
+                    DurationSeconds = set.DurationSeconds,
+                    DistanceMeters = set.DistanceMeters,
+                    RestSeconds = set.RestSeconds,
+                    IsCompleted = set.IsCompleted,
+                    Notes = set.Notes,
+                    CompletedAt = set.CompletedAt
+                };
+                await WorkoutHistorySetService.UpdateSetAsync(set.Id, updateDto);
+            }
 
-            var success = await WorkoutExerciseService.UpdateWorkoutExerciseAsync(currentExercise.Id, updateDto);
-            if (success)
-            {
-                await LoadWorkout();
-            }
-            else
-            {
-                Snackbar.Add("Ошибка при замене упражнения", Severity.Error);
-            }
+            exerciseReplacementsInHistory[currentExercise.Id] = newExercise;
+            await SaveExerciseReplacementsToStorage();
+            weightLabel = $"Вес ({newExercise.WeightUnit})";
+            await LoadSetsForCurrentExercise();
+            StateHasChanged();
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Ошибка при замене упражнения: {ex.Message}", Severity.Error);
         }
+    }
+
+    private async Task LoadExerciseReplacementsFromStorage()
+    {
+        try
+        {
+            var key = $"activeWorkout_{WorkoutHistoryId}_exerciseReplacements";
+            var json = await JSRuntime.InvokeAsync<string>("localStorage.getItem", key);
+            if (string.IsNullOrEmpty(json) || workout?.WorkoutExercises == null)
+                return;
+
+            var dict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(json);
+            if (dict == null) return;
+
+            foreach (var (weIdStr, exerciseIdStr) in dict)
+            {
+                if (!Guid.TryParse(weIdStr, out var weId) || !Guid.TryParse(exerciseIdStr, out var exerciseId))
+                    continue;
+                var exercise = await ExerciseService.GetExerciseByIdAsync(exerciseId);
+                if (exercise != null)
+                    exerciseReplacementsInHistory[weId] = exercise;
+            }
+        }
+        catch { /* игнорируем */ }
+    }
+
+    private async Task SaveExerciseReplacementsToStorage()
+    {
+        try
+        {
+            var key = $"activeWorkout_{WorkoutHistoryId}_exerciseReplacements";
+            var dict = exerciseReplacementsInHistory.ToDictionary(kv => kv.Key.ToString(), kv => kv.Value.Id.ToString());
+            var json = System.Text.Json.JsonSerializer.Serialize(dict);
+            await JSRuntime.InvokeVoidAsync("localStorage.setItem", key, json);
+        }
+        catch { /* игнорируем */ }
+    }
+
+    private async Task ClearWorkoutDataFromStorage()
+    {
+        try
+        {
+            var replacementsKey = $"activeWorkout_{WorkoutHistoryId}_exerciseReplacements";
+            var exerciseIndexKey = $"activeWorkout_{WorkoutHistoryId}_exerciseIndex";
+            await JSRuntime.InvokeVoidAsync("localStorage.removeItem", replacementsKey);
+            await JSRuntime.InvokeVoidAsync("localStorage.removeItem", exerciseIndexKey);
+        }
+        catch { /* игнорируем */ }
     }
 
     public async ValueTask DisposeAsync()
