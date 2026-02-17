@@ -192,7 +192,7 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
                 <!-- Таблица подходов -->
                 @if (sets != null && sets.Any())
                 {
-                    <MudCard Elevation="2" Class="mb-4 sets-table-card">
+                    <MudCard Elevation="2" Class="sets-table-card">
                         <MudCardContent>
                             <MudText Typo="Typo.h6" Class="mb-3">Подходы</MudText>
                             <MudTable Items="@sets" Hover="true" Dense="true" Class="compact-table" Breakpoint="Breakpoint.None">
@@ -396,7 +396,6 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
 
     .workout-exercise-detail-container {
         max-width: 100%;
-        padding-bottom: 20px;
         position: relative;
     }
 

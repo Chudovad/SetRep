@@ -437,16 +437,44 @@ else if (workoutHistory != null)
         }
 
         var groupedSets = workoutHistory.Sets.Where(s => s.IsCompleted).GroupBy(s => s.ExerciseId).ToList();
+        var historyExerciseIds = groupedSets.Select(g => g.Key).ToHashSet();
 
         if (workoutHistory.Workout?.WorkoutExercises != null && workoutHistory.Workout.WorkoutExercises.Any())
         {
-            return groupedSets.OrderBy(g =>
+            var templateExercises = workoutHistory.Workout.WorkoutExercises.OrderBy(we => we.Order).ToList();
+            var orderByExerciseId = new Dictionary<Guid, int>();
+
+            // Позиции в шаблоне, для которых нет подходов в истории (заменённые упражнения)
+            var emptySlotOrders = templateExercises
+                .Where(we => !historyExerciseIds.Contains(we.ExerciseId))
+                .Select(we => we.Order)
+                .OrderBy(o => o)
+                .ToList();
+
+            // Упражнения в истории, которых нет в шаблоне (замены)
+            var orphanGroups = groupedSets
+                .Where(g => templateExercises.All(we => we.ExerciseId != g.Key))
+                .OrderBy(g => g.Min(s => s.CompletedAt))
+                .ToList();
+
+            foreach (var g in groupedSets)
             {
-                var exerciseId = g.Key;
-                var workoutExercise = workoutHistory.Workout.WorkoutExercises
-                    .FirstOrDefault(we => we.ExerciseId == exerciseId);
-                return workoutExercise?.Order ?? int.MaxValue;
-            }).ThenBy(g => g.Min(s => s.CompletedAt));
+                var workoutExercise = templateExercises.FirstOrDefault(we => we.ExerciseId == g.Key);
+                if (workoutExercise != null)
+                {
+                    orderByExerciseId[g.Key] = workoutExercise.Order;
+                }
+                else
+                {
+                    var orphanIndex = orphanGroups.FindIndex(og => og.Key == g.Key);
+                    orderByExerciseId[g.Key] = orphanIndex >= 0 && orphanIndex < emptySlotOrders.Count
+                        ? emptySlotOrders[orphanIndex]
+                        : int.MaxValue;
+                }
+            }
+
+            return groupedSets.OrderBy(g => orderByExerciseId.GetValueOrDefault(g.Key, int.MaxValue))
+                .ThenBy(g => g.Min(s => s.CompletedAt));
         }
 
         return groupedSets.OrderBy(g => g.Min(s => s.CompletedAt));
