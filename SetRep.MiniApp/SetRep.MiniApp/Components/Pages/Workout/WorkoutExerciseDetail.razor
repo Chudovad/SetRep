@@ -45,15 +45,6 @@
         @* Скелетон описания *@
         <MudSkeleton Width="100%" Height="60px" Variant="SkeletonVariant.Rounded" Class="mb-4" />
 
-        @* Скелетон формы добавления подхода *@
-        <MudCard Elevation="2" Class="mb-4">
-            <MudCardContent>
-                <MudSkeleton Width="100%" Height="40px" Class="mb-2" />
-                <MudSkeleton Width="100%" Height="40px" Class="mb-2" />
-                <MudSkeleton Width="100%" Height="48px" Variant="SkeletonVariant.Rounded" />
-            </MudCardContent>
-        </MudCard>
-
         @* Скелетон таблицы подходов *@
         <MudCard Elevation="2" Class="mb-4 sets-table-card">
             <MudCardContent>
@@ -198,16 +189,6 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
                     </MudExpansionPanels>
                 }
 
-                <!-- Форма добавления подхода -->
-                <AddSetForm WeightLabel="@weightLabel"
-                            Weight="@newSetWeight"
-                            WeightChanged="@((decimal? value) => newSetWeight = value)"
-                            Reps="@newSetReps"
-                            RepsChanged="@((int value) => newSetReps = value)"
-                            IsAddingSet="@isAddingSet"
-                            OnAddSet="@AddSet"
-                            WeightStep="@GetWeightStep()" />
-
                 <!-- Таблица подходов -->
                 @if (sets != null && sets.Any())
                 {
@@ -292,11 +273,6 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
                                         }
                                         else
                                         {
-                                            <MudIconButton Icon="@Icons.Material.Filled.ContentCopy"
-                                                           Color="Color.Primary"
-                                                           Size="Size.Small"
-                                                           OnClick="() => DuplicateSet(context.Id)"
-                                                           Title="Дублировать подход" />
                                             <MudIconButton Icon="@Icons.Material.Filled.Delete"
                                                            Color="Color.Error"
                                                            Size="Size.Small"
@@ -305,6 +281,23 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
                                     </MudTd>
                                 </RowTemplate>
                             </MudTable>
+                            <MudButton Variant="Variant.Outlined"
+                                       Color="Color.Primary"
+                                       FullWidth="true"
+                                       StartIcon="@Icons.Material.Filled.Add"
+                                       OnClick="AddSet"
+                                       Disabled="@isAddingSet"
+                                       Class="mt-2">
+                                @if (isAddingSet)
+                                {
+                                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                    <span class="ms-2">Добавление...</span>
+                                }
+                                else
+                                {
+                                    <span>Добавить подход</span>
+                                }
+                            </MudButton>
                         </MudCardContent>
                     </MudCard>
                 }
@@ -317,9 +310,24 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
                                 <MudText Typo="Typo.h6" Align="Align.Center" Class="mb-2">
                                     Нет подходов
                                 </MudText>
-                                <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
-                                    Добавьте первый подход, используя форму выше
+                                <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="mb-4">
+                                    Добавьте первый подход
                                 </MudText>
+                                <MudButton Variant="Variant.Outlined"
+                                           Color="Color.Primary"
+                                           StartIcon="@Icons.Material.Filled.Add"
+                                           OnClick="AddSet"
+                                           Disabled="@isAddingSet">
+                                    @if (isAddingSet)
+                                    {
+                                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                        <span class="ms-2">Добавление...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Добавить подход</span>
+                                    }
+                                </MudButton>
                             </div>
                         </MudCardContent>
                     </MudCard>
@@ -466,8 +474,6 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
     private bool isLoading = true;
     private bool isAddingSet = false;
     private string? errorMessage;
-    private decimal? newSetWeight;
-    private int newSetReps;
     private string weightLabel = "Вес (кг)";
     private string weightString = "weight";
     private string repsString = "reps";
@@ -577,7 +583,7 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
 
     private async Task AddSet()
     {
-        if (workoutExercise == null || newSetReps <= 0)
+        if (workoutExercise == null)
         {
             return;
         }
@@ -587,13 +593,16 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
         try
         {
             var nextSetNumber = sets.Any() ? sets.Max(s => s.SetNumber) + 1 : 1;
+            var lastSet = sets.OrderBy(s => s.SetNumber).LastOrDefault();
+            var reps = lastSet?.Reps ?? 0;
+            var weight = lastSet?.Weight;
 
             var createSetDto = new CreateSetDto
             {
                 WorkoutExerciseId = workoutExercise.Id,
                 SetNumber = nextSetNumber,
-                Reps = newSetReps,
-                Weight = newSetWeight,
+                Reps = reps,
+                Weight = weight,
                 IsCompleted = true,
                 CompletedAt = DateTime.UtcNow
             };
@@ -602,8 +611,6 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
             if (createdSet != null)
             {
                 await LoadSetsForCurrentExercise();
-                newSetWeight = null;
-                newSetReps = 0;
                 StateHasChanged();
             }
             else
@@ -711,55 +718,6 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
         catch (Exception ex)
         {
             Snackbar.Add($"Не удалось удалить подход: {ex.Message}", Severity.Error);
-        }
-    }
-
-    private async Task DuplicateSet(Guid setId)
-    {
-        if (workoutExercise == null)
-        {
-            return;
-        }
-
-        try
-        {
-            var set = sets.FirstOrDefault(s => s.Id == setId);
-            if (set == null)
-            {
-                Snackbar.Add("Подход не найден", Severity.Error);
-                return;
-            }
-
-            var nextSetNumber = sets.Any() ? sets.Max(s => s.SetNumber) + 1 : 1;
-
-            var createSetDto = new CreateSetDto
-            {
-                WorkoutExerciseId = workoutExercise.Id,
-                SetNumber = nextSetNumber,
-                Reps = set.Reps,
-                Weight = set.Weight,
-                DurationSeconds = set.DurationSeconds,
-                DistanceMeters = set.DistanceMeters,
-                RestSeconds = set.RestSeconds,
-                IsCompleted = false,
-                Notes = set.Notes,
-                CompletedAt = DateTime.UtcNow
-            };
-
-            var createdSet = await WorkoutExerciseService.CreateSetAsync(createSetDto);
-            if (createdSet != null)
-            {
-                await LoadSetsForCurrentExercise();
-                StateHasChanged();
-            }
-            else
-            {
-                Snackbar.Add("Ошибка при дублировании подхода", Severity.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Ошибка: {ex.Message}", Severity.Error);
         }
     }
 
