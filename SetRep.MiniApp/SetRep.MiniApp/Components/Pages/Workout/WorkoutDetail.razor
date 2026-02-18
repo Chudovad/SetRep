@@ -30,17 +30,17 @@
         @* Скелетон карточки информации о тренировке *@
         <MudCard Elevation="2" Class="mb-4 workout-info-card">
             <MudCardContent>
-                <MudSkeleton Typo="Typo.h4" Width="60%" Height="32px" Class="mb-2" />
-                <MudSkeleton Typo="Typo.body2" Width="90%" Height="20px" Class="mb-1" />
-                <MudSkeleton Typo="Typo.body2" Width="70%" Height="20px" />
+                <MudSkeleton Width="60%" Height="32px" Class="mb-2" />
+                <MudSkeleton Width="90%" Height="20px" Class="mb-1" />
+                <MudSkeleton Width="70%" Height="20px" />
             </MudCardContent>
         </MudCard>
 
         @* Скелетон кнопки начала тренировки *@
-        <MudSkeleton Width="100%" Height="48px" Variant="SkeletonVariant.Rounded" Class="mb-4" />
+        <MudSkeleton Width="100%" Height="48px" Class="mb-4" />
 
         @* Скелетон кнопки добавления упражнений *@
-        <MudSkeleton Width="100%" Height="48px" Variant="SkeletonVariant.Rounded" Class="mb-4" />
+        <MudSkeleton Width="100%" Height="48px"Class="mb-4" />
 
         @* Скелетон списка упражнений *@
         <MudSkeleton Typo="Typo.h6" Width="150px" Height="24px" Class="mb-3" />
@@ -51,11 +51,11 @@
                     <MudCardContent>
                         <div class="exercise-header">
                             <MudSkeleton Width="24px" Height="24px" />
-                            <MudSkeleton Width="48px" Height="48px" Variant="SkeletonVariant.Circular" />
+                            <MudSkeleton Width="48px" Height="48px" SkeletonType="SkeletonType.Circle" />
                             <div class="exercise-header-content">
-                                <MudSkeleton Typo="Typo.body1" Width="70%" Height="20px" />
+                                <MudSkeleton Width="70%" Height="20px" />
                             </div>
-                            <MudSkeleton Width="24px" Height="24px" Variant="SkeletonVariant.Circular" />
+                            <MudSkeleton Width="24px" Height="24px" SkeletonType="SkeletonType.Circle" />
                         </div>
                     </MudCardContent>
                 </MudCard>

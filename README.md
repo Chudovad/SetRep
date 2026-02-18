@@ -513,8 +513,7 @@ SetRep - это комплексное решение для отслежива�
 #### Компоненты (Components)
 
 ##### Диалоги (Components/Dialog)
-- **AddExerciseDialog.razor** - Добавление упражнения
-- **EditExerciseDialog.razor** - Редактирование упражнения
+- **AddExerciseDialog.razor** - Добавление и редактирование упражнения
 - **EditWorkoutDialog.razor** - Редактирование тренировки
 - **EditWorkoutPlanDialog.razor** - Редактирование плана тренировок
 - **EditWorkoutExerciseNotesDialog.razor** - Редактирование заметок к упражнению

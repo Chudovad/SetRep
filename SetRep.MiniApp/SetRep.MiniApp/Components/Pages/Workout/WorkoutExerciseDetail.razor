@@ -23,14 +23,13 @@
         @* Скелетон навигации *@
         <MudCard Elevation="2" Class="mb-4 navigation-card">
             <MudCardContent>
-                <MudSkeleton Width="120px" Height="36px" Variant="SkeletonVariant.Rounded" Class="mb-3" />
                 <div class="navigation-header">
-                    <MudSkeleton Width="40px" Height="40px" Variant="SkeletonVariant.Circular" />
-                    <div class="navigation-display">
-                        <MudSkeleton Typo="Typo.h6" Width="80px" Height="24px" Class="mb-1" />
-                        <MudSkeleton Typo="Typo.body2" Width="150px" Height="20px" />
+                    <MudSkeleton Width="40px" Height="40px" SkeletonType="SkeletonType.Circle" />
+                    <div class="navigation-display d-flex flex-column align-center justify-center flex-grow-1">
+                        <MudSkeleton Width="80px" Height="24px" Class="mb-1" />
+                        <MudSkeleton Width="150px" Height="20px" />
                     </div>
-                    <MudSkeleton Width="40px" Height="40px" Variant="SkeletonVariant.Circular" />
+                    <MudSkeleton Width="40px" Height="40px" SkeletonType="SkeletonType.Circle" />
                 </div>
             </MudCardContent>
         </MudCard>
@@ -43,7 +42,7 @@
         </MudCard>
 
         @* Скелетон описания *@
-        <MudSkeleton Width="100%" Height="60px" Variant="SkeletonVariant.Rounded" Class="mb-4" />
+        <MudSkeleton Width="100%" Height="60px" Class="mb-4" />
 
         @* Скелетон таблицы подходов *@
         <MudCard Elevation="2" Class="mb-4 sets-table-card">
@@ -63,7 +62,7 @@
                             <MudSkeleton Width="20px" Height="20px" />
                             <MudSkeleton Width="40px" Height="20px" />
                             <MudSkeleton Width="30px" Height="20px" />
-                            <MudSkeleton Width="30px" Height="30px" Variant="SkeletonVariant.Circular" />
+                            <MudSkeleton Width="30px" Height="30px" SkeletonType="SkeletonType.Circle" />
                         </div>
                     }
                 </div>

@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using MudBlazor;
 using SetRep.Core.Entities;
@@ -10,6 +10,9 @@ namespace SetRep.MiniApp.Components.Dialog
     {
         [CascadingParameter] IMudDialogInstance? MudDialog { get; set; }
         [Parameter] public MuscleGroup? PreselectedMuscleGroup { get; set; }
+        [Parameter] public Exercise? Exercise { get; set; }
+
+        private bool IsEditMode => Exercise != null;
 
         private MudForm? form;
         private bool isFormValid;
@@ -18,30 +21,60 @@ namespace SetRep.MiniApp.Components.Dialog
         private IBrowserFile? selectedMainImageFile;
         private long maxFileSize;
 
-        private Exercise exercise = new()
-        {
-            Name = string.Empty,
-            Image = string.Empty,
-            MainImage = null,
-            Description = null,
-            WeightUnit = "кг",
-            IsSystem = false
-        };
+        private Exercise exercise = null!;
 
         protected override void OnInitialized()
         {
             base.OnInitialized();
             maxFileSize = FileUploadOptionsAccessor.Value.MaxFileSizeBytes;
 
-            if (PreselectedMuscleGroup.HasValue)
+            if (IsEditMode)
             {
-                exercise.MuscleGroup = PreselectedMuscleGroup.Value;
+                exercise = new Exercise
+                {
+                    Id = Exercise!.Id,
+                    Name = Exercise.Name,
+                    Image = Exercise.Image ?? string.Empty,
+                    MainImage = Exercise.MainImage,
+                    Description = Exercise.Description,
+                    MuscleGroup = Exercise.MuscleGroup,
+                    WeightUnit = Exercise.WeightUnit,
+                    IsSystem = Exercise.IsSystem,
+                    CreatedByUserId = Exercise.CreatedByUserId,
+                    CreatedAt = Exercise.CreatedAt,
+                    UpdatedAt = Exercise.UpdatedAt
+                };
+            }
+            else
+            {
+                exercise = new Exercise
+                {
+                    Name = string.Empty,
+                    Image = string.Empty,
+                    MainImage = null,
+                    Description = null,
+                    WeightUnit = "кг",
+                    IsSystem = false
+                };
+
+                if (PreselectedMuscleGroup.HasValue)
+                {
+                    exercise.MuscleGroup = PreselectedMuscleGroup.Value;
+                }
             }
         }
 
         private void Cancel()
         {
             MudDialog?.Cancel();
+        }
+
+        private async Task OnBeforeMainImageSelected()
+        {
+            if (IsEditMode)
+            {
+                await RemoveImageFromStorage();
+            }
         }
 
         private void OnMainImageFileSelected(IBrowserFile file)
@@ -53,7 +86,6 @@ namespace SetRep.MiniApp.Components.Dialog
         {
             if (file == null) return;
 
-            // Проверка размера файла
             if (file.Size > maxFileSize)
             {
                 var maxSizeMB = maxFileSize / 1024.0 / 1024.0;
@@ -104,25 +136,42 @@ namespace SetRep.MiniApp.Components.Dialog
                 if (selectedMainImageFile != null)
                     await UploadImageAsync(selectedMainImageFile, isMainImage: true);
 
-                if (exercise.Id == Guid.Empty)
+                if (IsEditMode)
                 {
-                    exercise.Id = Guid.NewGuid();
-                }
-                exercise.CreatedAt = DateTime.UtcNow;
+                    exercise.UpdatedAt = DateTime.UtcNow;
 
-                if (TelegramWebAppStateService.ValidationResult?.Data?.User != null)
-                {
-                    exercise.CreatedByUserId = TelegramWebAppStateService.ValidationResult.Data.User.Id;
-                }
-
-                var createdExercise = await ExerciseService.CreateExerciseAsync(exercise);
-                if (createdExercise != null)
-                {
-                    MudDialog?.Close(DialogResult.Ok(createdExercise));
+                    var success = await ExerciseService.UpdateExerciseAsync(exercise);
+                    if (success)
+                    {
+                        MudDialog?.Close(DialogResult.Ok(exercise));
+                    }
+                    else
+                    {
+                        errorMessage = "Ошибка при обновлении упражнения. Проверьте подключение к API.";
+                    }
                 }
                 else
                 {
-                    errorMessage = "Ошибка при создании упражнения. Проверьте подключение к API.";
+                    if (exercise.Id == Guid.Empty)
+                    {
+                        exercise.Id = Guid.NewGuid();
+                    }
+                    exercise.CreatedAt = DateTime.UtcNow;
+
+                    if (TelegramWebAppStateService.ValidationResult?.Data?.User != null)
+                    {
+                        exercise.CreatedByUserId = TelegramWebAppStateService.ValidationResult.Data.User.Id;
+                    }
+
+                    var createdExercise = await ExerciseService.CreateExerciseAsync(exercise);
+                    if (createdExercise != null)
+                    {
+                        MudDialog?.Close(DialogResult.Ok(createdExercise));
+                    }
+                    else
+                    {
+                        errorMessage = "Ошибка при создании упражнения. Проверьте подключение к API.";
+                    }
                 }
             }
             catch (HttpRequestException ex)
@@ -131,7 +180,9 @@ namespace SetRep.MiniApp.Components.Dialog
             }
             catch (Exception ex)
             {
-                errorMessage = $"Не удалось создать упражнение: {ex.Message}";
+                errorMessage = IsEditMode
+                    ? $"Не удалось обновить упражнение: {ex.Message}"
+                    : $"Не удалось создать упражнение: {ex.Message}";
             }
             finally
             {
@@ -139,11 +190,38 @@ namespace SetRep.MiniApp.Components.Dialog
             }
         }
 
-        private void RemoveImage()
+        private async Task RemoveImage()
         {
+            if (IsEditMode)
+            {
+                await RemoveImageFromStorage();
+            }
             selectedMainImageFile = null;
             exercise.MainImage = null;
             StateHasChanged();
+        }
+
+        private async Task RemoveImageFromStorage()
+        {
+            var imageUrlToDelete = exercise.MainImage;
+
+            if (!string.IsNullOrEmpty(imageUrlToDelete) && !imageUrlToDelete.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+            {
+                try
+                {
+                    var deleted = await FileUploadService.DeleteImageAsync(imageUrlToDelete);
+                    if (!deleted)
+                    {
+                        Logger?.LogWarning("Не удалось удалить изображение из облака: {Url}", imageUrlToDelete);
+                        Snackbar.Add("Не удалось удалить изображение из облака", Severity.Warning);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogError(ex, "Ошибка при удалении изображения из облака: {Url}", imageUrlToDelete);
+                    Snackbar.Add("Ошибка при удалении изображения из облака", Severity.Error);
+                }
+            }
         }
     }
 }
