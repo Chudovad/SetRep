@@ -3,6 +3,7 @@
 @using SetRep.Core.Entities
 @using SetRep.Core.Enums
 @using SetRep.MiniApp.Client.Services
+@using SetRep.MiniApp.Components.Controls
 @using SetRep.MiniApp.Components.Dialog
 @using SetRep.Shared.DTO
 @using static SetRep.MiniApp.Client.Services.InitializationHelper
@@ -12,6 +13,7 @@
 @inject IActiveWorkoutService ActiveWorkoutService
 @inject IWorkoutHistorySetService WorkoutHistorySetService
 @inject IExerciseService ExerciseService
+@inject IWorkoutExerciseService WorkoutExerciseService
 @inject NavigationManager Navigation
 @inject ITelegramBackButtonService TelegramBackButtonService
 @inject IAppInitializationService AppInitializationService
@@ -236,8 +238,7 @@ else if (workout != null && currentExercise != null)
                                                              Step="@((decimal?)GetWeightStep())"
                                                              Immediate="true"
                                                              Style="width: 80px;"
-                                                             Margin="Margin.Dense"
-                                                             @onblur="() => SaveSet(context.Id)" />
+                                                             Margin="Margin.Dense" />
                                         }
                                         else
                                         {
@@ -263,8 +264,7 @@ else if (workout != null && currentExercise != null)
                                                              Step="1"
                                                              Immediate="true"
                                                              Style="width: 60px;"
-                                                             Margin="Margin.Dense"
-                                                             @onblur="() => SaveSet(context.Id)" />
+                                                             Margin="Margin.Dense"/>
                                         }
                                         else
                                         {
@@ -335,25 +335,25 @@ else if (workout != null && currentExercise != null)
                                 <MudButton Variant="Variant.Outlined"
                                            Color="Color.Primary"
                                            StartIcon="@Icons.Material.Filled.Add"
-                                           OnClick="AddSet"
-                                           Disabled="@isAddingSet">
-                                    @if (isAddingSet)
-                                    {
-                                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
-                                        <span class="ms-2">Добавление...</span>
-                                    }
-                                    else
-                                    {
-                                        <span>Добавить подход</span>
-                                    }
-                                </MudButton>
-                            </div>
-                        </MudCardContent>
-                    </MudCard>
-                }
-            </MudTabPanel>
+                                                                           OnClick="AddSet"
+                                                                           Disabled="@isAddingSet">
+                                                                    @if (isAddingSet)
+                                                                    {
+                                                                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                                                        <span class="ms-2">Добавление...</span>
+                                                                    }
+                                                                    else
+                                                                    {
+                                                                        <span>Добавить подход</span>
+                                                                    }
+                                                                </MudButton>
+                                                            </div>
+                                                        </MudCardContent>
+                                                    </MudCard>
+                                                }
+                                            </MudTabPanel>
 
-            <!-- Таб 2: Инструкция -->
+                                           <!-- Таб 2: Инструкция -->
             <MudTabPanel Text="Инструкция">
                 <!-- Как делать упражнение -->
                 <MudCard Elevation="2" Class="mb-4 mt-4">
@@ -398,6 +398,12 @@ else if (workout != null && currentExercise != null)
                 }
             </MudTabPanel>
         </MudTabs>
+
+        <!-- Таймер отдыха для упражнения -->
+        <RestTimerInput RestMinutes="restTimerMinutes"
+                        RestSeconds="restTimerSeconds"
+                        OnTimerSaved="SaveRestTimer"
+                        Class="mb-4" />
 
         <!-- Кнопка завершения тренировки -->
         <MudButton Variant="Variant.Filled"
@@ -554,6 +560,10 @@ else if (workout != null && currentExercise != null)
     private string repsString = "reps";
     private int activeTabIndex = 0;
 
+    // Таймер отдыха (минуты/секунды) для текущего упражнения
+    private int restTimerMinutes = 1;
+    private int restTimerSeconds = 0;
+
     // Редактирование подхода
     private Guid? editingSetId;
     private string? editingField;
@@ -570,6 +580,55 @@ else if (workout != null && currentExercise != null)
             await LoadWorkout();
             StateHasChanged();
         }
+
+    }
+
+    private async Task SaveRestTimer((int minutes, int seconds) timerValues)
+    {
+        if (currentExercise == null)
+            return;
+
+        var total = timerValues.minutes * 60 + timerValues.seconds;
+
+        var updateDto = new CreateWorkoutExerciseDto
+        {
+            WorkoutId = currentExercise.WorkoutId,
+            ExerciseId = currentExercise.ExerciseId,
+            Order = currentExercise.Order,
+            Notes = currentExercise.Notes,
+            RestSeconds = total
+        };
+
+        var success = await WorkoutExerciseService.UpdateWorkoutExerciseAsync(currentExercise.Id, updateDto);
+        if (success)
+        {
+            currentExercise.RestSeconds = total;
+            restTimerMinutes = timerValues.minutes;
+            restTimerSeconds = timerValues.seconds;
+            Snackbar.Add("Время отдыха сохранено", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Ошибка при сохранении времени отдыха", Severity.Error);
+        }
+    }
+
+    private async Task OpenRestTimerDialog(int initialSeconds)
+    {
+        var parameters = new DialogParameters<RestTimerDialog>
+        {
+            { nameof(RestTimerDialog.InitialSeconds), initialSeconds }
+        };
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = false,
+            CloseButton = false,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialogReference = await DialogService.ShowAsync<RestTimerDialog>("", parameters, options);
+        await dialogReference.Result;
     }
 
     private void OnDurationUpdated(TimeSpan duration)
@@ -605,6 +664,14 @@ else if (workout != null && currentExercise != null)
             }
             
             currentExercise = exercises[currentExerciseIndex];
+
+            // Инициализируем значения таймера отдыха из сущности упражнения в тренировке
+            if (currentExercise != null)
+            {
+                var rest = currentExercise.RestSeconds;
+                restTimerMinutes = rest / 60;
+                restTimerSeconds = rest % 60;
+            }
 
             workoutHistory = await WorkoutHistoryService.GetWorkoutHistoryDetailsAsync(WorkoutHistoryId);
             if (workoutHistory != null)
@@ -664,6 +731,12 @@ else if (workout != null && currentExercise != null)
             currentExerciseIndex--;
             currentExercise = exercises[currentExerciseIndex];
             weightLabel = $"Вес ({DisplayExercise.WeightUnit})";
+            if (currentExercise != null)
+            {
+                var rest = currentExercise.RestSeconds;
+                restTimerMinutes = rest / 60;
+                restTimerSeconds = rest % 60;
+            }
             await SaveExerciseIndex();
             await LoadSetsForCurrentExercise();
             CancelEditing();
@@ -677,6 +750,12 @@ else if (workout != null && currentExercise != null)
             currentExerciseIndex++;
             currentExercise = exercises[currentExerciseIndex];
             weightLabel = $"Вес ({DisplayExercise.WeightUnit})";
+            if (currentExercise != null)
+            {
+                var rest = currentExercise.RestSeconds;
+                restTimerMinutes = rest / 60;
+                restTimerSeconds = rest % 60;
+            }
             await SaveExerciseIndex();
             await LoadSetsForCurrentExercise();
             CancelEditing();
@@ -788,6 +867,13 @@ else if (workout != null && currentExercise != null)
             {
                 await LoadSetsForCurrentExercise();
                 CancelEditing();
+
+                // Открываем таймер отдыха после сохранения подхода
+                int totalSeconds = (restTimerMinutes * 60) + restTimerSeconds;
+                if (totalSeconds > 0)
+                {
+                    await OpenRestTimerDialog(totalSeconds);
+                }
             }
             else
             {
@@ -809,6 +895,15 @@ else if (workout != null && currentExercise != null)
             if (success)
             {
                 await LoadSetsForCurrentExercise();
+
+                if (isCompleted)
+                {
+                    int totalSeconds = (restTimerMinutes * 60) + restTimerSeconds;
+                    if (totalSeconds > 0)
+                    {
+                        await OpenRestTimerDialog(totalSeconds);
+                    }
+                }
             }
             else
             {

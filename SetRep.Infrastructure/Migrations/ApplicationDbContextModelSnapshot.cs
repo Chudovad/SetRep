@@ -235,9 +235,6 @@ namespace SetRep.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
 
-                    b.Property<int?>("RestSeconds")
-                        .HasColumnType("integer");
-
                     b.Property<int>("SetNumber")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
@@ -354,6 +351,11 @@ namespace SetRep.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
+
+                    b.Property<int>("RestSeconds")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(60);
 
                     b.Property<Guid>("WorkoutId")
                         .HasColumnType("uuid");

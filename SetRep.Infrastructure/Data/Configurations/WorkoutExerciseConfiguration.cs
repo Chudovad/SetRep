@@ -31,6 +31,10 @@ public class WorkoutExerciseConfiguration : IEntityTypeConfiguration<WorkoutExer
         builder.Property(we => we.Notes)
             .HasMaxLength(2000);
 
+        builder.Property(we => we.RestSeconds)
+            .IsRequired()
+            .HasDefaultValue(60);
+
         builder.Property(we => we.CreatedAt)
             .IsRequired();
 

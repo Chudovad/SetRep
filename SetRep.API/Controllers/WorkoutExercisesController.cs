@@ -108,6 +108,7 @@ public class WorkoutExercisesController : ControllerBase
         existing.ExerciseId = dto.ExerciseId;
         existing.Order = dto.Order;
         existing.Notes = dto.Notes;
+        existing.RestSeconds = dto.RestSeconds.Value;
 
         await _workoutExerciseRepository.UpdateAsync(existing);
         await _workoutExerciseRepository.SaveChangesAsync();
