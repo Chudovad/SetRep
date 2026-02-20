@@ -205,7 +205,6 @@ public class WorkoutPlansController : ControllerBase
                                 Weight = srcSet.Weight,
                                 DurationSeconds = srcSet.DurationSeconds,
                                 DistanceMeters = srcSet.DistanceMeters,
-                                RestSeconds = srcSet.RestSeconds,
                                 IsCompleted = false,
                                 Notes = srcSet.Notes,
                                 CompletedAt = default,
