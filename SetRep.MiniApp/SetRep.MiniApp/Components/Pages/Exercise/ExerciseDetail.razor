@@ -36,12 +36,12 @@
         <MudCard Elevation="2" Class="mb-4 exercise-info-card">
             <MudCardContent>
                 <div class="exercise-header">
-                    <MudSkeleton Typo="Typo.h5" Width="70%" Height="32px" />
-                    <MudSkeleton Width="40px" Height="40px" Variant="SkeletonVariant.Circular" />
+                    <MudSkeleton Width="70%" Height="32px" />
+                    <MudSkeleton Width="40px" Height="40px" SkeletonType="SkeletonType.Circle" />
                 </div>
-                <MudSkeleton Typo="Typo.body2" Width="100%" Height="60px" Class="mb-2" />
-                <MudSkeleton Typo="Typo.body2" Width="80%" Height="60px" Class="mb-2" />
-                <MudSkeleton Width="120px" Height="32px" Variant="SkeletonVariant.Rounded" Style="margin-top: 15px" />
+                <MudSkeleton Width="100%" Height="60px" Class="mb-2" />
+                <MudSkeleton Width="80%" Height="60px" Class="mb-2" />
+                <MudSkeleton Width="120px" Height="32px" Style="margin-top: 15px" />
             </MudCardContent>
         </MudCard>
     </div>
@@ -335,9 +335,9 @@ else if (exercise != null)
         if (exercise == null)
             return;
 
-        var parameters = new DialogParameters<EditExerciseDialog>
+        var parameters = new DialogParameters<AddExerciseDialog>
         {
-            { nameof(EditExerciseDialog.Exercise), exercise }
+            { nameof(AddExerciseDialog.Exercise), exercise }
         };
         var options = new DialogOptions
         {
@@ -346,7 +346,7 @@ else if (exercise != null)
             FullWidth = true
         };
 
-        var dialogReference = await DialogService.ShowAsync<EditExerciseDialog>("Редактировать упражнение", parameters, options);
+        var dialogReference = await DialogService.ShowAsync<AddExerciseDialog>("Редактировать упражнение", parameters, options);
         var result = await dialogReference.Result;
 
         if (!result.Canceled)

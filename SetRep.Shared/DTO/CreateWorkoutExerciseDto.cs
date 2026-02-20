@@ -24,5 +24,10 @@ public class CreateWorkoutExerciseDto
     /// Заметки к конкретному упражнению в этой тренировке
     /// </summary>
     public string? Notes { get; set; }
+
+    /// <summary>
+    /// Таймер отдыха
+    /// </summary>
+    public int RestSeconds { get; set; }
 }
 

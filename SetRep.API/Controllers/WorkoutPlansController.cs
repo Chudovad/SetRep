@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using SetRep.API.Extensions;
 using SetRep.Core.Entities;
 using SetRep.Core.Repositories;
 using SetRep.Shared.DTO;
@@ -12,13 +13,22 @@ namespace SetRep.API.Controllers;
 public class WorkoutPlansController : ControllerBase
 {
     private readonly IWorkoutPlanRepository _workoutPlanRepository;
+    private readonly IWorkoutRepository _workoutRepository;
+    private readonly IWorkoutExerciseRepository _workoutExerciseRepository;
+    private readonly ISetRepository _setRepository;
     private readonly ILogger<WorkoutPlansController> _logger;
 
     public WorkoutPlansController(
-        IWorkoutPlanRepository workoutPlanRepository, 
+        IWorkoutPlanRepository workoutPlanRepository,
+        IWorkoutRepository workoutRepository,
+        IWorkoutExerciseRepository workoutExerciseRepository,
+        ISetRepository setRepository,
         ILogger<WorkoutPlansController> logger)
     {
         _workoutPlanRepository = workoutPlanRepository;
+        _workoutRepository = workoutRepository;
+        _workoutExerciseRepository = workoutExerciseRepository;
+        _setRepository = setRepository;
         _logger = logger;
     }
 
@@ -128,5 +138,86 @@ public class WorkoutPlansController : ControllerBase
         await _workoutPlanRepository.SaveChangesAsync();
 
         return NoContent();
+    }
+
+    /// <summary>
+    /// Скопировать план тренировки к текущему пользователю (план, тренировки, упражнения, подходы)
+    /// </summary>
+    [HttpPost("{id}/copy")]
+    public async Task<ActionResult<WorkoutPlan>> Copy(Guid id)
+    {
+        var targetUserId = User.GetUserId();
+        if (targetUserId == null)
+            return Unauthorized();
+
+        var sourcePlan = await _workoutPlanRepository.GetWithWorkoutsAsync(id);
+        if (sourcePlan == null)
+            return NotFound();
+
+        var newPlan = new WorkoutPlan
+        {
+            Id = Guid.NewGuid(),
+            UserId = targetUserId.Value,
+            Name = sourcePlan.Name,
+            CreatedAt = DateTime.UtcNow
+        };
+        await _workoutPlanRepository.AddAsync(newPlan);
+
+        if (sourcePlan.Workouts != null)
+        {
+            foreach (var srcW in sourcePlan.Workouts.OrderBy(w => w.CreatedAt))
+            {
+                var exercisesWithSets = await _workoutExerciseRepository.GetByWorkoutIdAsync(srcW.Id);
+                var newWorkout = new Workout
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = targetUserId.Value,
+                    WorkoutPlanId = newPlan.Id,
+                    Name = srcW.Name,
+                    Notes = srcW.Notes,
+                    CreatedAt = DateTime.UtcNow
+                };
+                await _workoutRepository.AddAsync(newWorkout);
+
+                foreach (var srcWe in exercisesWithSets.OrderBy(we => we.Order))
+                {
+                    var newWe = new WorkoutExercise
+                    {
+                        Id = Guid.NewGuid(),
+                        WorkoutId = newWorkout.Id,
+                        ExerciseId = srcWe.ExerciseId,
+                        Order = srcWe.Order,
+                        Notes = srcWe.Notes,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    await _workoutExerciseRepository.AddAsync(newWe);
+
+                    if (srcWe.Sets != null)
+                    {
+                        foreach (var srcSet in srcWe.Sets.OrderBy(s => s.SetNumber))
+                        {
+                            var newSet = new Set
+                            {
+                                Id = Guid.NewGuid(),
+                                WorkoutExerciseId = newWe.Id,
+                                SetNumber = srcSet.SetNumber,
+                                Reps = srcSet.Reps,
+                                Weight = srcSet.Weight,
+                                DurationSeconds = srcSet.DurationSeconds,
+                                DistanceMeters = srcSet.DistanceMeters,
+                                IsCompleted = false,
+                                Notes = srcSet.Notes,
+                                CompletedAt = default,
+                                CreatedAt = DateTime.UtcNow
+                            };
+                            await _setRepository.AddAsync(newSet);
+                        }
+                    }
+                }
+            }
+        }
+
+        await _workoutPlanRepository.SaveChangesAsync();
+        return CreatedAtAction(nameof(GetById), new { id = newPlan.Id }, newPlan);
     }
 }

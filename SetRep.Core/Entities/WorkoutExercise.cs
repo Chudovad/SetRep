@@ -49,5 +49,10 @@ public class WorkoutExercise
     /// Навигационное свойство: подходы для этого упражнения в тренировке
     /// </summary>
     public ICollection<Set> Sets { get; set; } = [];
+
+    /// <summary>
+    /// Время отдыха после подхода в секундах (по умолчанию 60)
+    /// </summary>
+    public int RestSeconds { get; set; } = 60;
 }
 

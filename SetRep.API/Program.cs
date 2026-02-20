@@ -24,6 +24,8 @@ builder.Services.AddControllers()
 
 builder.Services.Configure<FileUploadOptions>(
     builder.Configuration.GetSection(FileUploadOptions.SectionName));
+builder.Services.Configure<ReadyWorkoutPlanOptions>(
+    builder.Configuration.GetSection(ReadyWorkoutPlanOptions.SectionName));
 
 var fileUploadOptions = builder.Configuration.GetSection(FileUploadOptions.SectionName)
     .Get<FileUploadOptions>() ?? new FileUploadOptions();
@@ -86,6 +88,7 @@ builder.Services.AddScoped<ISetRepository, SetRepository>();
 builder.Services.AddScoped<IMeasurementsHistoryRepository, MeasurementsHistoryRepository>();
 builder.Services.AddScoped<IWorkoutHistoryRepository, WorkoutHistoryRepository>();
 builder.Services.AddScoped<IWorkoutHistorySetRepository, WorkoutHistorySetRepository>();
+builder.Services.AddScoped<IReadyWorkoutPlanRepository, ReadyWorkoutPlanRepository>();
 
 // Регистрируем сервис валидации Telegram WebApp
 builder.Services.AddScoped<ITelegramWebAppValidationService, TelegramWebAppValidationService>();

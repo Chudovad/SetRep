@@ -37,8 +37,6 @@ public class SetConfiguration : IEntityTypeConfiguration<Set>
         builder.Property(s => s.DistanceMeters)
             .HasPrecision(10, 2);
 
-        builder.Property(s => s.RestSeconds);
-
         builder.Property(s => s.IsCompleted)
             .IsRequired()
             .HasDefaultValue(true);

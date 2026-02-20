@@ -51,11 +51,14 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IUserService, UserService>();
         services.AddTransient<IMeasurementsHistoryService, MeasurementsHistoryService>();
         services.AddTransient<IFileUploadService, FileUploadService>();
+        services.AddTransient<IReadyWorkoutPlanService, ReadyWorkoutPlanService>();
         services.AddScoped<IAppInitializationService, AppInitializationService>();
         services.AddScoped<IImageConversionService, ImageConversionService>();
 
         services.Configure<Options.FileUploadOptions>(
             builder.Configuration.GetSection(Options.FileUploadOptions.SectionName));
+        services.Configure<Options.ReadyWorkoutPlanOptions>(
+            builder.Configuration.GetSection(Options.ReadyWorkoutPlanOptions.SectionName));
 
         return services;
     }

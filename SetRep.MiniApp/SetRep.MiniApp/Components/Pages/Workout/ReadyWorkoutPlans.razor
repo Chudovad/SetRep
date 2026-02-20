@@ -1,0 +1,192 @@
+@page "/workouts/ready"
+@using SetRep.Core.ApiRequestServices
+@using SetRep.Core.Entities
+@using SetRep.Core.Enums
+@using SetRep.Core.Extensions
+@using SetRep.MiniApp.Client.Services
+@using static SetRep.MiniApp.Client.Services.InitializationHelper
+@rendermode InteractiveServer
+@inject IReadyWorkoutPlanService ReadyWorkoutPlanService
+@inject ITelegramBackButtonService TelegramBackButtonService
+@inject IAppInitializationService AppInitializationService
+@inject NavigationManager Navigation
+
+<PageTitle>SetRep - Готовые планы</PageTitle>
+
+<div class="ready-plans-container">
+    @if (isLoading)
+    {
+        <MudSkeleton Height="40px" Width="100%" Class="mb-3" />
+        @for (int i = 0; i < 4; i++)
+        {
+            <MudCard Elevation="2" Class="mb-3">
+                <MudCardContent>
+                    <MudSkeleton Width="70%" Height="24px" />
+                    <MudSkeleton Width="50%" Height="20px" Class="mt-2" />
+                </MudCardContent>
+            </MudCard>
+        }
+    }
+    else if (errorMessage != null)
+    {
+        <MudCard Elevation="2" Class="error-card">
+            <MudCardContent>
+                <div class="error-state">
+                    <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Large" Color="Color.Error" Class="mb-4" />
+                    <MudText Typo="Typo.h6" Align="Align.Center" Class="mb-2">Ошибка загрузки</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="mb-4">@errorMessage</MudText>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="LoadPlans">
+                        Попробовать снова
+                    </MudButton>
+                </div>
+            </MudCardContent>
+        </MudCard>
+    }
+    else
+    {
+        <MudText Typo="Typo.h5" Class="mb-4">Готовые планы тренировок</MudText>
+
+        <div class="filters-row mb-4">
+            <MudSelect T="ReadyPlanLevel?"
+                       Label="Уровень"
+                       Variant="Variant.Outlined"
+                       Value="@selectedLevel"
+                       ValueChanged="@OnLevelChanged"
+                       Dense="true"
+                       Class="filter-select">
+                <MudSelectItem T="ReadyPlanLevel?" Value="null">Все</MudSelectItem>
+                @foreach (var value in Enum.GetValues<ReadyPlanLevel>())
+                {
+                    <MudSelectItem T="ReadyPlanLevel?" Value="@value">@value.GetDescription()</MudSelectItem>
+                }
+            </MudSelect>
+            <MudSelect T="ReadyPlanGoal?"
+                       Label="Цель"
+                       Variant="Variant.Outlined"
+                       Value="@selectedGoal"
+                       ValueChanged="@OnGoalChanged"
+                       Dense="true"
+                       Class="filter-select">
+                <MudSelectItem T="ReadyPlanGoal?" Value="null">Все</MudSelectItem>
+                @foreach (var value in Enum.GetValues<ReadyPlanGoal>())
+                {
+                    <MudSelectItem T="ReadyPlanGoal?" Value="@value">@value.GetDescription()</MudSelectItem>
+                }
+            </MudSelect>
+            <MudSelect T="ReadyPlanEquipment?"
+                       Label="Оборудование"
+                       Variant="Variant.Outlined"
+                       Value="@selectedEquipment"
+                       ValueChanged="@OnEquipmentChanged"
+                       Dense="true"
+                       Class="filter-select">
+                <MudSelectItem T="ReadyPlanEquipment?" Value="null">Все</MudSelectItem>
+                @foreach (var value in Enum.GetValues<ReadyPlanEquipment>())
+                {
+                    <MudSelectItem T="ReadyPlanEquipment?" Value="@value">@value.GetDescription()</MudSelectItem>
+                }
+            </MudSelect>
+        </div>
+
+        @if (plans.Any())
+        {
+            @foreach (var item in plans)
+            {
+                var planId = item.WorkoutPlanId;
+                var name = item.WorkoutPlan?.Name ?? "Без названия";
+                <MudCard Elevation="2" Class="mb-3 ready-plan-card" @onclick="() => NavigateToPlan(planId)">
+                    <MudCardContent>
+                        <div class="d-flex align-center justify-space-between">
+                            <MudText Typo="Typo.h6">@name</MudText>
+                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" />
+                        </div>
+                        <div class="badges-row mt-2">
+                            <MudChip T="ReadyPlanLevel" Size="Size.Small" Class="mr-1">@item.Level.GetDescription()</MudChip>
+                            <MudChip T="ReadyPlanGoal" Size="Size.Small" Class="mr-1">@item.Goal.GetDescription()</MudChip>
+                            <MudChip T="ReadyPlanEquipment" Size="Size.Small">@item.Equipment.GetDescription()</MudChip>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            }
+        }
+        else
+        {
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="py-4">
+                По выбранным фильтрам планов не найдено.
+            </MudText>
+        }
+    }
+</div>
+
+<style>
+    .ready-plans-container { max-width: 100%; }
+    .filters-row { display: flex; flex-wrap: wrap; gap: 12px; }
+    .filter-select { min-width: 140px; }
+    .ready-plan-card { cursor: pointer; }
+    .badges-row { display: flex; flex-wrap: wrap; gap: 4px; }
+</style>
+
+@code {
+    private List<ReadyWorkoutPlan> plans = new();
+    private ReadyPlanLevel? selectedLevel;
+    private ReadyPlanGoal? selectedGoal;
+    private ReadyPlanEquipment? selectedEquipment;
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await WaitForInitializationAsync(AppInitializationService);
+            await LoadPlans();
+            await TelegramBackButtonService.ShowAsync();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadPlans()
+    {
+        isLoading = true;
+        errorMessage = null;
+        StateHasChanged();
+        try
+        {
+            var data = await ReadyWorkoutPlanService.GetReadyPlansAsync(selectedLevel, selectedGoal, selectedEquipment);
+            plans = data ?? new List<ReadyWorkoutPlan>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+            plans = new List<ReadyWorkoutPlan>();
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnLevelChanged(ReadyPlanLevel? level)
+    {
+        selectedLevel = level;
+        await LoadPlans();
+    }
+
+    private async Task OnGoalChanged(ReadyPlanGoal? goal)
+    {
+        selectedGoal = goal;
+        await LoadPlans();
+    }
+
+    private async Task OnEquipmentChanged(ReadyPlanEquipment? equipment)
+    {
+        selectedEquipment = equipment;
+        await LoadPlans();
+    }
+
+    private void NavigateToPlan(Guid planId)
+    {
+        Navigation.NavigateTo($"/workouts/plans/{planId}");
+    }
+}

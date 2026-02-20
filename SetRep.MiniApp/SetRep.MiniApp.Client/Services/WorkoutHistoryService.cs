@@ -195,7 +195,6 @@ public class WorkoutHistoryService : IWorkoutHistoryService
                             Weight = newWeight,
                             DurationSeconds = workoutSet.DurationSeconds,
                             DistanceMeters = workoutSet.DistanceMeters,
-                            RestSeconds = workoutSet.RestSeconds,
                             IsCompleted = workoutSet.IsCompleted,
                             Notes = workoutSet.Notes,
                             CompletedAt = workoutSet.CompletedAt
@@ -275,7 +274,6 @@ public class WorkoutHistoryService : IWorkoutHistoryService
                         Weight = set.Weight,
                         DurationSeconds = set.DurationSeconds,
                         DistanceMeters = set.DistanceMeters,
-                        RestSeconds = set.RestSeconds,
                         IsCompleted = false,
                         Notes = set.Notes,
                         CompletedAt = DateTime.UtcNow

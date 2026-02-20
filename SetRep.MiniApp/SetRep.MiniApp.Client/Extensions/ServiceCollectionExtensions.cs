@@ -40,6 +40,7 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IUserService, UserService>();
         services.AddTransient<IMeasurementsHistoryService, MeasurementsHistoryService>();
         services.AddTransient<IFileUploadService, FileUploadService>();
+        services.AddTransient<IReadyWorkoutPlanService, ReadyWorkoutPlanService>();
         services.AddScoped<IAppInitializationService, AppInitializationService>();
 
         return services;

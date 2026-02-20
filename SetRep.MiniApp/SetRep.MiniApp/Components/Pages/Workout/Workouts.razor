@@ -3,12 +3,15 @@
 @using SetRep.Core.Entities
 @using SetRep.MiniApp.Client.Services
 @using SetRep.MiniApp.Components.Dialog
+@using SetRep.MiniApp.Options
 @using SetRep.Shared.DTO
+@using Microsoft.Extensions.Options
 @using static SetRep.MiniApp.Client.Services.InitializationHelper
 
 @rendermode InteractiveServer
 @inject IWorkoutService WorkoutService
 @inject IWorkoutPlanService WorkoutPlanService
+@inject IReadyWorkoutPlanService ReadyWorkoutPlanService
 @inject IWorkoutExerciseService WorkoutExerciseService
 @inject IWorkoutHistoryService WorkoutHistoryService
 @inject ITelegramWebAppStateService TelegramWebAppStateService
@@ -17,6 +20,7 @@
 @inject NavigationManager Navigation
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
+@inject IOptions<ReadyWorkoutPlanOptions> ReadyWorkoutPlanOptions
 
 <PageTitle>SetRep - Тренировки</PageTitle>
 
@@ -70,6 +74,14 @@
     }
     else if (workouts.Any() || workoutPlans.Any())
     {
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   FullWidth="true"
+                   Class="mb-2"
+                   StartIcon="@Icons.Material.Filled.Star"
+                   OnClick="NavigateToReadyPlans">
+            Готовые планы
+        </MudButton>
         <MudButton Variant="Variant.Outlined"
                    Color="Color.Primary"
                    FullWidth="true"
@@ -146,6 +158,12 @@
                                 <MudMenuItem OnClick="@(() => OpenAddWorkoutsToPlanDialog(plan))" Icon="@Icons.Material.Filled.Add">
                                     Добавить тренировки
                                 </MudMenuItem>
+                                @if (CanAddToReadyPlans())
+                                {
+                                    <MudMenuItem OnClick="@(() => OpenAddToReadyPlansDialog(plan))" Icon="@Icons.Material.Filled.Star">
+                                        Добавить в готовые
+                                    </MudMenuItem>
+                                }
                                 <MudMenuItem OnClick="@(() => OpenEditPlanDialog(plan))" Icon="@Icons.Material.Filled.Edit">
                                     Редактировать
                                 </MudMenuItem>
@@ -186,6 +204,14 @@
     }
     else
     {
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   FullWidth="true"
+                   Class="mb-2"
+                   StartIcon="@Icons.Material.Filled.Star"
+                   OnClick="NavigateToReadyPlans">
+            Готовые планы
+        </MudButton>
         <MudButton Variant="Variant.Outlined"
                    Color="Color.Primary"
                    FullWidth="true"
@@ -262,6 +288,14 @@
     private bool isDeleting = false;
     private bool isDuplicating = false;
     private string? errorMessage;
+
+    private bool CanAddToReadyPlans()
+    {
+        var telegramId = TelegramWebAppStateService.ValidationResult?.Data?.User?.TelegramId;
+        if (!telegramId.HasValue) return false;
+        var ids = ReadyWorkoutPlanOptions?.Value?.AllowedEditorTelegramIds;
+        return ids != null && ids.Contains(telegramId.Value);
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -382,6 +416,22 @@
     private void AddWorkoutPlan()
     {
         Navigation.NavigateTo("/workouts/plans/add");
+    }
+
+    private void NavigateToReadyPlans()
+    {
+        Navigation.NavigateTo("/workouts/ready");
+    }
+
+    private async Task OpenAddToReadyPlansDialog(WorkoutPlan plan)
+    {
+        if (plan == null) return;
+        var parameters = new DialogParameters<AddToReadyPlansDialog>
+        {
+            { nameof(AddToReadyPlansDialog.WorkoutPlan), plan }
+        };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        await DialogService.ShowAsync<AddToReadyPlansDialog>("Добавить в готовые планы", parameters, options);
     }
 
     private async Task OpenEditDialog(Workout workout)
@@ -780,7 +830,6 @@
                                 Weight = sourceSet.Weight,
                                 DurationSeconds = sourceSet.DurationSeconds,
                                 DistanceMeters = sourceSet.DistanceMeters,
-                                RestSeconds = sourceSet.RestSeconds,
                                 IsCompleted = sourceSet.IsCompleted,
                                 Notes = sourceSet.Notes,
                                 CompletedAt = sourceSet.CompletedAt

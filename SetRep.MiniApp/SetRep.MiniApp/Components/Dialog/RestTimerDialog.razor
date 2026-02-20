@@ -1,0 +1,167 @@
+@using MudBlazor
+@using System.Timers
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Таймер отдыха</MudText>
+    </TitleContent>
+    <DialogContent>
+        <div class="rest-timer-container">
+            <div class="timer-display-large">
+                <MudText Typo="Typo.h2" Align="Align.Center" Class="timer-text">
+                    @FormatTime(remainingSeconds)
+                </MudText>
+            </div>
+
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Error"
+                       FullWidth="true"
+                       Size="Size.Large"
+                       OnClick="Skip"
+                       Class="timer-skip-button mt-6">
+                <MudIcon Icon="@Icons.Material.Filled.SkipNext" Class="me-2" />
+                Пропустить
+            </MudButton>
+        </div>
+    </DialogContent>
+<DialogActions>
+    <div class="stretch-actions">
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Primary"
+                   Size="Size.Large"
+                   OnClick="DecreaseTime"
+                   Class="timer-action-button">
+            -15 sec
+        </MudButton>
+        <MudButton Variant="Variant.Outlined"
+                   Color="Color.Success"
+                   Size="Size.Large"
+                   OnClick="IncreaseTime"
+                   Class="timer-action-button">
+            +15 sec
+        </MudButton>
+    </div>
+</DialogActions>
+</MudDialog>
+
+<style>
+    /* Контейнер для кнопок +/– */
+.stretch-actions {
+    display: flex;
+    justify-content: space-between;  /* кнопки прижимаются к краям */
+    gap: 8px;                        /* расстояние между кнопками */
+    width: 100%;
+    padding: 0 !important;            /* убираем стандартные отступы DialogActions */
+}
+
+/* Убираем фиксированную ширину у кнопок и позволяем им растягиваться */
+.stretch-actions .timer-action-button {
+    flex: 1 1 0;                      /* каждая кнопка занимает равную долю ширины */
+    min-width: unset !important;       /* отменяем предыдущее ограничение */
+}
+    .rest-timer-container {
+        padding: 10px 0;
+        text-align: center;
+    }
+
+    .timer-display-large {
+        padding: 40px 20px;
+        background: linear-gradient(135deg, rgba(25, 118, 210, 0.1) 0%, rgba(56, 142, 60, 0.1) 100%);
+        border-radius: 12px;
+    }
+
+    .timer-text {
+        font-weight: 600;
+        font-family: 'Courier New', monospace;
+        letter-spacing: 2px;
+    }
+
+    .timer-skip-button {
+        min-height: 48px !important;
+    }
+
+    .timer-action-button {
+        min-width: 130px !important;
+        min-height: 48px !important;
+    }
+</style>
+
+@code {
+    [CascadingParameter] IMudDialogInstance? MudDialog { get; set; }
+    [Parameter] public int InitialSeconds { get; set; } = 60;
+
+    private int remainingSeconds;
+    private System.Timers.Timer? timer;
+    private bool isRunning = false;
+
+    protected override void OnInitialized()
+    {
+        remainingSeconds = InitialSeconds;
+        StartTimer();
+    }
+
+    private void StartTimer()
+    {
+        if (isRunning) return;
+
+        timer = new System.Timers.Timer(1000);
+        timer.Elapsed += TimerTick;
+        timer.AutoReset = true;
+        timer.Start();
+        isRunning = true;
+    }
+
+    private void StopTimer()
+    {
+        if (timer != null)
+        {
+            timer.Stop();
+            timer.Dispose();
+            isRunning = false;
+        }
+    }
+
+    private void TimerTick(object? sender, ElapsedEventArgs e)
+    {
+        if (remainingSeconds > 0)
+        {
+            remainingSeconds--;
+            InvokeAsync(StateHasChanged);
+        }
+        else
+        {
+            StopTimer();
+            InvokeAsync(() => Skip());
+        }
+    }
+
+    private void IncreaseTime()
+    {
+        remainingSeconds += 15;
+        StateHasChanged();
+    }
+
+    private void DecreaseTime()
+    {
+        remainingSeconds = Math.Max(0, remainingSeconds - 15);
+        StateHasChanged();
+    }
+
+    private void Skip()
+    {
+        StopTimer();
+        MudDialog?.Close(DialogResult.Ok(true));
+    }
+
+    private string FormatTime(int seconds)
+    {
+        int minutes = seconds / 60;
+        int secs = seconds % 60;
+        return $"{minutes:D2}:{secs:D2}";
+    }
+
+    public void Dispose()
+    {
+        StopTimer();
+    }
+}

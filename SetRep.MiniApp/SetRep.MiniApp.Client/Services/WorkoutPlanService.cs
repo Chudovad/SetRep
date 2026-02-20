@@ -151,4 +151,24 @@ public class WorkoutPlanService : IWorkoutPlanService
             return false;
         }
     }
+
+    /// <summary>
+    /// Скопировать план к текущему пользователю
+    /// </summary>
+    public async Task<WorkoutPlan?> CopyPlanToMyPlansAsync(Guid sourcePlanId)
+    {
+        try
+        {
+            var request = new HttpRequestMessage(HttpMethod.Post, $"api/workoutplans/{sourcePlanId}/copy");
+            request.AddBearerToken(_telegramWebAppStateService);
+            var response = await _httpClient.SendAsync(request);
+            if (response.IsSuccessStatusCode)
+                return await response.Content.ReadFromJsonAsync<WorkoutPlan>();
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
 }
