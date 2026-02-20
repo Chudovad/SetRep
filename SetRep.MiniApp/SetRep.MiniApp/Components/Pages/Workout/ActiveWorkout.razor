@@ -245,7 +245,8 @@ else if (workout != null && currentExercise != null)
                                             <span @onclick="() => StartEditing(context.Id, weightString, context.Weight)" style="cursor: pointer;">
                                                 @if (context.Weight.HasValue)
                                                 {
-                                                    @context.Weight.Value.ToString("0.##")@(DisplayExercise.WeightUnit)
+                                                    @context.Weight.Value.ToString("0.##")
+                                                    @(DisplayExercise.WeightUnit)
                                                 }
                                                 else
                                                 {
@@ -264,7 +265,7 @@ else if (workout != null && currentExercise != null)
                                                              Step="1"
                                                              Immediate="true"
                                                              Style="width: 60px;"
-                                                             Margin="Margin.Dense"/>
+                                                             Margin="Margin.Dense" />
                                         }
                                         else
                                         {
@@ -335,25 +336,32 @@ else if (workout != null && currentExercise != null)
                                 <MudButton Variant="Variant.Outlined"
                                            Color="Color.Primary"
                                            StartIcon="@Icons.Material.Filled.Add"
-                                                                           OnClick="AddSet"
-                                                                           Disabled="@isAddingSet">
-                                                                    @if (isAddingSet)
-                                                                    {
-                                                                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
-                                                                        <span class="ms-2">Добавление...</span>
-                                                                    }
-                                                                    else
-                                                                    {
-                                                                        <span>Добавить подход</span>
-                                                                    }
-                                                                </MudButton>
-                                                            </div>
-                                                        </MudCardContent>
-                                                    </MudCard>
-                                                }
-                                            </MudTabPanel>
+                                           OnClick="AddSet"
+                                           Disabled="@isAddingSet">
+                                    @if (isAddingSet)
+                                    {
+                                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                        <span class="ms-2">Добавление...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Добавить подход</span>
+                                    }
+                                </MudButton>
+                            </div>
+                        </MudCardContent>
+                    </MudCard>
+                }
 
-                                           <!-- Таб 2: Инструкция -->
+                <!-- Таймер отдыха для упражнения -->
+                <RestTimerInput RestMinutes="restTimerMinutes"
+                                RestSeconds="restTimerSeconds"
+                                OnTimerSaved="SaveRestTimer"
+                                Class="mb-4" />
+
+            </MudTabPanel>
+
+            <!-- Таб 2: Инструкция -->
             <MudTabPanel Text="Инструкция">
                 <!-- Как делать упражнение -->
                 <MudCard Elevation="2" Class="mb-4 mt-4">
@@ -398,12 +406,6 @@ else if (workout != null && currentExercise != null)
                 }
             </MudTabPanel>
         </MudTabs>
-
-        <!-- Таймер отдыха для упражнения -->
-        <RestTimerInput RestMinutes="restTimerMinutes"
-                        RestSeconds="restTimerSeconds"
-                        OnTimerSaved="SaveRestTimer"
-                        Class="mb-4" />
 
         <!-- Кнопка завершения тренировки -->
         <MudButton Variant="Variant.Filled"
@@ -532,9 +534,9 @@ else if (workout != null && currentExercise != null)
         background-color: rgba(76, 175, 80, 0.1) !important;
     }
 
-    .sets-table .completed-set-row:hover {
-        background-color: rgba(76, 175, 80, 0.2) !important;
-    }
+        .sets-table .completed-set-row:hover {
+            background-color: rgba(76, 175, 80, 0.2) !important;
+        }
 
 </style>
 
@@ -619,8 +621,8 @@ else if (workout != null && currentExercise != null)
         {
             { nameof(RestTimerDialog.InitialSeconds), initialSeconds }
         };
-        var options = new DialogOptions 
-        { 
+        var options = new DialogOptions
+        {
             CloseOnEscapeKey = false,
             CloseButton = false,
             MaxWidth = MaxWidth.Small,
@@ -652,7 +654,7 @@ else if (workout != null && currentExercise != null)
             }
 
             exercises = workout.WorkoutExercises.OrderBy(we => we.Order).ToList();
-            
+
             var savedIndex = await LoadSavedExerciseIndex();
             if (savedIndex.HasValue && savedIndex.Value >= 0 && savedIndex.Value < exercises.Count)
             {
@@ -662,7 +664,7 @@ else if (workout != null && currentExercise != null)
             {
                 currentExerciseIndex = 0;
             }
-            
+
             currentExercise = exercises[currentExerciseIndex];
 
             // Инициализируем значения таймера отдыха из сущности упражнения в тренировке
@@ -882,7 +884,7 @@ else if (workout != null && currentExercise != null)
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Ошибка: {ex.Message}", Severity.Error);  
+            Snackbar.Add($"Ошибка: {ex.Message}", Severity.Error);
         }
     }
 
@@ -1052,11 +1054,11 @@ else if (workout != null && currentExercise != null)
             { nameof(ReplaceExerciseDialog.CurrentWorkoutExercise), currentExercise },
             { nameof(ReplaceExerciseDialog.ExcludedExerciseIds), excludedExerciseIds }
         };
-        var options = new DialogOptions 
-        { 
-            CloseOnEscapeKey = true, 
-            MaxWidth = MaxWidth.Medium, 
-            FullWidth = true 
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
         };
 
         var dialogReference = await DialogService.ShowAsync<ReplaceExerciseDialog>("Заменить упражнение", parameters, options);
