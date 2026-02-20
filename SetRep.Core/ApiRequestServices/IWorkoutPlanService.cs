@@ -37,4 +37,9 @@ public interface IWorkoutPlanService
     /// Удалить план тренировки
     /// </summary>
     Task<bool> DeleteWorkoutPlanAsync(Guid workoutPlanId);
+
+    /// <summary>
+    /// Скопировать план к текущему пользователю (план, тренировки, упражнения, подходы)
+    /// </summary>
+    Task<WorkoutPlan?> CopyPlanToMyPlansAsync(Guid sourcePlanId);
 }

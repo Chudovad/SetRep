@@ -1,0 +1,106 @@
+@using SetRep.Core.ApiRequestServices
+@using SetRep.Core.Entities
+@using SetRep.Core.Enums
+@using SetRep.Core.Extensions
+@using SetRep.Shared.DTO
+
+@inject IReadyWorkoutPlanService ReadyWorkoutPlanService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Добавить в готовые планы</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="@isFormValid">
+            <MudSelect T="ReadyPlanLevel" Label="Уровень подготовки" Variant="Variant.Outlined" @bind-Value="level" Required="true" RequiredError="Выберите уровень" Class="mb-3">
+                @foreach (var value in Enum.GetValues<ReadyPlanLevel>())
+                {
+                    <MudSelectItem T="ReadyPlanLevel" Value="@value">@value.GetDescription()</MudSelectItem>
+                }
+            </MudSelect>
+            <MudSelect T="ReadyPlanGoal" Label="Цель плана" Variant="Variant.Outlined" @bind-Value="goal" Required="true" RequiredError="Выберите цель" Class="mb-3">
+                @foreach (var value in Enum.GetValues<ReadyPlanGoal>())
+                {
+                    <MudSelectItem T="ReadyPlanGoal" Value="@value">@value.GetDescription()</MudSelectItem>
+                }
+            </MudSelect>
+            <MudSelect T="ReadyPlanEquipment" Label="Оборудование" Variant="Variant.Outlined" @bind-Value="equipment" Required="true" RequiredError="Выберите оборудование" Class="mb-3">
+                @foreach (var value in Enum.GetValues<ReadyPlanEquipment>())
+                {
+                    <MudSelectItem T="ReadyPlanEquipment" Value="@value">@value.GetDescription()</MudSelectItem>
+                }
+            </MudSelect>
+            <MudTextField T="string" Label="Заметка (необязательно)" @bind-Value="note" Variant="Variant.Outlined" Lines="3" Class="mb-3" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Отмена</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Add" Disabled="@(!isFormValid || isSaving)">
+            @if (isSaving)
+            {
+                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                <MudText Class="ms-2">Добавление...</MudText>
+            }
+            else
+            {
+                <MudText>Добавить</MudText>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance? MudDialog { get; set; }
+    [Parameter] public WorkoutPlan? WorkoutPlan { get; set; }
+
+    private MudForm? form;
+    private bool isFormValid;
+    private bool isSaving;
+    private ReadyPlanLevel level = ReadyPlanLevel.Beginner;
+    private ReadyPlanGoal goal = ReadyPlanGoal.BuildMuscle;
+    private ReadyPlanEquipment equipment = ReadyPlanEquipment.Gym;
+    private string? note;
+
+    private async Task Add()
+    {
+        if (form == null || WorkoutPlan == null) return;
+        await form.Validate();
+        if (!isFormValid || isSaving) return;
+
+        isSaving = true;
+        try
+        {
+            var dto = new CreateReadyWorkoutPlanDto
+            {
+                WorkoutPlanId = WorkoutPlan.Id,
+                Level = (int)level,
+                Goal = (int)goal,
+                Equipment = (int)equipment,
+                Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim()
+            };
+            var result = await ReadyWorkoutPlanService.AddReadyPlanAsync(dto);
+            if (result != null)
+            {
+                MudDialog?.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add("Не удалось добавить план. Возможно, он уже в списке готовых.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog?.Cancel();
+    }
+}

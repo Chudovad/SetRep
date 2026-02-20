@@ -10,6 +10,7 @@
 @inject IWorkoutService WorkoutService
 @inject NavigationManager Navigation
 @inject ITelegramBackButtonService TelegramBackButtonService
+@inject ITelegramWebAppStateService TelegramWebAppStateService
 @inject IAppInitializationService AppInitializationService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
@@ -169,11 +170,14 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
                     <MudCardContent>
                         <div class="exercise-header-with-actions">
                             <MudText Typo="Typo.h6" Class="exercise-name-header">@workoutExercise.Exercise.Name</MudText>
-                            <MudIconButton Icon="@Icons.Material.Filled.SwapHoriz"
-                                           Color="Color.Primary"
-                                           Size="Size.Medium"
-                                           OnClick="ReplaceExercise"
-                                           Title="Заменить упражнение" /> 
+                            @if (!isReadOnly)
+                            {
+                                <MudIconButton Icon="@Icons.Material.Filled.SwapHoriz"
+                                               Color="Color.Primary"
+                                               Size="Size.Medium"
+                                               OnClick="ReplaceExercise"
+                                               Title="Заменить упражнение" />
+                            }
                         </div>
                     </MudCardContent>
                 </MudCard>
@@ -199,12 +203,27 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
                                     <MudTh>№</MudTh>
                                     <MudTh>Вес</MudTh>
                                     <MudTh>Повт.</MudTh>
-                                    <MudTh> </MudTh>
+                                    @if (!isReadOnly)
+                                    {
+                                        <MudTh> </MudTh>
+                                    }
                                 </HeaderContent>
                                 <RowTemplate>
                                     <MudTd DataLabel="№">@context.SetNumber</MudTd>
                                     <MudTd DataLabel="Вес">
-                                        @if (editingSetId == context.Id && editingField == "weight")
+                                        @if (isReadOnly)
+                                        {
+                                            @if (context.Weight.HasValue)
+                                            {
+                                                @context.Weight.Value.ToString("0.##")
+                                                @(workoutExercise.Exercise.WeightUnit)
+                                            }
+                                            else
+                                            {
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">-</MudText>
+                                            }
+                                        }
+                                        else if (editingSetId == context.Id && editingField == "weight")
                                         {
                                             <MudNumericField T="decimal?"
                                                              @bind-Value="editingWeight"
@@ -232,7 +251,18 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
                                         }
                                     </MudTd>
                                     <MudTd DataLabel="Повторения">
-                                        @if (editingSetId == context.Id && editingField == "reps")
+                                        @if (isReadOnly)
+                                        {
+                                            @if (context.Reps > 0)
+                                            {
+                                                @context.Reps
+                                            }
+                                            else
+                                            {
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">-</MudText>
+                                            }
+                                        }
+                                        else if (editingSetId == context.Id && editingField == "reps")
                                         {
                                             <MudNumericField T="int"
                                                              @bind-Value="editingReps"
@@ -258,45 +288,51 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
                                             </span>
                                         }
                                     </MudTd>
-                                    <MudTd DataLabel="Действия">
-                                        @if (editingSetId == context.Id)
-                                        {
-                                            <MudIconButton Icon="@Icons.Material.Filled.Check"
-                                                           Color="Color.Success"
-                                                           Size="Size.Small"
-                                                           OnClick="() => SaveSet(context.Id)" />
-                                            <MudIconButton Icon="@Icons.Material.Filled.Close"
-                                                           Color="Color.Default"
-                                                           Size="Size.Small"
-                                                           OnClick="CancelEditing" />
-                                        }
-                                        else
-                                        {
-                                            <MudIconButton Icon="@Icons.Material.Filled.Delete"
-                                                           Color="Color.Error"
-                                                           Size="Size.Small"
-                                                           OnClick="() => DeleteSet(context.Id)" />
-                                        }
-                                    </MudTd>
+                                    @if (!isReadOnly)
+                                    {
+                                        <MudTd DataLabel="Действия">
+                                            @if (editingSetId == context.Id)
+                                            {
+                                                <MudIconButton Icon="@Icons.Material.Filled.Check"
+                                                               Color="Color.Success"
+                                                               Size="Size.Small"
+                                                               OnClick="() => SaveSet(context.Id)" />
+                                                <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                                               Color="Color.Default"
+                                                               Size="Size.Small"
+                                                               OnClick="CancelEditing" />
+                                            }
+                                            else
+                                            {
+                                                <MudIconButton Icon="@Icons.Material.Filled.Delete"
+                                                               Color="Color.Error"
+                                                               Size="Size.Small"
+                                                               OnClick="() => DeleteSet(context.Id)" />
+                                            }
+                                        </MudTd>
+                                    }
                                 </RowTemplate>
                             </MudTable>
-                            <MudButton Variant="Variant.Outlined"
-                                       Color="Color.Primary"
-                                       FullWidth="true"
-                                       StartIcon="@Icons.Material.Filled.Add"
-                                       OnClick="AddSet"
-                                       Disabled="@isAddingSet"
-                                       Class="mt-2">
-                                @if (isAddingSet)
-                                {
-                                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
-                                    <span class="ms-2">Добавление...</span>
-                                }
-                                else
-                                {
-                                    <span>Добавить подход</span>
-                                }
-                            </MudButton>
+                            @if (!isReadOnly)
+                            {
+                                <MudButton Variant="Variant.Outlined"
+                                           Color="Color.Primary"
+                                           FullWidth="true"
+                                           StartIcon="@Icons.Material.Filled.Add"
+                                           OnClick="AddSet"
+                                           Disabled="@isAddingSet"
+                                           Class="mt-2">
+                                    @if (isAddingSet)
+                                    {
+                                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                        <span class="ms-2">Добавление...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Добавить подход</span>
+                                    }
+                                </MudButton>
+                            }
                         </MudCardContent>
                     </MudCard>
                 }
@@ -310,23 +346,26 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
                                     Нет подходов
                                 </MudText>
                                 <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="mb-4">
-                                    Добавьте первый подход
+                                    @(isReadOnly ? "В этом упражнении нет подходов" : "Добавьте первый подход")
                                 </MudText>
-                                <MudButton Variant="Variant.Outlined"
-                                           Color="Color.Primary"
-                                           StartIcon="@Icons.Material.Filled.Add"
-                                           OnClick="AddSet"
-                                           Disabled="@isAddingSet">
-                                    @if (isAddingSet)
-                                    {
-                                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
-                                        <span class="ms-2">Добавление...</span>
-                                    }
-                                    else
-                                    {
-                                        <span>Добавить подход</span>
-                                    }
-                                </MudButton>
+                                @if (!isReadOnly)
+                                {
+                                    <MudButton Variant="Variant.Outlined"
+                                               Color="Color.Primary"
+                                               StartIcon="@Icons.Material.Filled.Add"
+                                               OnClick="AddSet"
+                                               Disabled="@isAddingSet">
+                                        @if (isAddingSet)
+                                        {
+                                            <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                                            <span class="ms-2">Добавление...</span>
+                                        }
+                                        else
+                                        {
+                                            <span>Добавить подход</span>
+                                        }
+                                    </MudButton>
+                                }
                             </div>
                         </MudCardContent>
                     </MudCard>
@@ -471,6 +510,7 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
     private int currentExerciseIndex = 0;
     private bool isLoading = true;
     private bool isAddingSet = false;
+    private bool isReadOnly = false;
     private string? errorMessage;
     private string weightLabel = "Вес (кг)";
     private string weightString = "weight";
@@ -507,6 +547,9 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
                 errorMessage = "В тренировке нет упражнений";
                 return;
             }
+
+            var currentUserId = TelegramWebAppStateService.ValidationResult?.Data?.User?.Id ?? Guid.Empty;
+            isReadOnly = workout.UserId != currentUserId;
 
             exercises = workout.WorkoutExercises.OrderBy(we => we.Order).ToList();
             

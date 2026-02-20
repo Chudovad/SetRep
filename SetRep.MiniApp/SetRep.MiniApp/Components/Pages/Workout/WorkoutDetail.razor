@@ -119,8 +119,8 @@ else if (workout != null)
             </MudCardContent>
         </MudCard>
 
-        <!-- Кнопка начала тренировки -->
-        @if (workout.WorkoutExercises != null && workout.WorkoutExercises.Any())
+        <!-- Кнопка начала тренировки (только для своей тренировки) -->
+        @if (!isReadOnly && workout.WorkoutExercises != null && workout.WorkoutExercises.Any())
         {
             var isCurrentWorkoutActive = activeWorkoutHistory != null && activeWorkoutHistory.WorkoutId == WorkoutId;
             var hasOtherActiveWorkout = activeWorkoutHistory != null && activeWorkoutHistory.WorkoutId != WorkoutId;
@@ -158,15 +158,18 @@ else if (workout != null)
             }
         }
 
-        <!-- Кнопка добавления упражнений -->
-        <MudButton Variant="Variant.Filled" 
-                   Color="Color.Primary" 
-                   FullWidth="true" 
-                   Class="mb-4 add-exercise-btn"
-                   StartIcon="@Icons.Material.Filled.Add"
-                   OnClick="OpenSelectExercisesDialog">
-            Добавить упражнение
-        </MudButton>
+        <!-- Кнопка добавления упражнений (только для своей тренировки) -->
+        @if (!isReadOnly)
+        {
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       FullWidth="true" 
+                       Class="mb-4 add-exercise-btn"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="OpenSelectExercisesDialog">
+                Добавить упражнение
+            </MudButton>
+        }
 
         <!-- Список упражнений -->
         @if (workout.WorkoutExercises != null && workout.WorkoutExercises.Any())
@@ -181,9 +184,12 @@ else if (workout != null)
                         <MudCard Elevation="2" Class="mb-3 exercise-card">
                             <MudCardContent>
                                 <div class="exercise-header">
-                                    <MudIcon Icon="@Icons.Material.Filled.Menu" 
-                                             Color="Color.Secondary" 
-                                             Class="drag-handle-icon" />
+                                    @if (!isReadOnly)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.Menu" 
+                                                 Color="Color.Secondary" 
+                                                 Class="drag-handle-icon" />
+                                    }
                                     @if (!string.IsNullOrWhiteSpace(item.WorkoutExercise.Exercise?.MainImage))
                                     {
                                         <MudAvatar Size="Size.Large" Class="exercise-image-avatar">
@@ -196,26 +202,33 @@ else if (workout != null)
                                         </MudText>
                                     </div>
                                     <div class="exercise-header-right" @onclick:stopPropagation="true">
-                                        <MudMenu Icon="@Icons.Material.Filled.MoreVert"
-                                                 Color="Color.Default"
-                                                 AnchorOrigin="Origin.BottomRight"
-                                                 TransformOrigin="Origin.TopRight"
-                                                 Variant="Variant.Text"
-                                                 Size="Size.Medium"
-                                                 Class="exercise-menu-button"
-                                                 StopPropagation="true">
-                                            <MudMenuItem OnClick="@(() => OpenEditNotesDialog(item.WorkoutExercise))" Icon="@Icons.Material.Filled.Edit">
-                                                Редактировать заметку
-                                            </MudMenuItem>
-                                            <MudDivider />
-                                            <MudMenuItem OnClick="@(() => ReplaceExerciseFromDialog(item.WorkoutExercise))" Icon="@Icons.Material.Filled.SwapHoriz">
-                                                Заменить упражнение
-                                            </MudMenuItem>
-                                            <MudDivider />
-                                            <MudMenuItem OnClick="@(() => ConfirmDeleteExercise(item.WorkoutExercise))" Icon="@Icons.Material.Filled.Delete" Color="Color.Error">
-                                                Удалить
-                                            </MudMenuItem>
-                                        </MudMenu>
+                                        @if (isReadOnly)
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Color="Color.Default" />
+                                        }
+                                        else
+                                        {
+                                            <MudMenu Icon="@Icons.Material.Filled.MoreVert"
+                                                     Color="Color.Default"
+                                                     AnchorOrigin="Origin.BottomRight"
+                                                     TransformOrigin="Origin.TopRight"
+                                                     Variant="Variant.Text"
+                                                     Size="Size.Medium"
+                                                     Class="exercise-menu-button"
+                                                     StopPropagation="true">
+                                                <MudMenuItem OnClick="@(() => OpenEditNotesDialog(item.WorkoutExercise))" Icon="@Icons.Material.Filled.Edit">
+                                                    Редактировать заметку
+                                                </MudMenuItem>
+                                                <MudDivider />
+                                                <MudMenuItem OnClick="@(() => ReplaceExerciseFromDialog(item.WorkoutExercise))" Icon="@Icons.Material.Filled.SwapHoriz">
+                                                    Заменить упражнение
+                                                </MudMenuItem>
+                                                <MudDivider />
+                                                <MudMenuItem OnClick="@(() => ConfirmDeleteExercise(item.WorkoutExercise))" Icon="@Icons.Material.Filled.Delete" Color="Color.Error">
+                                                    Удалить
+                                                </MudMenuItem>
+                                            </MudMenu>
+                                        }
                                     </div>
                                 </div>
                             </MudCardContent>
@@ -423,6 +436,7 @@ else if (workout != null)
     private bool isStartingWorkout = false;
     private bool isReordering = false;
     private bool isDeleting = false;
+    private bool isReadOnly = false;
     private string? errorMessage;
     private List<WorkoutExerciseItem> exerciseItems = new();
 
@@ -443,8 +457,8 @@ else if (workout != null)
             StateHasChanged();
         }
         
-        // Инициализируем drag and drop после рендеринга списка упражнений
-        if (exerciseItems.Any())
+        // Инициализируем drag and drop после рендеринга списка упражнений (только для своей тренировки)
+        if (!isReadOnly && exerciseItems.Any())
         {
             await InitializeDragAndDrop();
         }
@@ -469,6 +483,8 @@ else if (workout != null)
             }
             else
             {
+                var currentUserId = TelegramWebAppStateService.ValidationResult?.Data?.User?.Id ?? Guid.Empty;
+                isReadOnly = workout.UserId != currentUserId;
                 UpdateExerciseItems();
             }
         }

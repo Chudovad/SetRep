@@ -202,6 +202,45 @@ namespace SetRep.Infrastructure.Migrations
                     b.ToTable("MeasurementsHistory", (string)null);
                 });
 
+            modelBuilder.Entity("SetRep.Core.Entities.ReadyWorkoutPlan", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Equipment")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Goal")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Level")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid>("WorkoutPlanId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Equipment");
+
+                    b.HasIndex("Goal");
+
+                    b.HasIndex("Level");
+
+                    b.HasIndex("WorkoutPlanId")
+                        .IsUnique();
+
+                    b.ToTable("ReadyWorkoutPlans", (string)null);
+                });
+
             modelBuilder.Entity("SetRep.Core.Entities.Set", b =>
                 {
                     b.Property<Guid>("Id")
@@ -515,6 +554,17 @@ namespace SetRep.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SetRep.Core.Entities.ReadyWorkoutPlan", b =>
+                {
+                    b.HasOne("SetRep.Core.Entities.WorkoutPlan", "WorkoutPlan")
+                        .WithMany()
+                        .HasForeignKey("WorkoutPlanId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("WorkoutPlan");
                 });
 
             modelBuilder.Entity("SetRep.Core.Entities.Set", b =>
