@@ -79,7 +79,6 @@ public class SetsController : ControllerBase
             Weight = dto.Weight,
             DurationSeconds = dto.DurationSeconds,
             DistanceMeters = dto.DistanceMeters,
-            RestSeconds = dto.RestSeconds,
             IsCompleted = dto.IsCompleted,
             Notes = dto.Notes,
             CompletedAt = dto.CompletedAt,
@@ -110,7 +109,6 @@ public class SetsController : ControllerBase
         existing.Weight = dto.Weight;
         existing.DurationSeconds = dto.DurationSeconds;
         existing.DistanceMeters = dto.DistanceMeters;
-        existing.RestSeconds = dto.RestSeconds;
         existing.IsCompleted = dto.IsCompleted;
         existing.Notes = dto.Notes;
         existing.CompletedAt = dto.CompletedAt;

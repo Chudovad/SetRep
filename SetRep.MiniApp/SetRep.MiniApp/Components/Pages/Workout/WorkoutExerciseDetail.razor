@@ -5,6 +5,7 @@
 @using SetRep.MiniApp.Components.Dialog
 @using SetRep.Shared.DTO
 @using static SetRep.MiniApp.Client.Services.InitializationHelper
+@using SetRep.MiniApp.Components.Controls
 @rendermode InteractiveServer
 @inject IWorkoutExerciseService WorkoutExerciseService
 @inject IWorkoutService WorkoutService
@@ -195,7 +196,7 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
                 <!-- Таблица подходов -->
                 @if (sets != null && sets.Any())
                 {
-                    <MudCard Elevation="2" Class="sets-table-card">
+                    <MudCard Elevation="2" Class="sets-table-card mb-4">
                         <MudCardContent>
                             <MudText Typo="Typo.h6" Class="mb-3">Подходы</MudText>
                             <MudTable Items="@sets" Hover="true" Dense="true" Class="compact-table" Breakpoint="Breakpoint.None">
@@ -338,7 +339,7 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
                 }
                 else
                 {
-                    <MudCard Elevation="2" Class="empty-state-card">
+                    <MudCard Elevation="2" Class="empty-state-card mb-4">
                         <MudCardContent>
                             <div class="empty-state">
                                 <MudIcon Icon="@Icons.Material.Filled.FitnessCenter" Size="Size.Large" Color="Color.Secondary" Class="mb-4" />
@@ -370,6 +371,12 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
                         </MudCardContent>
                     </MudCard>
                 }
+
+                <!-- Таймер отдыха для упражнения -->
+                <RestTimerInput RestMinutes="restTimerMinutes"
+                                RestSeconds="restTimerSeconds"
+                                OnTimerSaved="SaveRestTimer"
+                                Class="mb-4" />
             </MudTabPanel>
 
             <!-- Таб 2: Инструкция -->
@@ -517,6 +524,10 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
     private string repsString = "reps";
     private int activeTabIndex = 0;
 
+    // Таймер отдыха (минуты/секунды) для текущего упражнения
+    private int restTimerMinutes = 1;
+    private int restTimerSeconds = 0;
+
     // Редактирование подхода
     private Guid? editingSetId;
     private string? editingField;
@@ -569,6 +580,14 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
             if (workoutExercise?.Exercise != null)
             {
                 weightLabel = $"Вес ({workoutExercise.Exercise.WeightUnit})";
+            }
+
+            // Инициализируем значения таймера отдыха из сущности упражнения в тренировке
+            if (workoutExercise != null)
+            {
+                var rest = workoutExercise.RestSeconds;
+                restTimerMinutes = rest / 60;
+                restTimerSeconds = rest % 60;
             }
 
             await LoadSetsForCurrentExercise();
@@ -715,7 +734,6 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
                 Weight = editingField == "weight" ? editingWeight : set.Weight,
                 DurationSeconds = set.DurationSeconds,
                 DistanceMeters = set.DistanceMeters,
-                RestSeconds = set.RestSeconds,
                 IsCompleted = set.IsCompleted,
                 Notes = set.Notes,
                 //CompletedAt = set.CompletedAt ?? DateTime.UtcNow
@@ -772,6 +790,12 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
             {
                 weightLabel = $"Вес ({workoutExercise.Exercise.WeightUnit})";
             }
+            if (workoutExercise != null)
+            {
+                var rest = workoutExercise.RestSeconds;
+                restTimerMinutes = rest / 60;
+                restTimerSeconds = rest % 60;
+            }
             await LoadSetsForCurrentExercise();
             CancelEditing();
             StateHasChanged();
@@ -788,6 +812,12 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
             {
                 weightLabel = $"Вес ({workoutExercise.Exercise.WeightUnit})";
             }
+            if (workoutExercise != null)
+            {
+                var rest = workoutExercise.RestSeconds;
+                restTimerMinutes = rest / 60;
+                restTimerSeconds = rest % 60;
+            }
             await LoadSetsForCurrentExercise();
             CancelEditing();
             StateHasChanged();
@@ -797,6 +827,36 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
     private decimal GetWeightStep()
     {
         return ExerciseStepHelper.GetWeightStep(workoutExercise?.Exercise?.MuscleGroup);
+    }
+
+    private async Task SaveRestTimer((int minutes, int seconds) timerValues)
+    {
+        if (workoutExercise == null)
+            return;
+
+        var total = timerValues.minutes * 60 + timerValues.seconds;
+
+        var updateDto = new CreateWorkoutExerciseDto
+        {
+            WorkoutId = workoutExercise.WorkoutId,
+            ExerciseId = workoutExercise.ExerciseId,
+            Order = workoutExercise.Order,
+            Notes = workoutExercise.Notes,
+            RestSeconds = total
+        };
+
+        var success = await WorkoutExerciseService.UpdateWorkoutExerciseAsync(workoutExercise.Id, updateDto);
+        if (success)
+        {
+            workoutExercise.RestSeconds = total;
+            restTimerMinutes = timerValues.minutes;
+            restTimerSeconds = timerValues.seconds;
+            Snackbar.Add("Время отдыха сохранено", Severity.Success);
+        }
+        else
+        {
+            Snackbar.Add("Ошибка при сохранении времени отдыха", Severity.Error);
+        }
     }
 
     public async ValueTask DisposeAsync()

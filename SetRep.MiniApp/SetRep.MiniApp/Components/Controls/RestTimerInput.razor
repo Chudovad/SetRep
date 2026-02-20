@@ -1,0 +1,156 @@
+@using MudBlazor
+
+<MudCard Elevation="2" Class="@($"rest-timer-input-card {Class}".Trim())">
+    <MudCardContent>
+        <div class="rest-timer-header">
+            <MudIcon Icon="@Icons.Material.Filled.Timer" Class="me-2" Color="Color.Primary" />
+            <MudText Typo="Typo.subtitle2">Таймер отдыха</MudText>
+        </div>
+
+        <div class="rest-timer-inputs mt-3">
+            <div class="time-input-group">
+                <MudNumericField @key="minutes"
+                                 T="int"
+                                 Value="minutes"
+                                 ValueChanged="@((int val) => OnMinutesChanged(val))"
+                                 Label="Мин"
+                                 Variant="Variant.Outlined"
+                                 Min="0"
+                                 Max="59"
+                                 Step="1"
+                                 HideSpinButtons="false"
+                                 Margin="Margin.Dense"
+                                 Immediate="true"
+                                 Class="time-field" />
+            </div>
+
+            <div class="time-separator">
+                <MudText Typo="Typo.h6">:</MudText>
+            </div>
+
+            <div class="time-input-group">
+                <MudNumericField @key="seconds"
+                                 T="int"
+                                 Value="seconds"
+                                 ValueChanged="@((int val) => OnSecondsChanged(val))"
+                                 Label="Сек"
+                                 Variant="Variant.Outlined"
+                                 Min="0"
+                                 Max="59"
+                                 Step="5"
+                                 HideSpinButtons="false"
+                                 Margin="Margin.Dense"
+                                 Immediate="true"
+                                 Class="time-field" />
+            </div>
+
+            <MudIconButton Icon="@Icons.Material.Filled.Check"
+                           Color="Color.Success"
+                           Size="Size.Medium"
+                           OnClick="OnSave"
+                           Title="Сохранить время отдыха"
+                           Class="save-button" />
+        </div>
+    </MudCardContent>
+</MudCard>
+
+<style>
+    .rest-timer-input-card {
+        border-radius: 8px;
+    }
+
+    .rest-timer-header {
+        display: flex;
+        align-items: center;
+        font-weight: 500;
+    }
+
+    .rest-timer-inputs {
+        display: flex;
+        align-items: flex-end;
+        gap: 8px;
+    }
+
+    .time-input-group {
+        flex: 1;
+        max-width: 80px;
+    }
+
+    .time-field {
+        text-align: center;
+    }
+
+    .time-separator {
+        display: flex;
+        align-items: center;
+        height: 40px;
+        padding: 0 4px;
+    }
+
+    .save-button {
+        align-self: center;
+        margin-left: 8px;
+    }
+</style>
+
+@code {
+    [Parameter] public int RestMinutes { get; set; } = 1;
+    [Parameter] public int RestSeconds { get; set; } = 0;
+    [Parameter] public EventCallback<(int, int)> OnTimerSaved { get; set; }
+    [Parameter] public string? Class { get; set; }
+
+    private int minutes;
+    private int seconds;
+    private int lastRestMinutes = -1;
+    private int lastRestSeconds = -1;
+    private DateTime lastSaveTime = DateTime.MinValue;
+
+    protected override void OnInitialized()
+    {
+        // Инициализируем значения при первой загрузке компонента
+        minutes = RestMinutes;
+        seconds = RestSeconds;
+        lastRestMinutes = RestMinutes;
+        lastRestSeconds = RestSeconds;
+    }
+
+    protected override void OnParametersSet()
+    {
+        // Обновляем только если произошло реальное изменение параметров
+        // и прошло достаточно времени с момента сохранения (не мерцание от обновления параметров)
+        if (RestMinutes != lastRestMinutes || RestSeconds != lastRestSeconds)
+        {
+            var timeSinceLastSave = DateTime.Now - lastSaveTime;
+
+            // Если прошло более 100ms с момента сохранения, это реальное изменение (смена упражнения)
+            // Если меньше, то это просто обновление параметров от родителя после сохранения
+            if (timeSinceLastSave.TotalMilliseconds > 100)
+            {
+                minutes = RestMinutes;
+                seconds = RestSeconds;
+                lastRestMinutes = RestMinutes;
+                lastRestSeconds = RestSeconds;
+            }
+        }
+    }
+
+    private async Task OnSave()
+    {
+        minutes = Math.Max(0, Math.Min(59, minutes));
+        seconds = Math.Max(0, Math.Min(59, seconds));
+        lastRestMinutes = minutes;
+        lastRestSeconds = seconds;
+        lastSaveTime = DateTime.Now;
+        await OnTimerSaved.InvokeAsync((minutes, seconds));
+    }
+
+    private void OnMinutesChanged(int value)
+    {
+        minutes = Math.Max(0, Math.Min(59, value));
+    }
+
+    private void OnSecondsChanged(int value)
+    {
+        seconds = Math.Max(0, Math.Min(59, value));
+    }
+}

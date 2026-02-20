@@ -41,11 +41,6 @@ public class Set
     public decimal? DistanceMeters { get; set; }
 
     /// <summary>
-    /// Отдых после подхода в секундах
-    /// </summary>
-    public int? RestSeconds { get; set; }
-
-    /// <summary>
     /// Отметка о выполнении подхода (может быть не выполнен)
     /// </summary>
     public bool IsCompleted { get; set; } = true;
