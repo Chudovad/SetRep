@@ -3,7 +3,7 @@
 
 <MudDialog>
     <TitleContent>
-        <MudText Typo="Typo.h6">Таймер отдыха</MudText>
+        <MudText Typo="Typo.h6">РўР°Р№РјРµСЂ РѕС‚РґС‹С…Р°</MudText>
     </TitleContent>
     <DialogContent>
         <div class="rest-timer-container">
@@ -20,7 +20,7 @@
                        OnClick="Skip"
                        Class="timer-skip-button mt-6">
                 <MudIcon Icon="@Icons.Material.Filled.SkipNext" Class="me-2" />
-                Пропустить
+                РџСЂРѕРїСѓСЃС‚РёС‚СЊ
             </MudButton>
         </div>
     </DialogContent>
@@ -45,19 +45,19 @@
 </MudDialog>
 
 <style>
-    /* Контейнер для кнопок +/– */
+    /* ГЉГ®Г­ГІГҐГ©Г­ГҐГ° Г¤Г«Гї ГЄГ­Г®ГЇГ®ГЄ +/вЂ“ */
 .stretch-actions {
     display: flex;
-    justify-content: space-between;  /* кнопки прижимаются к краям */
-    gap: 8px;                        /* расстояние между кнопками */
+    justify-content: space-between;  /* ГЄГ­Г®ГЇГЄГЁ ГЇГ°ГЁГ¦ГЁГ¬Г ГѕГІГ±Гї ГЄ ГЄГ°Г ГїГ¬ */
+    gap: 8px;                        /* Г°Г Г±Г±ГІГ®ГїГ­ГЁГҐ Г¬ГҐГ¦Г¤Гі ГЄГ­Г®ГЇГЄГ Г¬ГЁ */
     width: 100%;
-    padding: 0 !important;            /* убираем стандартные отступы DialogActions */
+    padding: 0 !important;            /* ГіГЎГЁГ°Г ГҐГ¬ Г±ГІГ Г­Г¤Г Г°ГІГ­Г»ГҐ Г®ГІГ±ГІГіГЇГ» DialogActions */
 }
 
-/* Убираем фиксированную ширину у кнопок и позволяем им растягиваться */
+/* Г“ГЎГЁГ°Г ГҐГ¬ ГґГЁГЄГ±ГЁГ°Г®ГўГ Г­Г­ГіГѕ ГёГЁГ°ГЁГ­Гі Гі ГЄГ­Г®ГЇГ®ГЄ ГЁ ГЇГ®Г§ГўГ®Г«ГїГҐГ¬ ГЁГ¬ Г°Г Г±ГІГїГЈГЁГўГ ГІГјГ±Гї */
 .stretch-actions .timer-action-button {
-    flex: 1 1 0;                      /* каждая кнопка занимает равную долю ширины */
-    min-width: unset !important;       /* отменяем предыдущее ограничение */
+    flex: 1 1 0;                      /* ГЄГ Г¦Г¤Г Гї ГЄГ­Г®ГЇГЄГ  Г§Г Г­ГЁГ¬Г ГҐГІ Г°Г ГўГ­ГіГѕ Г¤Г®Г«Гѕ ГёГЁГ°ГЁГ­Г» */
+    min-width: unset !important;       /* Г®ГІГ¬ГҐГ­ГїГҐГ¬ ГЇГ°ГҐГ¤Г»Г¤ГіГ№ГҐГҐ Г®ГЈГ°Г Г­ГЁГ·ГҐГ­ГЁГҐ */
 }
     .rest-timer-container {
         padding: 10px 0;
