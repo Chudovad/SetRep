@@ -4,7 +4,7 @@
     <MudCardContent>
         <div class="rest-timer-header">
             <MudIcon Icon="@Icons.Material.Filled.Timer" Class="me-2" Color="Color.Primary" />
-            <MudText Typo="Typo.subtitle2">Таймер отдыха</MudText>
+            <MudText Typo="Typo.subtitle2">РўР°Р№РјРµСЂ РѕС‚РґС‹С…Р°</MudText>
         </div>
 
         <div class="rest-timer-inputs mt-3">
@@ -13,7 +13,7 @@
                                  T="int"
                                  Value="minutes"
                                  ValueChanged="@((int val) => OnMinutesChanged(val))"
-                                 Label="Мин"
+                                 Label="РњРёРЅ"
                                  Variant="Variant.Outlined"
                                  Min="0"
                                  Max="59"
@@ -33,7 +33,7 @@
                                  T="int"
                                  Value="seconds"
                                  ValueChanged="@((int val) => OnSecondsChanged(val))"
-                                 Label="Сек"
+                                 Label="РЎРµРє"
                                  Variant="Variant.Outlined"
                                  Min="0"
                                  Max="59"
@@ -48,7 +48,7 @@
                            Color="Color.Success"
                            Size="Size.Medium"
                            OnClick="OnSave"
-                           Title="Сохранить время отдыха"
+                           Title="Г‘Г®ГµГ°Г Г­ГЁГІГј ГўГ°ГҐГ¬Гї Г®ГІГ¤Г»ГµГ "
                            Class="save-button" />
         </div>
     </MudCardContent>
@@ -107,7 +107,7 @@
 
     protected override void OnInitialized()
     {
-        // Инициализируем значения при первой загрузке компонента
+        // Г€Г­ГЁГ¶ГЁГ Г«ГЁГ§ГЁГ°ГіГҐГ¬ Г§Г­Г Г·ГҐГ­ГЁГї ГЇГ°ГЁ ГЇГҐГ°ГўГ®Г© Г§Г ГЈГ°ГіГ§ГЄГҐ ГЄГ®Г¬ГЇГ®Г­ГҐГ­ГІГ 
         minutes = RestMinutes;
         seconds = RestSeconds;
         lastRestMinutes = RestMinutes;
@@ -116,14 +116,14 @@
 
     protected override void OnParametersSet()
     {
-        // Обновляем только если произошло реальное изменение параметров
-        // и прошло достаточно времени с момента сохранения (не мерцание от обновления параметров)
+        // ГЋГЎГ­Г®ГўГ«ГїГҐГ¬ ГІГ®Г«ГјГЄГ® ГҐГ±Г«ГЁ ГЇГ°Г®ГЁГ§Г®ГёГ«Г® Г°ГҐГ Г«ГјГ­Г®ГҐ ГЁГ§Г¬ГҐГ­ГҐГ­ГЁГҐ ГЇГ Г°Г Г¬ГҐГІГ°Г®Гў
+        // ГЁ ГЇГ°Г®ГёГ«Г® Г¤Г®Г±ГІГ ГІГ®Г·Г­Г® ГўГ°ГҐГ¬ГҐГ­ГЁ Г± Г¬Г®Г¬ГҐГ­ГІГ  Г±Г®ГµГ°Г Г­ГҐГ­ГЁГї (Г­ГҐ Г¬ГҐГ°Г¶Г Г­ГЁГҐ Г®ГІ Г®ГЎГ­Г®ГўГ«ГҐГ­ГЁГї ГЇГ Г°Г Г¬ГҐГІГ°Г®Гў)
         if (RestMinutes != lastRestMinutes || RestSeconds != lastRestSeconds)
         {
             var timeSinceLastSave = DateTime.Now - lastSaveTime;
 
-            // Если прошло более 100ms с момента сохранения, это реальное изменение (смена упражнения)
-            // Если меньше, то это просто обновление параметров от родителя после сохранения
+            // Г…Г±Г«ГЁ ГЇГ°Г®ГёГ«Г® ГЎГ®Г«ГҐГҐ 100ms Г± Г¬Г®Г¬ГҐГ­ГІГ  Г±Г®ГµГ°Г Г­ГҐГ­ГЁГї, ГЅГІГ® Г°ГҐГ Г«ГјГ­Г®ГҐ ГЁГ§Г¬ГҐГ­ГҐГ­ГЁГҐ (Г±Г¬ГҐГ­Г  ГіГЇГ°Г Г¦Г­ГҐГ­ГЁГї)
+            // Г…Г±Г«ГЁ Г¬ГҐГ­ГјГёГҐ, ГІГ® ГЅГІГ® ГЇГ°Г®Г±ГІГ® Г®ГЎГ­Г®ГўГ«ГҐГ­ГЁГҐ ГЇГ Г°Г Г¬ГҐГІГ°Г®Гў Г®ГІ Г°Г®Г¤ГЁГІГҐГ«Гї ГЇГ®Г±Г«ГҐ Г±Г®ГµГ°Г Г­ГҐГ­ГЁГї
             if (timeSinceLastSave.TotalMilliseconds > 100)
             {
                 minutes = RestMinutes;
