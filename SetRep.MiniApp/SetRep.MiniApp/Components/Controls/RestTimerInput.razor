@@ -48,7 +48,7 @@
                            Color="Color.Success"
                            Size="Size.Medium"
                            OnClick="OnSave"
-                           Title="Ñîõðàíèòü âðåìÿ îòäûõà"
+                           Title="Сохранить время отдыха"
                            Class="save-button" />
         </div>
     </MudCardContent>
@@ -107,7 +107,7 @@
 
     protected override void OnInitialized()
     {
-        // Èíèöèàëèçèðóåì çíà÷åíèÿ ïðè ïåðâîé çàãðóçêå êîìïîíåíòà
+        // Инициализируем значения при первой загрузке компонента
         minutes = RestMinutes;
         seconds = RestSeconds;
         lastRestMinutes = RestMinutes;
@@ -116,14 +116,14 @@
 
     protected override void OnParametersSet()
     {
-        // Îáíîâëÿåì òîëüêî åñëè ïðîèçîøëî ðåàëüíîå èçìåíåíèå ïàðàìåòðîâ
-        // è ïðîøëî äîñòàòî÷íî âðåìåíè ñ ìîìåíòà ñîõðàíåíèÿ (íå ìåðöàíèå îò îáíîâëåíèÿ ïàðàìåòðîâ)
+        // Обновляем только если произошло реальное изменение параметров
+        // и прошло достаточно времени с момента сохранения (не мерцание от обновления параметров)
         if (RestMinutes != lastRestMinutes || RestSeconds != lastRestSeconds)
         {
             var timeSinceLastSave = DateTime.Now - lastSaveTime;
 
-            // Åñëè ïðîøëî áîëåå 100ms ñ ìîìåíòà ñîõðàíåíèÿ, ýòî ðåàëüíîå èçìåíåíèå (ñìåíà óïðàæíåíèÿ)
-            // Åñëè ìåíüøå, òî ýòî ïðîñòî îáíîâëåíèå ïàðàìåòðîâ îò ðîäèòåëÿ ïîñëå ñîõðàíåíèÿ
+            // Если прошло более 100ms с момента сохранения, это реальное изменение (смена упражнения)
+            // Если меньше, то это просто обновление параметров от родителя после сохранения
             if (timeSinceLastSave.TotalMilliseconds > 100)
             {
                 minutes = RestMinutes;
