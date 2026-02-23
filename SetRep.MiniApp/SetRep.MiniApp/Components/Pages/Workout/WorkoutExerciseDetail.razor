@@ -11,6 +11,7 @@
 @inject IWorkoutService WorkoutService
 @inject NavigationManager Navigation
 @inject ITelegramBackButtonService TelegramBackButtonService
+@inject ITelegramHapticService TelegramHapticService
 @inject ITelegramWebAppStateService TelegramWebAppStateService
 @inject IAppInitializationService AppInitializationService
 @inject ISnackbar Snackbar
@@ -582,10 +583,10 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
                 weightLabel = $"Вес ({workoutExercise.Exercise.WeightUnit})";
             }
 
-            // Инициализируем значения таймера отдыха из сущности упражнения в тренировке
+            // Инициализируем значения таймера отдыха: сохранённое или дефолт по группе мышц
             if (workoutExercise != null)
             {
-                var rest = workoutExercise.RestSeconds;
+                var rest = GetRestSecondsToDisplay();
                 restTimerMinutes = rest / 60;
                 restTimerSeconds = rest % 60;
             }
@@ -675,11 +676,13 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
             }
             else
             {
+                await TelegramHapticService.NotificationErrorAsync();
                 Snackbar.Add("Ошибка при добавлении подхода", Severity.Error);
             }
         }
         catch (Exception ex)
         {
+            await TelegramHapticService.NotificationErrorAsync();
             Snackbar.Add($"Не удалось добавить подход: {ex.Message}", Severity.Error);
         }
         finally
@@ -748,11 +751,13 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
             }
             else
             {
+                await TelegramHapticService.NotificationErrorAsync();
                 Snackbar.Add("Ошибка при обновлении подхода", Severity.Error);
             }
         }
         catch (Exception ex)
         {
+            await TelegramHapticService.NotificationErrorAsync();
             Snackbar.Add($"Ошибка: {ex.Message}", Severity.Error);
         }
     }
@@ -771,11 +776,13 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
             }
             else
             {
+                await TelegramHapticService.NotificationErrorAsync();
                 Snackbar.Add("Ошибка при удалении подхода", Severity.Error);
             }
         }
         catch (Exception ex)
         {
+            await TelegramHapticService.NotificationErrorAsync();
             Snackbar.Add($"Не удалось удалить подход: {ex.Message}", Severity.Error);
         }
     }
@@ -792,7 +799,7 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
             }
             if (workoutExercise != null)
             {
-                var rest = workoutExercise.RestSeconds;
+                var rest = GetRestSecondsToDisplay();
                 restTimerMinutes = rest / 60;
                 restTimerSeconds = rest % 60;
             }
@@ -814,7 +821,7 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
             }
             if (workoutExercise != null)
             {
-                var rest = workoutExercise.RestSeconds;
+                var rest = GetRestSecondsToDisplay();
                 restTimerMinutes = rest / 60;
                 restTimerSeconds = rest % 60;
             }
@@ -822,6 +829,20 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
             CancelEditing();
             StateHasChanged();
         }
+    }
+
+    /// <summary>
+    /// Возвращает время отдыха для отображения: сохранённое в тренировке или дефолт по группе мышц.
+    /// </summary>
+    private int GetRestSecondsToDisplay()
+    {
+        if (workoutExercise == null)
+            return RestTimerHelper.DefaultRestSeconds;
+
+        var stored = workoutExercise.RestSeconds;
+        if (stored <= 0 || stored == RestTimerHelper.DefaultRestSeconds)
+            return RestTimerHelper.GetDefaultRestSeconds(workoutExercise.Exercise?.MuscleGroup);
+        return stored;
     }
 
     private decimal GetWeightStep()
@@ -855,6 +876,7 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
         }
         else
         {
+            await TelegramHapticService.NotificationErrorAsync();
             Snackbar.Add("Ошибка при сохранении времени отдыха", Severity.Error);
         }
     }
@@ -937,11 +959,13 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
             }
             else
             {
+                await TelegramHapticService.NotificationErrorAsync();
                 Snackbar.Add("Ошибка при замене упражнения", Severity.Error);
             }
         }
         catch (Exception ex)
         {
+            await TelegramHapticService.NotificationErrorAsync();
             Snackbar.Add($"Ошибка при замене упражнения: {ex.Message}", Severity.Error);
         }
     }

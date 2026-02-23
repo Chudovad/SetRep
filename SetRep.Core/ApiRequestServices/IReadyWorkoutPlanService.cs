@@ -26,4 +26,9 @@ public interface IReadyWorkoutPlanService
     /// Добавить план в список готовых
     /// </summary>
     Task<ReadyWorkoutPlan?> AddReadyPlanAsync(CreateReadyWorkoutPlanDto dto);
+
+    /// <summary>
+    /// Удалить план из списка готовых (только из таблицы готовых планов)
+    /// </summary>
+    Task<bool> RemoveFromReadyPlansAsync(Guid workoutPlanId);
 }

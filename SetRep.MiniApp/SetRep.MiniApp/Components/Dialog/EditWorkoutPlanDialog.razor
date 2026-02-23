@@ -3,6 +3,7 @@
 @using SetRep.Shared.DTO
 
 @inject IWorkoutPlanService WorkoutPlanService
+@inject SetRep.MiniApp.Client.Services.ITelegramHapticService TelegramHapticService
 @inject ISnackbar Snackbar
 
 <MudDialog>
@@ -88,11 +89,13 @@
             }
             else
             {
+                await TelegramHapticService.NotificationErrorAsync();
                 Snackbar.Add("Ошибка при обновлении плана тренировки", Severity.Error);
             }
         }
         catch (Exception ex)
         {
+            await TelegramHapticService.NotificationErrorAsync();
             Snackbar.Add($"Ошибка при обновлении плана тренировки: {ex.Message}", Severity.Error);
         }
         finally

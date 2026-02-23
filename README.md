@@ -95,6 +95,7 @@ SetRep - это комплексное решение для отслежива�
   - `ExerciseId` (Guid) - ID упражнения
   - `Order` (int) - Порядок выполнения
   - `Notes` (string?) - Заметки к упражнению
+  - `RestSeconds` (int) - Время отдыха после подхода в секундах (по умолчанию 60)
   - Навигационные свойства: `Workout`, `Exercise`, `Sets`
 
 - **Set** - Подход
@@ -116,6 +117,16 @@ SetRep - это комплексное решение для отслежива�
   - `CreatedAt` (DateTime) - Дата создания
   - `UpdatedAt` (DateTime?) - Дата обновления
   - Навигационные свойства: `User`, `Workouts`
+
+- **ReadyWorkoutPlan** - Готовый (опубликованный) план в каталоге
+  - `Id` (Guid) - Уникальный идентификатор записи
+  - `WorkoutPlanId` (Guid) - ID плана тренировки (FK, уникальный)
+  - `Level` (ReadyPlanLevel) - Уровень подготовки
+  - `Goal` (ReadyPlanGoal) - Цель плана
+  - `Equipment` (ReadyPlanEquipment) - Оборудование
+  - `Note` (string?) - Заметка к плану
+  - `CreatedAt` (DateTime) - Дата добавления в каталог
+  - Навигационное свойство: `WorkoutPlan`
 
 - **WorkoutHistory** - История выполненных тренировок
   - `Id` (Guid) - Уникальный идентификатор
@@ -168,6 +179,10 @@ SetRep - это комплексное решение для отслежива�
   - Cardio (Кардио)
   - Other (Другое)
 
+- **ReadyPlanLevel** - Уровень подготовки готового плана: Beginner (Новичок), Intermediate (Средний), Advanced (Продвинутый)
+- **ReadyPlanGoal** - Цель готового плана: BuildMuscle (Нарастить мышцы), IncreaseStrength (Увеличить силу), LoseWeight (Сбросить вес)
+- **ReadyPlanEquipment** - Оборудование: Gym (Тренажёрный зал), Dumbbells (Гантели), None (Нет)
+
 #### Репозитории (Repositories)
 Интерфейсы репозиториев для работы с данными:
 - `IRepository<T>` - Базовый интерфейс репозитория
@@ -175,6 +190,7 @@ SetRep - это комплексное решение для отслежива�
 - `IExerciseRepository` - Работа с упражнениями
 - `IWorkoutRepository` - Работа с тренировками
 - `IWorkoutPlanRepository` - Работа с планами тренировок
+- `IReadyWorkoutPlanRepository` - Работа с готовыми планами (каталог)
 - `IWorkoutExerciseRepository` - Работа с упражнениями в тренировках
 - `ISetRepository` - Работа с подходами
 - `IMeasurementsHistoryRepository` - Работа с историей измерений
@@ -187,6 +203,7 @@ SetRep - это комплексное решение для отслежива�
 - `IExerciseService`
 - `IWorkoutService`
 - `IWorkoutPlanService`
+- `IReadyWorkoutPlanService`
 - `IWorkoutExerciseService`
 - `ISetService`
 - `IMeasurementsHistoryService`
@@ -227,6 +244,7 @@ SetRep - это комплексное решение для отслежива�
   - `WorkoutHistory` - История тренировок
   - `WorkoutHistorySets` - Подходы в истории
   - `WorkoutPlans` - Планы тренировок
+  - `ReadyWorkoutPlans` - Готовые планы (каталог)
 
 #### Конфигурации сущностей (Data/Configurations)
 Конфигурации EF Core для всех сущностей:
@@ -236,6 +254,7 @@ SetRep - это комплексное решение для отслежива�
 - `WorkoutExerciseConfiguration`
 - `SetConfiguration`
 - `WorkoutPlanConfiguration`
+- `ReadyWorkoutPlanConfiguration`
 - `WorkoutHistoryConfiguration`
 - `WorkoutHistorySetConfiguration`
 - `MeasurementsHistoryConfiguration`
@@ -247,6 +266,7 @@ SetRep - это комплексное решение для отслежива�
 - `ExerciseRepository`
 - `WorkoutRepository`
 - `WorkoutPlanRepository`
+- `ReadyWorkoutPlanRepository`
 - `WorkoutExerciseRepository`
 - `SetRepository`
 - `MeasurementsHistoryRepository`
@@ -272,6 +292,7 @@ SetRep - это комплексное решение для отслежива�
 - `UserDto` - DTO пользователя
 - `CreateWorkoutDto` - DTO для создания тренировки
 - `CreateWorkoutPlanDto` - DTO для создания плана тренировок
+- `CreateReadyWorkoutPlanDto` - DTO для добавления плана в каталог готовых (WorkoutPlanId, Level, Goal, Equipment, Note)
 - `CreateWorkoutExerciseDto` - DTO для добавления упражнения в тренировку
 - `CreateSetDto` - DTO для создания подхода
 - `CreateWorkoutHistoryDto` - DTO для создания записи истории тренировки
@@ -319,6 +340,13 @@ SetRep - это комплексное решение для отслежива�
 
 - **WorkoutPlansController** (`/api/workoutplans`)
   - CRUD операции для планов тренировок
+  - `POST /api/workoutplans/{id}/copy` - Копирование плана к текущему пользователю (план, тренировки, упражнения, подходы)
+
+- **ReadyWorkoutPlansController** (`/api/readyworkoutplans`)
+  - `GET /api/readyworkoutplans?level=&goal=&equipment=` - Список готовых планов с фильтрами
+  - `GET /api/readyworkoutplans/by-plan/{planId}` - Запись готового плана по ID плана (заметка, фильтры)
+  - `POST /api/readyworkoutplans` - Добавить план в каталог (только для разрешённых TelegramId)
+  - `DELETE /api/readyworkoutplans/by-plan/{planId}` - Удалить план из каталога готовых (только запись в таблице готовых планов; сам план тренировки не удаляется; только для разрешённых TelegramId)
 
 - **WorkoutExercisesController** (`/api/workoutexercises`)
   - Управление упражнениями в тренировках
@@ -370,6 +398,9 @@ SetRep - это комплексное решение для отслежива�
   - Настройки загрузки файлов:
     - `MaxFileSizeBytes` - Максимальный размер файла
     - `MaxUploadsPerUser` - Максимальное количество загрузок на пользователя
+
+- **ReadyWorkoutPlanOptions** (секция `ReadyWorkoutPlan`)
+  - `AllowedEditorTelegramIds` - Массив TelegramId пользователей, которым разрешено добавлять планы в каталог готовых
 
 #### Конфигурация
 - **Аутентификация:** JWT Bearer Authentication
@@ -459,8 +490,9 @@ SetRep - это комплексное решение для отслежива�
   - Регистрация сервисов для MiniApp
 
 #### Опции
-- **FileUploadOptions**
-  - Настройки загрузки файлов
+- **FileUploadOptions** - Настройки загрузки файлов
+- **ReadyWorkoutPlanOptions** (секция `ReadyWorkoutPlan` в appsettings.json)
+  - `AllowedEditorTelegramIds` - Список TelegramId пользователей, которым доступна кнопка «Добавить в готовые»
 
 #### Конфигурация
 - Настроен для хостинга Blazor WebAssembly приложения
@@ -496,11 +528,13 @@ SetRep - это комплексное решение для отслежива�
 - **ExerciseGroup.razor** - Группировка упражнений по группам мышц
 
 ##### Тренировки (Pages/Workout)
-- **Workouts.razor** - Список тренировок
+- **Workouts.razor** - Список тренировок и планов; кнопка «Готовые планы»; в меню плана — «Добавить в готовые» (для разрешённых пользователей)
+- **ReadyWorkoutPlans.razor** - Каталог готовых планов с фильтрами (уровень, цель, оборудование)
+- **WorkoutPlanView.razor** - Просмотр плана: заметка, фильтры, кнопка «Сохранить план» (копирование к себе), список тренировок; для пользователей из `AllowedEditorTelegramIds` — кнопка «Удалить из готовых планов» (удаление только из каталога)
 - **AddWorkout.razor** - Добавление тренировки
-- **WorkoutDetail.razor** - Детали тренировки
+- **WorkoutDetail.razor** - Детали тренировки; для чужой тренировки — только просмотр (без кнопок управления)
 - **ActiveWorkout.razor** - Активная тренировка
-- **WorkoutExerciseDetail.razor** - Детали упражнения в тренировке
+- **WorkoutExerciseDetail.razor** - Детали упражнения в тренировке; для чужой тренировки — только просмотр (без замены, добавления/удаления подходов)
 - **WorkoutHistoryPage.razor** - История тренировок
 - **WorkoutHistoryDetail.razor** - Детали истории тренировки
 - **AddWorkoutPlan.razor** - Добавление плана тренировок
@@ -521,6 +555,7 @@ SetRep - это комплексное решение для отслежива�
 - **SelectWorkoutDialog.razor** - Выбор тренировки
 - **SelectWorkoutPlanDialog.razor** - Выбор плана тренировок
 - **AddWorkoutsToPlanDialog.razor** - Добавление тренировок в план
+- **AddToReadyPlansDialog.razor** - Добавление плана в каталог готовых (уровень, цель, оборудование, заметка)
 - **ReplaceExerciseDialog.razor** - Замена упражнения
 - **ConfirmDialog.razor** - Диалог подтверждения
 
@@ -536,7 +571,8 @@ SetRep - это комплексное решение для отслежива�
 - **IUserService / UserService** - Работа с пользователями
 - **IExerciseService / ExerciseService** - Работа с упражнениями
 - **IWorkoutService / WorkoutService** - Работа с тренировками
-- **IWorkoutPlanService / WorkoutPlanService** - Работа с планами тренировок
+- **IWorkoutPlanService / WorkoutPlanService** - Работа с планами тренировок, копирование плана к пользователю
+- **IReadyWorkoutPlanService / ReadyWorkoutPlanService** - Работа с каталогом готовых планов (список, получение по planId, добавление, удаление из каталога)
 - **IWorkoutExerciseService / WorkoutExerciseService** - Работа с упражнениями в тренировках
 - **ISetService / SetService** - Работа с подходами
 - **IMeasurementsHistoryService / MeasurementsHistoryService** - Работа с измерениями
@@ -580,6 +616,25 @@ SetRep - это комплексное решение для отслежива�
 
 ---
 
+## Готовые планы тренировок
+
+Каталог готовых планов позволяет публиковать планы в общий список и просматривать их с фильтрацией. Пользователи могут сохранять понравившийся план к себе (копия плана, тренировок и подходов).
+
+### Сценарии использования
+
+1. **Просмотр каталога** — со страницы «Тренировки» кнопка «Готовые планы» ведёт на `/workouts/ready`. Доступны фильтры: уровень (новичок / средний / продвинутый), цель (нарастить мышцы / увеличить силу / сбросить вес), оборудование (тренажёрный зал / гантели / нет).
+2. **Просмотр плана** — по клику открывается страница плана с названием, заметкой (если есть), бейджами фильтров и кнопкой «Сохранить план». Список тренировок плана — ссылки на просмотр тренировки (режим только чтение для чужой тренировки). У разрешённых пользователей на странице просмотра готового плана доступна кнопка «Удалить из готовых планов» (удаляется только запись в каталоге, сам план не удаляется).
+3. **Сохранить план** — копирование плана к текущему пользователю: создаётся новый план, копии всех тренировок и подходов. После сохранения выполняется переход на страницу «Тренировки».
+4. **Добавление в каталог** — в меню своего плана на странице «Тренировки» у разрешённых пользователей есть пункт «Добавить в готовые». Открывается диалог: уровень, цель, оборудование, заметка. Один план может быть в каталоге только один раз.
+5. **Удаление из каталога** — на странице просмотра плана (`WorkoutPlanView`) у пользователей из `AllowedEditorTelegramIds` отображается кнопка «Удалить из готовых планов». Удаляется только запись в таблице готовых планов; сам план тренировки и его тренировки не удаляются.
+
+### Ограничения доступа
+
+- Добавлять и удалять планы в каталоге готовых могут только пользователи из списка `AllowedEditorTelegramIds` (API: `ReadyWorkoutPlan`, MiniApp: `ReadyWorkoutPlanOptions` в appsettings.json).
+- При просмотре чужой тренировки (WorkoutDetail) и чужого упражнения (WorkoutExerciseDetail) доступен только просмотр: скрыты кнопки «Начать тренировку», «Добавить упражнение», меню упражнения заменено на стрелку перехода, в деталях упражнения недоступны замена упражнения и добавление/удаление подходов.
+
+---
+
 ## База данных
 
 ### PostgreSQL
@@ -598,6 +653,7 @@ SetRep - это комплексное решение для отслежива�
 - `WorkoutExercises` - Связь тренировок и упражнений
 - `Sets` - Подходы
 - `WorkoutPlans` - Планы тренировок
+- `ReadyWorkoutPlans` - Готовые планы (каталог: ссылка на план, уровень, цель, оборудование, заметка)
 - `WorkoutHistory` - История тренировок
 - `WorkoutHistorySets` - Подходы в истории
 - `MeasurementsHistory` - История измерений
@@ -922,4 +978,4 @@ SetRep/
 
 ---
 
-**Последнее обновление:** 2026-02-04
+**Последнее обновление:** 2026-02-23

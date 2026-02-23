@@ -1,6 +1,8 @@
 @using MudBlazor
 @using System.Timers
 
+@inject ITelegramHapticService TelegramHapticService
+
 <MudDialog>
     <TitleContent>
         <MudText Typo="Typo.h6">Таймер отдыха</MudText>
@@ -45,19 +47,19 @@
 </MudDialog>
 
 <style>
-    /* Êîíòåéíåð äëÿ êíîïîê +/– */
+    /* Контейнер для кнопок +/– */
 .stretch-actions {
     display: flex;
-    justify-content: space-between;  /* êíîïêè ïðèæèìàþòñÿ ê êðàÿì */
-    gap: 8px;                        /* ðàññòîÿíèå ìåæäó êíîïêàìè */
+    justify-content: space-between;  /* кнопки прижимаются к краям */
+    gap: 8px;                        /* расстояние между кнопками */
     width: 100%;
-    padding: 0 !important;            /* óáèðàåì ñòàíäàðòíûå îòñòóïû DialogActions */
+    padding: 0 !important;            /* убираем стандартные отступы DialogActions */
 }
 
-/* Óáèðàåì ôèêñèðîâàííóþ øèðèíó ó êíîïîê è ïîçâîëÿåì èì ðàñòÿãèâàòüñÿ */
+/* Убираем фиксированную ширину у кнопок и позволяем им растягиваться */
 .stretch-actions .timer-action-button {
-    flex: 1 1 0;                      /* êàæäàÿ êíîïêà çàíèìàåò ðàâíóþ äîëþ øèðèíû */
-    min-width: unset !important;       /* îòìåíÿåì ïðåäûäóùåå îãðàíè÷åíèå */
+    flex: 1 1 0;                      /* каждая кнопка занимает равную долю ширины */
+    min-width: unset !important;       /* отменяем предыдущее ограничение */
 }
     .rest-timer-container {
         padding: 10px 0;
@@ -135,20 +137,23 @@
         }
     }
 
-    private void IncreaseTime()
+    private async void IncreaseTime()
     {
+        await TelegramHapticService.ImpactMediumAsync();
         remainingSeconds += 15;
         StateHasChanged();
     }
 
-    private void DecreaseTime()
+    private async void DecreaseTime()
     {
+        await TelegramHapticService.ImpactMediumAsync();
         remainingSeconds = Math.Max(0, remainingSeconds - 15);
         StateHasChanged();
     }
 
-    private void Skip()
+    private async void Skip()
     {
+        await TelegramHapticService.ImpactSoftAsync();
         StopTimer();
         MudDialog?.Close(DialogResult.Ok(true));
     }

@@ -138,3 +138,33 @@ window.navigationHelper = {
         }
     }
 };
+
+// Тактильная отдача (вибрация) в Telegram WebApp
+// Impact: heavy, light, medium, rigid, soft
+// Notification: error, success, warning
+// Selection: selectionChanged
+window.telegramHapticHelper = {
+    isReady: function () {
+        return typeof window.Telegram !== 'undefined'
+            && window.Telegram.WebApp
+            && window.Telegram.WebApp.HapticFeedback;
+    },
+
+    impactOccurred: function (style) {
+        if (this.isReady() && typeof window.Telegram.WebApp.HapticFeedback.impactOccurred === 'function') {
+            window.Telegram.WebApp.HapticFeedback.impactOccurred(style || 'medium');
+        }
+    },
+
+    notificationOccurred: function (type) {
+        if (this.isReady() && typeof window.Telegram.WebApp.HapticFeedback.notificationOccurred === 'function') {
+            window.Telegram.WebApp.HapticFeedback.notificationOccurred(type || 'success');
+        }
+    },
+
+    selectionChanged: function () {
+        if (this.isReady() && typeof window.Telegram.WebApp.HapticFeedback.selectionChanged === 'function') {
+            window.Telegram.WebApp.HapticFeedback.selectionChanged();
+        }
+    }
+};

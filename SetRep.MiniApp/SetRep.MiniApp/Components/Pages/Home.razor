@@ -13,6 +13,7 @@
 @inject IMeasurementsHistoryService MeasurementsHistoryService
 @inject ITelegramWebAppStateService TelegramWebAppStateService
 @inject ITelegramBackButtonService TelegramBackButtonService
+@inject ITelegramHapticService TelegramHapticService
 @inject IAppInitializationService AppInitializationService
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
@@ -256,7 +257,7 @@
     private async Task LoadWorkoutData()
     {
         isLoadingWorkout = true;
-        
+
         try
         {
             Guid userId = Guid.Empty;
@@ -354,6 +355,7 @@
 
             if (userId == Guid.Empty)
             {
+                await TelegramHapticService.NotificationErrorAsync();
                 Snackbar.Add("Не удалось определить пользователя", Severity.Error);
                 isStartingWorkout = false;
                 StateHasChanged();
@@ -361,13 +363,14 @@
             }
 
             var workoutHistory = await WorkoutHistoryService.StartWorkoutAsync(selectedWorkoutId.Value, userId);
-            
+
             if (workoutHistory != null)
             {
                 Navigation.NavigateTo($"/workouts/{workoutHistory.WorkoutId}/active/{workoutHistory.Id}");
             }
             else
             {
+                await TelegramHapticService.NotificationErrorAsync();
                 Snackbar.Add("Не удалось начать тренировку. Попробуйте еще раз.", Severity.Error);
                 isStartingWorkout = false;
                 StateHasChanged();
@@ -375,6 +378,7 @@
         }
         catch (Exception ex)
         {
+            await TelegramHapticService.NotificationErrorAsync();
             Snackbar.Add($"Ошибка при начале тренировки: {ex.Message}", Severity.Error);
             isStartingWorkout = false;
             StateHasChanged();
@@ -427,7 +431,7 @@
         try
         {
             var success = await WorkoutHistoryService.EndWorkoutAsync(activeWorkoutHistory.Id);
-            
+
             if (success)
             {
                 activeWorkoutHistory = null;
@@ -435,11 +439,13 @@
             }
             else
             {
+                await TelegramHapticService.NotificationErrorAsync();
                 Snackbar.Add("Не удалось завершить тренировку. Попробуйте еще раз.", Severity.Error);
             }
         }
         catch (Exception ex)
         {
+            await TelegramHapticService.NotificationErrorAsync();
             Snackbar.Add($"Ошибка при завершении тренировки: {ex.Message}", Severity.Error);
         }
         finally
@@ -484,6 +490,7 @@
 
         if (userId == Guid.Empty)
         {
+            await TelegramHapticService.NotificationErrorAsync();
             Snackbar.Add("Не удалось определить пользователя", Severity.Error);
             return;
         }
@@ -510,15 +517,18 @@
 
             if (created != null)
             {
+                await TelegramHapticService.NotificationSuccessAsync();
                 Snackbar.Add("Текущий вес успешно записан", Severity.Success);
             }
             else
             {
+                await TelegramHapticService.NotificationErrorAsync();
                 Snackbar.Add("Не удалось записать вес. Попробуйте еще раз.", Severity.Error);
             }
         }
         catch (Exception ex)
         {
+            await TelegramHapticService.NotificationErrorAsync();
             Snackbar.Add($"Ошибка при записи веса: {ex.Message}", Severity.Error);
         }
         finally

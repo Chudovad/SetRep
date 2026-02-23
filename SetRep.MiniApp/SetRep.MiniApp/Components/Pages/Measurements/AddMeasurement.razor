@@ -13,6 +13,7 @@
 @inject IFileUploadService FileUploadService
 @inject ITelegramWebAppStateService TelegramWebAppStateService
 @inject ITelegramBackButtonService TelegramBackButtonService
+@inject ITelegramHapticService TelegramHapticService
 @inject IAppInitializationService AppInitializationService
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
@@ -388,6 +389,7 @@
         if (file.Size > maxFileSize)
         {
             var maxSizeMB = maxFileSize / 1024.0 / 1024.0;
+            await TelegramHapticService.NotificationErrorAsync();
             Snackbar.Add($"Размер файла превышает {maxSizeMB:F1} МБ", Severity.Error);
             return;
         }
@@ -404,11 +406,13 @@
             }
             else
             {
+                await TelegramHapticService.NotificationErrorAsync();
                 Snackbar.Add("Ошибка при загрузке изображения", Severity.Error);
             }
         }
         catch (Exception ex)
         {
+            await TelegramHapticService.NotificationErrorAsync();
             Snackbar.Add($"Ошибка при загрузке изображения: {ex.Message}", Severity.Error);
         }
         finally

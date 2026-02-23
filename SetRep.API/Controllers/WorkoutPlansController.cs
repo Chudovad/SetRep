@@ -188,7 +188,8 @@ public class WorkoutPlansController : ControllerBase
                         ExerciseId = srcWe.ExerciseId,
                         Order = srcWe.Order,
                         Notes = srcWe.Notes,
-                        CreatedAt = DateTime.UtcNow
+                        CreatedAt = DateTime.UtcNow,
+                        RestSeconds = srcWe.RestSeconds,
                     };
                     await _workoutExerciseRepository.AddAsync(newWe);
 
