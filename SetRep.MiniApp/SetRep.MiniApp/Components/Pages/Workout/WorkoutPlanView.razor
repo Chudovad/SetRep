@@ -3,6 +3,9 @@
 @using SetRep.Core.Entities
 @using SetRep.Core.Extensions
 @using SetRep.MiniApp.Client.Services
+@using SetRep.MiniApp.Components.Dialog
+@using SetRep.MiniApp.Options
+@using Microsoft.Extensions.Options
 @using static SetRep.MiniApp.Client.Services.InitializationHelper
 @rendermode InteractiveServer
 @inject IWorkoutPlanService WorkoutPlanService
@@ -12,6 +15,8 @@
 @inject IAppInitializationService AppInitializationService
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject IOptions<ReadyWorkoutPlanOptions> ReadyWorkoutPlanOptions
 
 <PageTitle>SetRep - @(plan?.Name ?? "План")</PageTitle>
 
@@ -39,8 +44,23 @@
     }
     else if (plan != null)
     {
-        <MudText Typo="Typo.h4" Class="mb-4">@plan.Name</MudText>
-
+        <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+            <MudText Typo="Typo.h4">@plan.Name</MudText>
+            @if (CanRemoveFromReadyPlans())
+            {
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Error"
+                           Size="Size.Large"
+                           StartIcon="@Icons.Material.Filled.DeleteOutline"
+                           Disabled="@isRemovingFromReady"
+                           OnClick="RemoveFromReadyPlansAsync">
+                    @if (isRemovingFromReady)
+                    {
+                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                    }
+                </MudButton>
+            }
+        </MudStack>
         @if (readyPlan != null)
         {
             <MudCard Elevation="2" Class="mb-4 ready-plan-info-card">
@@ -113,7 +133,16 @@
     private ReadyWorkoutPlan? readyPlan;
     private bool isLoading = true;
     private bool isSaving;
+    private bool isRemovingFromReady;
     private string? errorMessage;
+
+    private bool CanRemoveFromReadyPlans()
+    {
+        var telegramId = TelegramWebAppStateService.ValidationResult?.Data?.User?.TelegramId;
+        if (!telegramId.HasValue) return false;
+        var ids = ReadyWorkoutPlanOptions?.Value?.AllowedEditorTelegramIds;
+        return ids != null && ids.Contains(telegramId.Value);
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -179,6 +208,47 @@
         finally
         {
             isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RemoveFromReadyPlansAsync()
+    {
+        if (readyPlan == null || isRemovingFromReady) return;
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { nameof(ConfirmDialog.Title), "Удалить из готовых планов" },
+            { nameof(ConfirmDialog.ContentText), "План будет удалён только из списка готовых планов. Сам план тренировки не удаляется. Продолжить?" },
+            { nameof(ConfirmDialog.ButtonText), "Удалить" },
+            { nameof(ConfirmDialog.Color), Color.Error }
+        };
+        var options = new DialogOptions { CloseOnEscapeKey = true };
+        var dialogReference = await DialogService.ShowAsync<ConfirmDialog>("Подтверждение", parameters, options);
+        var result = await dialogReference.Result;
+        if (result?.Canceled != false) return;
+
+        isRemovingFromReady = true;
+        StateHasChanged();
+        try
+        {
+            var removed = await ReadyWorkoutPlanService.RemoveFromReadyPlansAsync(PlanId);
+            if (removed)
+            {
+                Navigation.NavigateTo("/workouts/ready");
+                readyPlan = null;
+            }
+            else
+            {
+                Snackbar.Add("Не удалось удалить план из готовых", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Ошибка: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isRemovingFromReady = false;
             StateHasChanged();
         }
     }

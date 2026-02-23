@@ -87,4 +87,19 @@ public class ReadyWorkoutPlanService : IReadyWorkoutPlanService
             return null;
         }
     }
+
+    public async Task<bool> RemoveFromReadyPlansAsync(Guid workoutPlanId)
+    {
+        try
+        {
+            var request = new HttpRequestMessage(HttpMethod.Delete, $"api/readyworkoutplans/by-plan/{workoutPlanId}");
+            request.AddBearerToken(_telegramWebAppStateService);
+            var response = await _httpClient.SendAsync(request);
+            return response.IsSuccessStatusCode;
+        }
+        catch
+        {
+            return false;
+        }
+    }
 }

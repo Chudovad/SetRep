@@ -93,4 +93,26 @@ public class ReadyWorkoutPlansController : ControllerBase
         var withPlan = await _repository.GetByWorkoutPlanIdAsync(dto.WorkoutPlanId);
         return CreatedAtAction(nameof(GetByPlanId), new { planId = dto.WorkoutPlanId }, withPlan);
     }
+
+    /// <summary>
+    /// Удалить план из списка готовых.
+    /// Доступно только пользователям из AllowedEditorTelegramIds.
+    /// </summary>
+    [HttpDelete("by-plan/{planId:guid}")]
+    public async Task<IActionResult> DeleteByPlanId(Guid planId)
+    {
+        var telegramId = User.GetTelegramId();
+        if (telegramId == null || !_options.AllowedEditorTelegramIds.Contains(telegramId.Value))
+        {
+            return Forbid();
+        }
+
+        var ready = await _repository.GetByWorkoutPlanIdAsync(planId);
+        if (ready == null)
+            return NotFound();
+
+        await _repository.DeleteAsync(ready);
+        await _repository.SaveChangesAsync();
+        return NoContent();
+    }
 }
