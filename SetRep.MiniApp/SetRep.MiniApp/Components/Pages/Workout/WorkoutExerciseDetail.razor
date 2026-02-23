@@ -582,10 +582,10 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
                 weightLabel = $"Вес ({workoutExercise.Exercise.WeightUnit})";
             }
 
-            // Инициализируем значения таймера отдыха из сущности упражнения в тренировке
+            // Инициализируем значения таймера отдыха: сохранённое или дефолт по группе мышц
             if (workoutExercise != null)
             {
-                var rest = workoutExercise.RestSeconds;
+                var rest = GetRestSecondsToDisplay();
                 restTimerMinutes = rest / 60;
                 restTimerSeconds = rest % 60;
             }
@@ -792,7 +792,7 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
             }
             if (workoutExercise != null)
             {
-                var rest = workoutExercise.RestSeconds;
+                var rest = GetRestSecondsToDisplay();
                 restTimerMinutes = rest / 60;
                 restTimerSeconds = rest % 60;
             }
@@ -814,7 +814,7 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
             }
             if (workoutExercise != null)
             {
-                var rest = workoutExercise.RestSeconds;
+                var rest = GetRestSecondsToDisplay();
                 restTimerMinutes = rest / 60;
                 restTimerSeconds = rest % 60;
             }
@@ -822,6 +822,20 @@ else if (workoutExercise != null && workoutExercise.Exercise != null)
             CancelEditing();
             StateHasChanged();
         }
+    }
+
+    /// <summary>
+    /// Возвращает время отдыха для отображения: сохранённое в тренировке или дефолт по группе мышц.
+    /// </summary>
+    private int GetRestSecondsToDisplay()
+    {
+        if (workoutExercise == null)
+            return RestTimerHelper.DefaultRestSeconds;
+
+        var stored = workoutExercise.RestSeconds;
+        if (stored <= 0 || stored == RestTimerHelper.DefaultRestSeconds)
+            return RestTimerHelper.GetDefaultRestSeconds(workoutExercise.Exercise?.MuscleGroup);
+        return stored;
     }
 
     private decimal GetWeightStep()
