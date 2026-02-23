@@ -136,7 +136,7 @@ else if (workout != null && currentExercise != null)
                     <MudIconButton Icon="@Icons.Material.Filled.ArrowForward"
                                    Color="Color.Primary"
                                    OnClick="NextExercise"
-                                   Disabled="currentExerciseIndex >= exercises.Count - 1" />
+                                   Disabled="currentExerciseIndex >= exercises.Count - 1" />  
                 </div>
             </MudCardContent>
         </MudCard>
@@ -859,9 +859,8 @@ else if (workout != null && currentExercise != null)
                 DurationSeconds = set.DurationSeconds,
                 DistanceMeters = set.DistanceMeters,
                 RestSeconds = set.RestSeconds,
-                IsCompleted = true,
                 Notes = set.Notes,
-                CompletedAt = set.CompletedAt
+                IsCompleted = false,
             };
 
             var success = await WorkoutHistorySetService.UpdateSetAsync(setId, updateDto);
@@ -869,13 +868,6 @@ else if (workout != null && currentExercise != null)
             {
                 await LoadSetsForCurrentExercise();
                 CancelEditing();
-
-                // Открываем таймер отдыха после сохранения подхода
-                int totalSeconds = (restTimerMinutes * 60) + restTimerSeconds;
-                if (totalSeconds > 0)
-                {
-                    await OpenRestTimerDialog(totalSeconds);
-                }
             }
             else
             {
