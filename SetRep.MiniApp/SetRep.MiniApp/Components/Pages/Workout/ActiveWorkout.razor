@@ -16,6 +16,7 @@
 @inject IWorkoutExerciseService WorkoutExerciseService
 @inject NavigationManager Navigation
 @inject ITelegramBackButtonService TelegramBackButtonService
+@inject ITelegramHapticService TelegramHapticService
 @inject IAppInitializationService AppInitializationService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
@@ -607,10 +608,12 @@ else if (workout != null && currentExercise != null)
             currentExercise.RestSeconds = total;
             restTimerMinutes = timerValues.minutes;
             restTimerSeconds = timerValues.seconds;
+            await TelegramHapticService.NotificationSuccessAsync();
             Snackbar.Add("Время отдыха сохранено", Severity.Success);
         }
         else
         {
+            await TelegramHapticService.NotificationErrorAsync();
             Snackbar.Add("Ошибка при сохранении времени отдыха", Severity.Error);
         }
     }
@@ -798,11 +801,13 @@ else if (workout != null && currentExercise != null)
             }
             else
             {
+                await TelegramHapticService.NotificationErrorAsync();
                 Snackbar.Add("Ошибка при добавлении подхода", Severity.Error);
             }
         }
         catch (Exception ex)
         {
+            await TelegramHapticService.NotificationErrorAsync();
             Snackbar.Add($"Ошибка: {ex.Message}", Severity.Error);
         }
         finally
@@ -871,11 +876,13 @@ else if (workout != null && currentExercise != null)
             }
             else
             {
+                await TelegramHapticService.NotificationErrorAsync();
                 Snackbar.Add("Ошибка при обновлении подхода", Severity.Error);
             }
         }
         catch (Exception ex)
         {
+            await TelegramHapticService.NotificationErrorAsync();
             Snackbar.Add($"Ошибка: {ex.Message}", Severity.Error);
         }
     }
@@ -892,6 +899,8 @@ else if (workout != null && currentExercise != null)
 
                 if (isCompleted)
                 {
+                    await TelegramHapticService.NotificationSuccessAsync();
+
                     int totalSeconds = (restTimerMinutes * 60) + restTimerSeconds;
                     if (totalSeconds > 0)
                     {
@@ -902,11 +911,13 @@ else if (workout != null && currentExercise != null)
             else
             {
                 Snackbar.Add("Ошибка при обновлении статуса подхода", Severity.Error);
+                await TelegramHapticService.NotificationErrorAsync();
             }
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Ошибка: {ex.Message}", Severity.Error);
+            await TelegramHapticService.NotificationErrorAsync();
         }
     }
 
@@ -923,11 +934,13 @@ else if (workout != null && currentExercise != null)
             else
             {
                 Snackbar.Add("Ошибка при удалении подхода", Severity.Error);
+                await TelegramHapticService.NotificationErrorAsync();
             }
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Ошибка: {ex.Message}", Severity.Error);
+            await TelegramHapticService.NotificationErrorAsync();
         }
     }
 
@@ -972,11 +985,13 @@ else if (workout != null && currentExercise != null)
             else
             {
                 Snackbar.Add("Ошибка при завершении тренировки", Severity.Error);
+                await TelegramHapticService.NotificationErrorAsync();
             }
         }
         catch (Exception ex)
         {
             Snackbar.Add($"Ошибка: {ex.Message}", Severity.Error);
+            await TelegramHapticService.NotificationErrorAsync();
         }
         finally
         {
@@ -1117,6 +1132,7 @@ else if (workout != null && currentExercise != null)
         }
         catch (Exception ex)
         {
+            await TelegramHapticService.NotificationErrorAsync();
             Snackbar.Add($"Ошибка при замене упражнения: {ex.Message}", Severity.Error);
         }
     }

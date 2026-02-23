@@ -89,6 +89,7 @@ namespace SetRep.MiniApp.Components.Dialog
             if (file.Size > maxFileSize)
             {
                 var maxSizeMB = maxFileSize / 1024.0 / 1024.0;
+                await TelegramHapticService.NotificationErrorAsync();
                 Snackbar.Add($"Размер файла превышает {maxSizeMB:F1} МБ", Severity.Error);
                 return;
             }
@@ -112,11 +113,13 @@ namespace SetRep.MiniApp.Components.Dialog
                 }
                 else
                 {
+                    await TelegramHapticService.NotificationErrorAsync();
                     Snackbar.Add("Ошибка при загрузке изображения", Severity.Error);
                 }
             }
             catch (Exception ex)
             {
+                await TelegramHapticService.NotificationErrorAsync();
                 Snackbar.Add($"Ошибка при загрузке изображения: {ex.Message}", Severity.Error);
             }
         }
@@ -219,6 +222,7 @@ namespace SetRep.MiniApp.Components.Dialog
                 catch (Exception ex)
                 {
                     Logger?.LogError(ex, "Ошибка при удалении изображения из облака: {Url}", imageUrlToDelete);
+                    await TelegramHapticService.NotificationErrorAsync();
                     Snackbar.Add("Ошибка при удалении изображения из облака", Severity.Error);
                 }
             }

@@ -5,6 +5,7 @@
 @using SetRep.Shared.DTO
 
 @inject IReadyWorkoutPlanService ReadyWorkoutPlanService
+@inject SetRep.MiniApp.Client.Services.ITelegramHapticService TelegramHapticService
 @inject ISnackbar Snackbar
 
 <MudDialog>
@@ -86,11 +87,13 @@
             }
             else
             {
+                await TelegramHapticService.NotificationErrorAsync();
                 Snackbar.Add("Не удалось добавить план. Возможно, он уже в списке готовых.", Severity.Error);
             }
         }
         catch (Exception ex)
         {
+            await TelegramHapticService.NotificationErrorAsync();
             Snackbar.Add($"Ошибка: {ex.Message}", Severity.Error);
         }
         finally

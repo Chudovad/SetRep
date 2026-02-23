@@ -9,6 +9,7 @@
 @inject IMeasurementsHistoryService MeasurementsHistoryService
 @inject NavigationManager Navigation
 @inject ITelegramBackButtonService TelegramBackButtonService
+@inject ITelegramHapticService TelegramHapticService
 @inject IAppInitializationService AppInitializationService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
@@ -459,6 +460,7 @@ else if (measurement != null)
             }
             else
             {
+                await TelegramHapticService.NotificationErrorAsync();
                 Snackbar.Add("Ошибка при удалении записи измерений", Severity.Error);
                 isDeleting = false;
                 StateHasChanged();
@@ -466,6 +468,7 @@ else if (measurement != null)
         }
         catch (Exception ex)
         {
+            await TelegramHapticService.NotificationErrorAsync();
             Snackbar.Add($"Ошибка при удалении записи измерений: {ex.Message}", Severity.Error);
             isDeleting = false;
             StateHasChanged();

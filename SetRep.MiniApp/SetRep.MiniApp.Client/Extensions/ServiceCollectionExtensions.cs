@@ -27,6 +27,7 @@ public static class ServiceCollectionExtensions
         // Регистрация сервисов для работы с Telegram WebApp
         services.AddTransient<ITelegramWebAppService, TelegramWebAppService>();
         services.AddScoped<ITelegramBackButtonService, TelegramBackButtonService>();
+        services.AddScoped<ITelegramHapticService, TelegramHapticService>();
         
         // Регистрация бизнес-сервисов
         services.AddScoped<IActiveWorkoutService, ActiveWorkoutService>();

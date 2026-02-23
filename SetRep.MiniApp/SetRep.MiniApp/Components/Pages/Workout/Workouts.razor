@@ -16,6 +16,7 @@
 @inject IWorkoutHistoryService WorkoutHistoryService
 @inject ITelegramWebAppStateService TelegramWebAppStateService
 @inject ITelegramBackButtonService TelegramBackButtonService
+@inject ITelegramHapticService TelegramHapticService
 @inject IAppInitializationService AppInitializationService
 @inject NavigationManager Navigation
 @inject IDialogService DialogService
@@ -507,11 +508,13 @@
             }
             else
             {
+                await TelegramHapticService.NotificationErrorAsync();
                 Snackbar.Add($"Не удалось добавить тренировку \"{workout.Name}\" в план", Severity.Error);
             }
         }
         catch (Exception ex)
         {
+            await TelegramHapticService.NotificationErrorAsync();
             Snackbar.Add($"Ошибка при добавлении тренировки в план: {ex.Message}", Severity.Error);
         }
     }
@@ -570,6 +573,7 @@
         }
         catch (Exception ex)
         {
+            await TelegramHapticService.NotificationErrorAsync();
             Snackbar.Add($"Ошибка при добавлении тренировок в план: {ex.Message}", Severity.Error);
         }
     }
@@ -663,11 +667,13 @@
             }
             else
             {
+                await TelegramHapticService.NotificationErrorAsync();
                 Snackbar.Add("Ошибка при удалении плана тренировки", Severity.Error);
             }
         }
         catch (Exception ex)
         {
+            await TelegramHapticService.NotificationErrorAsync();
             Snackbar.Add($"Ошибка при удалении плана тренировки: {ex.Message}", Severity.Error);
         }
     }
@@ -726,6 +732,7 @@
                 var endSuccess = await WorkoutHistoryService.EndWorkoutAsync(activeWorkoutHistory.Id);
                 if (!endSuccess)
                 {
+                    await TelegramHapticService.NotificationErrorAsync();
                     Snackbar.Add("Не удалось завершить активную тренировку. Удаление отменено.", Severity.Error);
                     return;
                 }
@@ -740,11 +747,13 @@
             }
             else
             {
+                await TelegramHapticService.NotificationErrorAsync();
                 Snackbar.Add("Ошибка при удалении тренировки", Severity.Error);
             }
         }
         catch (Exception ex)
         {
+            await TelegramHapticService.NotificationErrorAsync();
             Snackbar.Add($"Ошибка при удалении тренировки: {ex.Message}", Severity.Error);
         }
         finally
@@ -769,6 +778,7 @@
             var userId = TelegramWebAppStateService.ValidationResult?.Data?.User?.Id;
             if (userId == null || userId == Guid.Empty)
             {
+                await TelegramHapticService.NotificationErrorAsync();
                 Snackbar.Add("Не удалось определить пользователя", Severity.Error);
                 return;
             }
@@ -776,6 +786,7 @@
             var sourceWorkout = await WorkoutService.GetWorkoutDetailsAsync(workout.Id);
             if (sourceWorkout == null)
             {
+                await TelegramHapticService.NotificationErrorAsync();
                 Snackbar.Add("Не удалось загрузить информацию о тренировке", Severity.Error);
                 return;
             }
@@ -790,6 +801,7 @@
             var newWorkout = await WorkoutService.CreateWorkoutAsync(newWorkoutDto);
             if (newWorkout == null)
             {
+                await TelegramHapticService.NotificationErrorAsync();
                 Snackbar.Add("Не удалось создать копию тренировки", Severity.Error);
                 return;
             }
@@ -850,6 +862,7 @@
         }
         catch (Exception ex)
         {
+            await TelegramHapticService.NotificationErrorAsync();
             Snackbar.Add($"Ошибка при дублировании тренировки: {ex.Message}", Severity.Error);
         }
         finally

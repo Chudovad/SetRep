@@ -16,6 +16,7 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @inject ITelegramBackButtonService TelegramBackButtonService
+@inject ITelegramHapticService TelegramHapticService
 @inject ITelegramWebAppStateService TelegramWebAppStateService
 @inject IAppInitializationService AppInitializationService
 @implements IAsyncDisposable
@@ -400,15 +401,18 @@ else if (exercise != null)
             }
             else
             {
+                await TelegramHapticService.NotificationErrorAsync();
                 Snackbar.Add("Ошибка при удалении упражнения. Проверьте подключение к API.", Severity.Error);
             }
         }
         catch (HttpRequestException ex)
         {
+            await TelegramHapticService.NotificationErrorAsync();
             Snackbar.Add($"Ошибка сети: {ex.Message}", Severity.Error);
         }
         catch (Exception ex)
         {
+            await TelegramHapticService.NotificationErrorAsync();
             Snackbar.Add($"Не удалось удалить упражнение: {ex.Message}", Severity.Error);
         }
         finally
@@ -454,6 +458,7 @@ else if (exercise != null)
             var workoutDetails = await WorkoutService.GetWorkoutDetailsAsync(workout.Id);
             if (workoutDetails == null)
             {
+                await TelegramHapticService.NotificationErrorAsync();
                 Snackbar.Add("Не удалось загрузить детали тренировки", Severity.Error);
                 return;
             }
@@ -488,11 +493,13 @@ else if (exercise != null)
             }
             else
             {
+                await TelegramHapticService.NotificationErrorAsync();
                 Snackbar.Add($"Ошибка при добавлении упражнения в тренировку", Severity.Error);
             }
         }
         catch (Exception ex)
         {
+            await TelegramHapticService.NotificationErrorAsync();
             Snackbar.Add($"Ошибка при добавлении упражнения в тренировку: {ex.Message}", Severity.Error);
         }
         finally

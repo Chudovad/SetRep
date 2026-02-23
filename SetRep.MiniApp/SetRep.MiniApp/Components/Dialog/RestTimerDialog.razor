@@ -1,6 +1,8 @@
 @using MudBlazor
 @using System.Timers
 
+@inject ITelegramHapticService TelegramHapticService
+
 <MudDialog>
     <TitleContent>
         <MudText Typo="Typo.h6">Таймер отдыха</MudText>
@@ -135,20 +137,23 @@
         }
     }
 
-    private void IncreaseTime()
+    private async void IncreaseTime()
     {
+        await TelegramHapticService.ImpactMediumAsync();
         remainingSeconds += 15;
         StateHasChanged();
     }
 
-    private void DecreaseTime()
+    private async void DecreaseTime()
     {
+        await TelegramHapticService.ImpactMediumAsync();
         remainingSeconds = Math.Max(0, remainingSeconds - 15);
         StateHasChanged();
     }
 
-    private void Skip()
+    private async void Skip()
     {
+        await TelegramHapticService.ImpactSoftAsync();
         StopTimer();
         MudDialog?.Close(DialogResult.Ok(true));
     }

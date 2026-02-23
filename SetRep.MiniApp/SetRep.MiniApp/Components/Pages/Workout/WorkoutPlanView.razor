@@ -12,6 +12,7 @@
 @inject IReadyWorkoutPlanService ReadyWorkoutPlanService
 @inject ITelegramWebAppStateService TelegramWebAppStateService
 @inject ITelegramBackButtonService TelegramBackButtonService
+@inject ITelegramHapticService TelegramHapticService
 @inject IAppInitializationService AppInitializationService
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
@@ -198,11 +199,13 @@
             }
             else
             {
+                await TelegramHapticService.NotificationErrorAsync();
                 Snackbar.Add("Не удалось сохранить план", Severity.Error);
             }
         }
         catch (Exception ex)
         {
+            await TelegramHapticService.NotificationErrorAsync();
             Snackbar.Add($"Ошибка: {ex.Message}", Severity.Error);
         }
         finally
@@ -239,11 +242,13 @@
             }
             else
             {
+                await TelegramHapticService.NotificationErrorAsync();
                 Snackbar.Add("Не удалось удалить план из готовых", Severity.Error);
             }
         }
         catch (Exception ex)
         {
+            await TelegramHapticService.NotificationErrorAsync();
             Snackbar.Add($"Ошибка: {ex.Message}", Severity.Error);
         }
         finally

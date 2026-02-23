@@ -9,6 +9,7 @@
 @inject IWorkoutHistoryService WorkoutHistoryService
 @inject NavigationManager Navigation
 @inject ITelegramBackButtonService TelegramBackButtonService
+@inject ITelegramHapticService TelegramHapticService
 @inject IAppInitializationService AppInitializationService
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
@@ -531,6 +532,7 @@ else if (workoutHistory != null)
             }
             else
             {
+                await TelegramHapticService.NotificationErrorAsync();
                 Snackbar.Add("Ошибка при удалении тренировки", Severity.Error);
                 isDeleting = false;
                 StateHasChanged();
@@ -538,6 +540,7 @@ else if (workoutHistory != null)
         }
         catch (Exception ex)
         {
+            await TelegramHapticService.NotificationErrorAsync();
             Snackbar.Add($"Ошибка при удалении тренировки: {ex.Message}", Severity.Error);
             isDeleting = false;
             StateHasChanged();
