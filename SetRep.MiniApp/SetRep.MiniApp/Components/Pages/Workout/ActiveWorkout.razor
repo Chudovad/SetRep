@@ -865,7 +865,7 @@ else if (workout != null && currentExercise != null)
                 DistanceMeters = set.DistanceMeters,
                 RestSeconds = set.RestSeconds,
                 Notes = set.Notes,
-                IsCompleted = false,
+                IsCompleted = set.IsCompleted,
             };
 
             var success = await WorkoutHistorySetService.UpdateSetAsync(setId, updateDto);
