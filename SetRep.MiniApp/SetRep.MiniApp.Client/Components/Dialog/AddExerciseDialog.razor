@@ -1,0 +1,72 @@
+@using System
+@using System.Linq
+@using SetRep.Core.ApiRequestServices
+@using SetRep.Core.Entities
+@using SetRep.Core.Enums
+@using SetRep.Core.Extensions
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.Extensions.Logging
+@using Microsoft.Extensions.Options
+
+@inject ITelegramWebAppStateService TelegramWebAppStateService
+@inject IExerciseService ExerciseService
+@inject IFileUploadService FileUploadService
+@inject SetRep.MiniApp.Client.Services.ITelegramHapticService TelegramHapticService
+@inject ISnackbar Snackbar
+@inject ILogger<AddExerciseDialog>? Logger
+@inject IOptions<FileUploadOptions> FileUploadOptionsAccessor
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">@(IsEditMode ? "Редактировать упражнение" : "Добавить упражнение")</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="@isFormValid">
+            <MudTextField T="string"
+                          Label="Название упражнения"
+                          @bind-Value="exercise.Name"
+                          Variant="Variant.Outlined"
+                          Required="true"
+                          RequiredError="Название обязательно для заполнения"
+                          Class="mb-3" />
+
+            <MudTextField T="string"
+                          Label="Описание"
+                          @bind-Value="exercise.Description"
+                          Variant="Variant.Outlined"
+                          Lines="3"
+                          Class="mb-3" />
+
+            <MuscleGroupsFilter Label="Группа мышц" 
+                                @bind-SelectedMuscleGroup="exercise.MuscleGroup" />
+
+            <ImageUpload ImageUrl="@exercise.MainImage"
+                         ImageAlt="Главная картинка упражнения"
+                         OnBeforeFileSelected="OnBeforeMainImageSelected"
+                         OnFileSelected="OnMainImageFileSelected"
+                         OnRemoveRequested="RemoveImage" />
+        </MudForm>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <MudAlert Severity="Severity.Error" Class="mt-3">@errorMessage</MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Отмена</MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   OnClick="Save"
+                   Disabled="@(!isFormValid || isSaving)">
+            @if (isSaving)
+            {
+                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                <MudText Class="ms-2">Сохранение...</MudText>
+            }
+            else
+            {
+                <MudText>Сохранить</MudText>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>

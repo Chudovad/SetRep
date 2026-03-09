@@ -1,0 +1,133 @@
+@using SetRep.Core.Entities
+
+@inject IWorkoutService WorkoutService
+@inject ITelegramWebAppStateService TelegramWebAppStateService
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Добавить тренировки в план</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (isLoading)
+        {
+            <div class="loading-container">
+                <MudProgressCircular Indeterminate="true" Size="Size.Medium" Class="mb-3" />
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
+                    Загрузка тренировок...
+                </MudText>
+            </div>
+        }
+        else if (errorMessage != null)
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-3">@errorMessage</MudAlert>
+        }
+        else if (availableWorkouts.Any())
+        {
+            <!-- Поле поиска -->
+            <MudTextField @bind-Value="searchQuery"
+                          Variant="Variant.Outlined"
+                          Placeholder="Поиск тренировок..."
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          IconSize="Size.Medium"
+                          Class="mb-3 search-field"
+                          Immediate="true" />
+            
+            @if (filteredWorkouts.Any())
+            {
+                <MudList T="Guid"
+                         SelectedValues="selectedWorkoutIds"
+                         SelectedValuesChanged="OnSelectedValuesChanged"
+                         SelectionMode="SelectionMode.MultiSelection"
+                         CheckBoxColor="Color.Primary"
+                         Dense="true"
+                         Class="workout-list">
+                    @foreach (var workout in filteredWorkouts)
+                    {
+                        <MudListItem @key="workout.Id" Value="@workout.Id">
+                            <div class="workout-item">
+                                <MudText Typo="Typo.body1" Class="workout-name">@workout.Name</MudText>
+                                @if (!string.IsNullOrWhiteSpace(workout.Notes))
+                                {
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="workout-notes">
+                                        @TruncateNotes(workout.Notes)
+                                    </MudText>
+                                }
+                            </div>
+                        </MudListItem>
+                    }
+                </MudList>
+            }
+            else
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="py-4">
+                    @if (!string.IsNullOrWhiteSpace(searchQuery))
+                    {
+                        <text>Ничего не найдено по запросу "@searchQuery"</text>
+                    }
+                    else
+                    {
+                        <text>Нет доступных тренировок</text>
+                    }
+                </MudText>
+            }
+        }
+        else
+        {
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="py-4">
+                Нет доступных тренировок. Создайте тренировку, чтобы добавить её в план.
+            </MudText>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel"
+                   Variant="Variant.Text">
+            Отмена
+        </MudButton>
+        <MudButton Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   OnClick="AddWorkouts"
+                   Disabled="@(!selectedWorkoutIds.Any() || isAdding)">
+            @if (isAdding)
+            {
+                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                <MudText Class="ms-2">Добавление...</MudText>
+            }
+            else
+            {
+                <MudText>Добавить (@selectedWorkoutIds.Count)</MudText>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+<style>
+    .loading-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px;
+    }
+
+    .workout-list {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .workout-item {
+        flex: 1;
+    }
+
+    .workout-name {
+        font-weight: 500;
+    }
+
+    .workout-notes {
+        margin-top: 4px;
+        opacity: 0.7;
+    }
+
+    .search-field {
+        border-radius: 8px;
+    }
+</style>
