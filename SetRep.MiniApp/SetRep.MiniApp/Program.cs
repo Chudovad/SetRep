@@ -35,6 +35,7 @@ app.UseAntiforgery();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
+    .AddInteractiveServerRenderMode()
     .AddInteractiveWebAssemblyRenderMode()
     .AddAdditionalAssemblies(typeof(SetRep.MiniApp.Client._Imports).Assembly);
 

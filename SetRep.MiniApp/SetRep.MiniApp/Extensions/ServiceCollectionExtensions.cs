@@ -14,6 +14,7 @@ public static class ServiceCollectionExtensions
 
         // Add services to the container.
         services.AddRazorComponents()
+            .AddInteractiveServerComponents()
             .AddInteractiveWebAssemblyComponents();
 
         // Регистрация сервисов для работы с Telegram WebApp (для prerendering)
