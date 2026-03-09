@@ -1,0 +1,1013 @@
+@page "/workouts/{WorkoutId:guid}"
+@using SetRep.Core.ApiRequestServices
+@using SetRep.Core.Entities
+@using SetRep.Core.Enums
+@using SetRep.MiniApp.Client.Services
+@using SetRep.MiniApp.Components.Dialog
+@using SetRep.Shared.DTO
+@using static SetRep.MiniApp.Client.Services.InitializationHelper
+@using Microsoft.JSInterop
+@using Microsoft.AspNetCore.Components
+@rendermode InteractiveWebAssembly
+@inject IWorkoutService WorkoutService
+@inject IWorkoutExerciseService WorkoutExerciseService
+@inject IExerciseService ExerciseService
+@inject NavigationManager Navigation
+@inject ITelegramBackButtonService TelegramBackButtonService
+@inject ITelegramHapticService TelegramHapticService
+@inject IWorkoutHistoryService WorkoutHistoryService
+@inject ITelegramWebAppStateService TelegramWebAppStateService
+@inject IAppInitializationService AppInitializationService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+
+<PageTitle>SetRep - @(workout?.Name ?? "Тренировка")</PageTitle>
+
+@if (isLoading)
+{
+    <div class="workout-detail-container">
+        @* Скелетон карточки информации о тренировке *@
+        <MudCard Elevation="2" Class="mb-4 workout-info-card">
+            <MudCardContent>
+                <MudSkeleton Width="60%" Height="32px" Class="mb-2" />
+                <MudSkeleton Width="90%" Height="20px" Class="mb-1" />
+                <MudSkeleton Width="70%" Height="20px" />
+            </MudCardContent>
+        </MudCard>
+
+        @* Скелетон кнопки начала тренировки *@
+        <MudSkeleton Width="100%" Height="48px" Class="mb-4" />
+
+        @* Скелетон кнопки добавления упражнений *@
+        <MudSkeleton Width="100%" Height="48px"Class="mb-4" />
+
+        @* Скелетон списка упражнений *@
+        <MudSkeleton Typo="Typo.h6" Width="150px" Height="24px" Class="mb-3" />
+        @for (int i = 0; i < 3; i++)
+        {
+            <div class="exercise-card-wrapper">
+                <MudCard Elevation="2" Class="mb-3 exercise-card">
+                    <MudCardContent>
+                        <div class="exercise-header">
+                            <MudSkeleton Width="24px" Height="24px" />
+                            <MudSkeleton Width="48px" Height="48px" SkeletonType="SkeletonType.Circle" />
+                            <div class="exercise-header-content">
+                                <MudSkeleton Width="70%" Height="20px" />
+                            </div>
+                            <MudSkeleton Width="24px" Height="24px" SkeletonType="SkeletonType.Circle" />
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </div>
+        }
+    </div>
+}
+else if (errorMessage != null)
+{
+    <div class="workout-detail-container">
+        <MudCard Elevation="2" Class="error-card">
+            <MudCardContent>
+                <div class="error-state">
+                    <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Large" Color="Color.Error" Class="mb-4" />
+                    <MudText Typo="Typo.h6" Align="Align.Center" Class="mb-2">
+                        Ошибка загрузки
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="mb-4">
+                        @errorMessage
+                    </MudText>
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               StartIcon="@Icons.Material.Filled.Refresh"
+                               OnClick="LoadWorkout">
+                        Попробовать снова
+                    </MudButton>
+                    <MudButton Variant="Variant.Text" 
+                               Color="Color.Primary" 
+                               Class="mt-2"
+                               StartIcon="@Icons.Material.Filled.ArrowBack"
+                               OnClick="GoBack">
+                        Вернуться к списку
+                    </MudButton>
+                </div>
+            </MudCardContent>
+        </MudCard>
+    </div>
+}
+else if (workout != null)
+{
+    <div class="workout-detail-container">
+        <!-- Название и описание тренировки -->
+        <MudCard Elevation="2" Class="mb-4 workout-info-card">
+            <MudCardContent>
+                <div class="workout-header">
+                    <MudText Typo="Typo.h4" Class="workout-title">@workout.Name</MudText>
+                </div>
+                
+                @if (!string.IsNullOrWhiteSpace(workout.Notes))
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="workout-description">
+                        @workout.Notes
+                    </MudText>
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        Описание отсутствует
+                    </MudText>
+                }
+            </MudCardContent>
+        </MudCard>
+
+        <!-- Кнопка начала тренировки (только для своей тренировки) -->
+        @if (!isReadOnly && workout.WorkoutExercises != null && workout.WorkoutExercises.Any())
+        {
+            var isCurrentWorkoutActive = activeWorkoutHistory != null && activeWorkoutHistory.WorkoutId == WorkoutId;
+            var hasOtherActiveWorkout = activeWorkoutHistory != null && activeWorkoutHistory.WorkoutId != WorkoutId;
+            @if (isCurrentWorkoutActive)
+            {
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Info"
+                           FullWidth="true"
+                           Class="mb-4 start-workout-button"
+                           StartIcon="@Icons.Material.Filled.FitnessCenter"
+                           OnClick="ContinueWorkout"
+                           Disabled="isStartingWorkout">
+                    <span>Тренировка начата - Продолжить</span>
+                </MudButton>
+            }
+            else
+            {
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Success"
+                           FullWidth="true"
+                           Class="mb-4 start-workout-button"
+                           StartIcon="@Icons.Material.Filled.PlayArrow"
+                           OnClick="StartWorkout"
+                           Disabled="isStartingWorkout || hasOtherActiveWorkout">
+                    @if (isStartingWorkout)
+                    {
+                        <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                        <span class="ms-2">Запуск тренировки...</span>
+                    }
+                    else
+                    {
+                        <span>Начать тренировку</span>
+                    }
+                </MudButton>
+            }
+        }
+
+        <!-- Кнопка добавления упражнений (только для своей тренировки) -->
+        @if (!isReadOnly)
+        {
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       FullWidth="true" 
+                       Class="mb-4 add-exercise-btn"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="OpenSelectExercisesDialog">
+                Добавить упражнение
+            </MudButton>
+        }
+
+        <!-- Список упражнений -->
+        @if (workout.WorkoutExercises != null && workout.WorkoutExercises.Any())
+        {
+            <MudText Typo="Typo.h6" Class="mb-3">Упражнения</MudText>
+            
+            <div id="exercise-list-container" class="exercise-list-container">
+                @for (int i = 0; i < exerciseItems.Count; i++)
+                {
+                    var item = exerciseItems[i];
+                    <div @onclick="() => ViewWorkoutExercise(item.WorkoutExercise.Id)" class="exercise-card-wrapper">
+                        <MudCard Elevation="2" Class="mb-3 exercise-card">
+                            <MudCardContent>
+                                <div class="exercise-header">
+                                    @if (!isReadOnly)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.Menu" 
+                                                 Color="Color.Secondary" 
+                                                 Class="drag-handle-icon" />
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(item.WorkoutExercise.Exercise?.MainImage))
+                                    {
+                                        <MudAvatar Size="Size.Large" Class="exercise-image-avatar">
+                                            <img src="@item.WorkoutExercise.Exercise.MainImage" alt="@(item.WorkoutExercise.Exercise?.Name ?? "Упражнение")" />
+                                        </MudAvatar>
+                                    }
+                                    <div class="exercise-header-content">
+                                        <MudText Typo="Typo.body1" Class="exercise-name-text">
+                                            @(item.WorkoutExercise.Exercise?.Name ?? "Неизвестное упражнение")
+                                        </MudText>
+                                    </div>
+                                    <div class="exercise-header-right" @onclick:stopPropagation="true">
+                                        @if (isReadOnly)
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.ChevronRight" Color="Color.Default" />
+                                        }
+                                        else
+                                        {
+                                            <MudMenu Icon="@Icons.Material.Filled.MoreVert"
+                                                     Color="Color.Default"
+                                                     AnchorOrigin="Origin.BottomRight"
+                                                     TransformOrigin="Origin.TopRight"
+                                                     Variant="Variant.Text"
+                                                     Size="Size.Medium"
+                                                     Class="exercise-menu-button"
+                                                     StopPropagation="true">
+                                                <MudMenuItem OnClick="@(() => OpenEditNotesDialog(item.WorkoutExercise))" Icon="@Icons.Material.Filled.Edit">
+                                                    Редактировать заметку
+                                                </MudMenuItem>
+                                                <MudDivider />
+                                                <MudMenuItem OnClick="@(() => ReplaceExerciseFromDialog(item.WorkoutExercise))" Icon="@Icons.Material.Filled.SwapHoriz">
+                                                    Заменить упражнение
+                                                </MudMenuItem>
+                                                <MudDivider />
+                                                <MudMenuItem OnClick="@(() => ConfirmDeleteExercise(item.WorkoutExercise))" Icon="@Icons.Material.Filled.Delete" Color="Color.Error">
+                                                    Удалить
+                                                </MudMenuItem>
+                                            </MudMenu>
+                                        }
+                                    </div>
+                                </div>
+                            </MudCardContent>
+                        </MudCard>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <MudCard Elevation="2" Class="empty-state-card">
+                <MudCardContent>
+                    <div class="empty-state">
+                        <MudIcon Icon="@Icons.Material.Filled.FitnessCenter" Size="Size.Large" Color="Color.Secondary" Class="mb-4" />
+                        <MudText Typo="Typo.h6" Align="Align.Center" Class="mb-2">
+                            Нет упражнений
+                        </MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center">
+                            В этой тренировке пока нет упражнений
+                        </MudText>
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        }
+    </div>
+}
+
+<style>
+    .workout-detail-container {
+        max-width: 100%;
+    }
+
+    .workout-info-card {
+        border-radius: 12px;
+    }
+
+    .workout-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 12px;
+    }
+
+    .workout-title {
+        flex: 1;
+    }
+
+    .workout-description {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+    }
+
+    .workout-meta {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .exercise-list-container {
+        width: 100%;
+    }
+
+    .exercise-card-wrapper {
+        cursor: pointer;
+    }
+
+    .exercise-card-wrapper.dragging {
+        opacity: 0.5;
+    }
+
+    .exercise-card-wrapper.placeholder {
+        border: 2px dashed #ccc;
+        border-radius: 12px;
+        background-color: transparent;
+        margin-bottom: 12px;
+    }
+
+    .drag-handle-icon {
+        cursor: grab;
+        user-select: none;
+        flex-shrink: 0;
+    }
+
+    .drag-handle-icon:active {
+        cursor: grabbing;
+    }
+
+    .exercise-card {
+        border-radius: 12px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .exercise-card-wrapper:hover .exercise-card {
+        transform: translateY(-2px);
+    }
+
+    .exercise-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .exercise-image-avatar {
+        flex-shrink: 0;
+        border-radius: 50%;
+        overflow: hidden;
+    }
+
+    .exercise-image-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .exercise-header-content {
+        flex: 1;
+    }
+
+    .exercise-name-text {
+        font-size: 0.875rem;
+    }
+
+    .exercise-header-right {
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
+    .exercise-menu-button {
+        flex-shrink: 0;
+    }
+
+    .sets-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 12px;
+    }
+
+    .set-item {
+        padding: 12px;
+        background-color: #f5f5f5;
+        border-radius: 8px;
+    }
+
+    .set-number {
+        font-weight: 500;
+        margin-bottom: 8px;
+    }
+
+    .set-details {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .empty-state-card {
+        border-radius: 12px;
+        margin-top: 16px;
+    }
+
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px;
+    }
+
+    .start-workout-button {
+        border-radius: 12px;
+        height: 48px;
+        font-size: 1rem;
+        font-weight: 500;
+    }
+
+    .loading-card, .error-card {
+        border-radius: 12px;
+        margin-top: 32px;
+    }
+
+    .loading-state, .error-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px;
+    }
+
+    .add-exercise-btn {
+        height: 48px;
+        border-radius: 12px;
+        text-transform: none;
+        font-weight: 500;
+    }
+</style>
+
+@code {
+    [Parameter] public Guid WorkoutId { get; set; }
+
+    private Workout? workout;
+    private WorkoutHistory? activeWorkoutHistory;
+    private bool isLoading = true;
+    private bool isStartingWorkout = false;
+    private bool isReordering = false;
+    private bool isDeleting = false;
+    private bool isReadOnly = false;
+    private string? errorMessage;
+    private List<WorkoutExerciseItem> exerciseItems = new();
+
+    private class WorkoutExerciseItem
+    {
+        public WorkoutExercise WorkoutExercise { get; set; } = null!;
+        public string Zone { get; set; } = "exercises-zone";
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await WaitForInitializationAsync(AppInitializationService);
+            await TelegramBackButtonService.ShowAsync();
+            await LoadWorkout();
+            await CheckActiveWorkout();
+            StateHasChanged();
+        }
+        
+        // Инициализируем drag and drop после рендеринга списка упражнений (только для своей тренировки)
+        if (!isReadOnly && exerciseItems.Any())
+        {
+            await InitializeDragAndDrop();
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await CheckActiveWorkout();
+    }
+
+    private async Task LoadWorkout()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            workout = await WorkoutService.GetWorkoutDetailsAsync(WorkoutId);
+            if (workout == null)
+            {
+                errorMessage = "Тренировка не найдена.";
+            }
+            else
+            {
+                var currentUserId = TelegramWebAppStateService.ValidationResult?.Data?.User?.Id ?? Guid.Empty;
+                isReadOnly = workout.UserId != currentUserId;
+                UpdateExerciseItems();
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = $"Ошибка сети при подключении к API: {ex.Message}. " +
+                          "Убедитесь, что API сервер запущен и доступен.";
+            workout = null;
+        }
+        catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
+        {
+            errorMessage = "Превышено время ожидания ответа от API. Сервер может быть перегружен или недоступен.";
+            workout = null;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Не удалось загрузить тренировку: {ex.Message}";
+            workout = null;
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task CheckActiveWorkout()
+    {
+        try
+        {
+            Guid userId = Guid.Empty;
+            if (TelegramWebAppStateService.ValidationResult?.Data?.User != null)
+            {
+                userId = TelegramWebAppStateService.ValidationResult.Data.User.Id;
+            }
+
+            if (userId == Guid.Empty)
+            {
+                return;
+            }
+
+            // Получаем активную тренировку пользователя (любую)
+            activeWorkoutHistory = await WorkoutHistoryService.GetActiveWorkoutAsync(userId);
+
+            if (activeWorkoutHistory != null)
+            {
+                StateHasChanged();
+            }
+        }
+        catch
+        {
+            // Игнорируем ошибки при проверке активной тренировки
+        }
+    }
+
+    private async Task StartWorkout()
+    {
+        if (workout == null || isStartingWorkout)
+        {
+            return;
+        }
+
+        isStartingWorkout = true;
+        StateHasChanged();
+
+        try
+        {
+            Guid userId = Guid.Empty;
+            if (TelegramWebAppStateService.ValidationResult?.Data?.User != null)
+            {
+                userId = TelegramWebAppStateService.ValidationResult.Data.User.Id;
+            }
+
+            if (userId == Guid.Empty)
+            {
+                await TelegramHapticService.NotificationErrorAsync();
+                Snackbar.Add("Не удалось определить пользователя", Severity.Error);
+                return;
+            }
+
+            var workoutHistory = await WorkoutHistoryService.StartWorkoutAsync(WorkoutId, userId);
+
+            if (workoutHistory != null)
+            {
+                await WorkoutHistoryService.CopySetsFromWorkoutAsync(workoutHistory.Id, WorkoutId);
+
+                activeWorkoutHistory = workoutHistory;
+
+                Navigation.NavigateTo($"/workouts/{WorkoutId}/active/{workoutHistory.Id}");
+            }
+            else
+            {
+                await TelegramHapticService.NotificationErrorAsync();
+                Snackbar.Add("Не удалось начать тренировку", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            await TelegramHapticService.NotificationErrorAsync();
+            Snackbar.Add($"Ошибка при запуске тренировки: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isStartingWorkout = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ContinueWorkout()
+    {
+        if (activeWorkoutHistory != null)
+        {
+            Navigation.NavigateTo($"/workouts/{WorkoutId}/active/{activeWorkoutHistory.Id}");
+        }
+    }
+
+    private void ViewWorkoutExercise(Guid workoutExerciseId)
+    {
+        Navigation.NavigateTo($"/workouts/{WorkoutId}/exercises/{workoutExerciseId}");
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/workouts");
+    }
+
+    private void UpdateExerciseItems()
+    {
+        if (workout?.WorkoutExercises == null)
+        {
+            exerciseItems = new List<WorkoutExerciseItem>();
+            return;
+        }
+
+        exerciseItems = workout.WorkoutExercises
+            .OrderBy(we => we.Order)
+            .Select(we => new WorkoutExerciseItem
+            {
+                WorkoutExercise = we,
+                Zone = "exercises-zone"
+            })
+            .ToList();
+    }
+
+    private async Task OpenSelectExercisesDialog()
+    {
+        if (workout == null)
+            return;
+
+        var parameters = new DialogParameters<SelectExercisesDialog>();
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true, 
+            MaxWidth = MaxWidth.Medium, 
+            FullWidth = true 
+        };
+
+        var dialogReference = await DialogService.ShowAsync<SelectExercisesDialog>("Выберите упражнения", parameters, options);
+        var result = await dialogReference.Result;
+
+        if (result != null && !result.Canceled && result.Data is List<Exercise> exercises)
+        {
+            await AddExercisesToWorkout(exercises);
+        }
+    }
+
+    private async Task AddExercisesToWorkout(List<Exercise> exercises)
+    {
+        if (workout == null || exercises == null || !exercises.Any())
+            return;
+
+        try
+        {
+            int maxOrder = workout.WorkoutExercises?.Any() == true 
+                ? workout.WorkoutExercises.Max(we => we.Order) + 1 
+                : 0;
+
+            var existingExerciseIds = workout.WorkoutExercises?
+                .Select(we => we.ExerciseId)
+                .ToHashSet() ?? new HashSet<Guid>();
+
+            var exercisesToAdd = exercises
+                .Where(e => !existingExerciseIds.Contains(e.Id))
+                .ToList();
+
+            if (!exercisesToAdd.Any())
+            {
+                await TelegramHapticService.NotificationWarningAsync();
+                Snackbar.Add("Все выбранные упражнения уже добавлены в тренировку", Severity.Info);
+                return;
+            }
+
+            int order = maxOrder;
+            int successCount = 0;
+            var createdWorkoutExercises = new List<WorkoutExercise>();
+            
+            foreach (var exercise in exercisesToAdd)
+            {
+                var workoutExerciseDto = new CreateWorkoutExerciseDto
+                {
+                    WorkoutId = workout.Id,
+                    ExerciseId = exercise.Id,
+                    Order = order++
+                };
+
+                var createdWorkoutExercise = await WorkoutExerciseService.CreateWorkoutExerciseAsync(workoutExerciseDto);
+                if (createdWorkoutExercise != null)
+                {
+                    createdWorkoutExercise.Exercise = exercise;
+                    createdWorkoutExercises.Add(createdWorkoutExercise);
+                    successCount++;
+                }
+                else
+                {
+                    await TelegramHapticService.NotificationErrorAsync();
+                    Snackbar.Add($"Ошибка при добавлении упражнения '{exercise.Name}' в тренировку", Severity.Error);
+                }
+            }
+
+            if (successCount > 0)
+            {
+                await Task.Delay(200);
+                
+                var reloadedWorkout = await WorkoutService.GetWorkoutDetailsAsync(workout.Id);
+                if (reloadedWorkout != null)
+                {
+                    workout = reloadedWorkout;
+                    
+                    exerciseItems = new List<WorkoutExerciseItem>();
+                    UpdateExerciseItems();
+
+                    StateHasChanged();
+
+                    await InvokeAsync(StateHasChanged);
+                    
+                    // Инициализируем drag and drop после добавления упражнений
+                    await InitializeDragAndDrop();
+                }
+                else
+                {
+                    var existingExercises = workout.WorkoutExercises?.ToList() ?? new List<WorkoutExercise>();
+                    var updatedExercises = existingExercises.Concat(createdWorkoutExercises).ToList();
+                    workout.WorkoutExercises = updatedExercises;
+                    
+                    exerciseItems = new List<WorkoutExerciseItem>();
+                    UpdateExerciseItems();
+                    StateHasChanged();
+                    await InvokeAsync(StateHasChanged);
+                    
+                    // Инициализируем drag and drop после добавления упражнений
+                    await InitializeDragAndDrop();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            await TelegramHapticService.NotificationErrorAsync();
+            Snackbar.Add($"Ошибка при добавлении упражнений: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task InitializeDragAndDrop()
+    {
+        try
+        {
+            var dotNetReference = DotNetObjectReference.Create(this);
+            await JSRuntime.InvokeVoidAsync("workoutDragDrop.init", "exercise-list-container", dotNetReference);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Ошибка инициализации drag and drop: {ex.Message}");
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnExerciseDropped(int oldIndex, int newIndex)
+    {
+        if (isReordering || workout?.WorkoutExercises == null || oldIndex < 0 || newIndex < 0)
+        {
+            return;
+        }
+
+        if (oldIndex == newIndex)
+        {
+            return;
+        }
+
+        isReordering = true;
+        StateHasChanged();
+
+        try
+        {
+            var orderedExercises = exerciseItems.Select(ei => ei.WorkoutExercise).ToList();
+            
+            var movedExercise = orderedExercises[oldIndex];
+            orderedExercises.RemoveAt(oldIndex);
+
+            orderedExercises.Insert(newIndex, movedExercise);
+
+            var updateTasks = new List<Task<bool>>();
+            for (int i = 0; i < orderedExercises.Count; i++)
+            {
+                var exercise = orderedExercises[i];
+                if (exercise.Order != i)
+                {
+                    updateTasks.Add(WorkoutService.UpdateWorkoutExerciseOrderAsync(exercise.Id, i));
+                }
+            }
+
+            var results = await Task.WhenAll(updateTasks);
+            if (results.All(r => r))
+            {
+                for (int i = 0; i < orderedExercises.Count; i++)
+                {
+                    orderedExercises[i].Order = i;
+                }
+
+                await LoadWorkout();
+                
+                // Обновляем индексы в JS после перезагрузки
+                await JSRuntime.InvokeVoidAsync("workoutDragDrop.updateIndices", "exercise-list-container");
+            }
+            else
+            {
+                await TelegramHapticService.NotificationErrorAsync();
+                Snackbar.Add("Не удалось обновить порядок упражнений", Severity.Error);
+                UpdateExerciseItems();
+            }
+        }
+        catch (Exception ex)
+        {
+            await TelegramHapticService.NotificationErrorAsync();
+            Snackbar.Add($"Ошибка при изменении порядка: {ex.Message}", Severity.Error);
+            UpdateExerciseItems();
+        }
+        finally
+        {
+            isReordering = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenEditNotesDialog(WorkoutExercise workoutExercise)
+    {
+        if (workoutExercise == null || isDeleting)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters<EditWorkoutExerciseNotesDialog>
+        {
+            { nameof(EditWorkoutExerciseNotesDialog.WorkoutExercise), workoutExercise }
+        };
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true, 
+            MaxWidth = MaxWidth.Small, 
+            FullWidth = true 
+        };
+
+        var dialogReference = await DialogService.ShowAsync<EditWorkoutExerciseNotesDialog>("Редактировать заметку упражнения", parameters, options);
+        var result = await dialogReference.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            await LoadWorkout();
+        }
+    }
+
+    private async Task ConfirmDeleteExercise(WorkoutExercise workoutExercise)
+    {
+        if (workoutExercise == null || isDeleting)
+        {
+            return;
+        }
+
+        var exerciseName = workoutExercise.Exercise?.Name ?? "упражнение";
+        var parameters = new DialogParameters<ConfirmDialog>
+        {
+            { nameof(ConfirmDialog.Title), "Подтверждение удаления" },
+            { nameof(ConfirmDialog.ContentText), $"Вы уверены, что хотите удалить упражнение \"{exerciseName}\" из тренировки? Это действие нельзя отменить." },
+            { nameof(ConfirmDialog.ButtonText), "Удалить" },
+            { nameof(ConfirmDialog.Color), Color.Error }
+        };
+
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true, 
+            MaxWidth = MaxWidth.Small, 
+            FullWidth = true 
+        };
+
+        var dialogReference = await DialogService.ShowAsync<ConfirmDialog>("Подтверждение удаления", parameters, options);
+        var result = await dialogReference.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            await DeleteExercise(workoutExercise.Id);
+        }
+    }
+
+    private async Task DeleteExercise(Guid workoutExerciseId)
+    {
+        if (isDeleting)
+        {
+            return;
+        }
+
+        isDeleting = true;
+        StateHasChanged();
+
+        try
+        {
+            var success = await WorkoutExerciseService.DeleteWorkoutExerciseAsync(workoutExerciseId);
+            if (success)
+            {
+                await LoadWorkout();
+            }
+            else
+            {
+                await TelegramHapticService.NotificationErrorAsync();
+                Snackbar.Add("Ошибка при удалении упражнения", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            await TelegramHapticService.NotificationErrorAsync();
+            Snackbar.Add($"Ошибка при удалении упражнения: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isDeleting = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ReplaceExerciseFromDialog(WorkoutExercise workoutExercise)
+    {
+        if (workoutExercise == null || workout == null)
+            return;
+
+        // Получаем список ID упражнений, которые уже есть в тренировке (кроме текущего)
+        var excludedExerciseIds = workout.WorkoutExercises?
+            .Where(we => we.Id != workoutExercise.Id)
+            .Select(we => we.ExerciseId)
+            .ToList() ?? new List<Guid>();
+
+        var parameters = new DialogParameters<ReplaceExerciseDialog>
+        {
+            { nameof(ReplaceExerciseDialog.CurrentWorkoutExercise), workoutExercise },
+            { nameof(ReplaceExerciseDialog.ExcludedExerciseIds), excludedExerciseIds }
+        };
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true, 
+            MaxWidth = MaxWidth.Medium, 
+            FullWidth = true 
+        };
+
+        var dialogReference = await DialogService.ShowAsync<ReplaceExerciseDialog>("Заменить упражнение", parameters, options);
+        var result = await dialogReference.Result;
+
+        if (result != null && !result.Canceled && result.Data is Exercise selectedExercise)
+        {
+            // Проверяем, что выбранное упражнение не совпадает с текущим
+            if (selectedExercise.Id == workoutExercise.ExerciseId)
+            {
+                Snackbar.Add("Выбрано то же самое упражнение", Severity.Info);
+                return;
+            }
+
+            // Проверяем, что выбранное упражнение еще не добавлено в тренировку
+            var existingExerciseIds = workout.WorkoutExercises?
+                .Where(we => we.Id != workoutExercise.Id)
+                .Select(we => we.ExerciseId)
+                .ToHashSet() ?? new HashSet<Guid>();
+
+            if (existingExerciseIds.Contains(selectedExercise.Id))
+            {
+                Snackbar.Add("Это упражнение уже есть в тренировке", Severity.Warning);
+                return;
+            }
+
+            await ReplaceExercise(workoutExercise, selectedExercise);
+        }
+    }
+
+    private async Task ReplaceExercise(WorkoutExercise workoutExercise, Exercise newExercise)
+    {
+        if (workoutExercise == null || newExercise == null || workout == null)
+            return;
+
+        try
+        {
+            var updateDto = new CreateWorkoutExerciseDto
+            {
+                WorkoutId = workoutExercise.WorkoutId,
+                ExerciseId = newExercise.Id,
+                Order = workoutExercise.Order,
+                Notes = workoutExercise.Notes
+            };
+
+            var success = await WorkoutExerciseService.UpdateWorkoutExerciseAsync(workoutExercise.Id, updateDto);
+            if (success)
+            {
+                await LoadWorkout();
+            }
+            else
+            {
+                await TelegramHapticService.NotificationErrorAsync();
+                Snackbar.Add("Ошибка при замене упражнения", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            await TelegramHapticService.NotificationErrorAsync();
+            Snackbar.Add($"Ошибка при замене упражнения: {ex.Message}", Severity.Error);
+        }
+    }
+
+    public ValueTask DisposeAsync()
+    {
+        return ValueTask.CompletedTask;
+    }
+}
+

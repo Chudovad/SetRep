@@ -1,0 +1,589 @@
+@page "/profile/measurements"
+@using SetRep.Core.ApiRequestServices
+@using SetRep.Core.Entities
+@using SetRep.MiniApp.Client.Services
+@using static SetRep.MiniApp.Client.Services.InitializationHelper
+@rendermode InteractiveWebAssembly
+@inject IMeasurementsHistoryService MeasurementsHistoryService
+@inject NavigationManager Navigation
+@inject ITelegramBackButtonService TelegramBackButtonService
+@inject ITelegramWebAppStateService TelegramWebAppStateService
+@inject IAppInitializationService AppInitializationService
+@implements IAsyncDisposable
+
+<PageTitle>SetRep - Журнал измерений</PageTitle>
+
+@if (isLoading)
+{
+    <MudSkeleton Height="48px" Width="100%" Class="mb-4"/>
+
+    <MudCard Elevation="2" Class="mb-4 chart-card">
+        <MudCardContent>
+            <MudSkeleton Width="40%" Height="28px" Class="mb-3" />
+
+            <div class="chart-controls">
+                <MudSkeleton Height="56px" Width="100%" Class="mb-3" />
+                <MudSkeleton Height="56px" Width="100%" Class="mb-3" />
+            </div>
+
+            <MudSkeleton Height="300px" Width="100%" />
+        </MudCardContent>
+    </MudCard>
+
+    <div class="measurements-container">
+        @for (int i = 0; i < 4; i++)
+        {
+            <div class="measurement-card-wrapper">
+                <MudCard Elevation="2" Class="mb-3 measurement-item-card">
+                    <MudCardContent>
+                        <div class="measurement-header">
+                            <div class="measurement-info">
+                                <MudSkeleton Width="70%" Height="24px" Class="mb-1" />
+                                <MudSkeleton Width="60%" Height="20px" />
+                            </div>
+                            <MudSkeleton Width="24px" Height="24px" />
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </div>
+        }
+    </div>
+}
+else if (errorMessage != null)
+{
+    <div class="measurements-container">
+        <MudCard Elevation="2" Class="error-card">
+            <MudCardContent>
+                <div class="error-state">
+                    <MudIcon Icon="@Icons.Material.Filled.ErrorOutline" Size="Size.Large" Color="Color.Error" Class="mb-4" />
+                    <MudText Typo="Typo.h6" Align="Align.Center" Class="mb-2">
+                        Ошибка загрузки
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="mb-4">
+                        @errorMessage
+                    </MudText>
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Refresh"
+                               OnClick="LoadMeasurements">
+                        Попробовать снова
+                    </MudButton>
+                </div>
+            </MudCardContent>
+        </MudCard>
+    </div>
+}
+else if (measurementsList.Any())
+{
+    <MudButton Variant="Variant.Filled"
+               Color="Color.Primary"
+               FullWidth="true"
+               Class="mb-4"
+               StartIcon="@Icons.Material.Filled.Add"
+               OnClick="AddMeasurement">
+        Добавить измерения
+    </MudButton>
+
+    <MudCard Elevation="2" Class="mb-4 chart-card">
+        <MudCardContent Class="chart-card-content">
+            <MudText Typo="Typo.h6" Class="mb-2 chart-title">График измерений</MudText>
+            <MudSelect T="MeasurementParameter"
+                       Label="Параметр"
+                       Variant="Variant.Outlined"
+                       Value="@selectedParameter"
+                       ValueChanged="@OnParameterChanged"
+                       Dense="true">
+                @foreach (var param in Enum.GetValues<MeasurementParameter>())
+                {
+                    <MudSelectItem Value="@param">@GetParameterName(param)</MudSelectItem>
+                }
+            </MudSelect>
+            <MudSelect T="TimePeriod"
+                       Label="Период"
+                       Variant="Variant.Outlined"
+                       Value="@selectedPeriod"
+                       ValueChanged="@OnPeriodChanged">
+                @foreach (var period in Enum.GetValues<TimePeriod>())
+                {
+                    <MudSelectItem Value="@period">@GetPeriodName(period)</MudSelectItem>
+                }
+            </MudSelect>
+
+            @if (chartData.Any())
+            {
+                <div class="chart-container">
+                    <MudChart ChartType="ChartType.Line"
+                              ChartOptions="@chartOptions"
+                              ChartSeries="@chartSeriesList"
+                              XAxisLabels="@xAxisLabels"
+                              AxisChartOptions="@axisChartOptions"
+                              Width="100%"
+                              Height="100%" />
+                </div>
+            }
+            else
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="py-4">
+                    Нет данных для выбранного параметра за выбранный период
+                </MudText>
+            }
+        </MudCardContent>
+    </MudCard>
+
+    <div class="measurements-container">
+        @foreach (var measurement in measurementsList)
+        {
+            <div @onclick="() => ViewMeasurementDetails(measurement.Id)" class="measurement-card-wrapper">
+                <MudCard Elevation="2" Class="mb-3 measurement-item-card">
+                    <MudCardContent>
+                        <div class="measurement-header">
+                            <div class="measurement-info">
+                                <MudText Typo="Typo.h6" Class="mb-1">
+                                    @FormatDate(measurement.Date)
+                                </MudText>
+                                @if (measurement.BodyWeight.HasValue)
+                                {
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-1">
+                                        Масса тела: @measurement.BodyWeight.Value.ToString("0.################") кг
+                                    </MudText>
+                                }
+                                @if (measurement.Waist.HasValue)
+                                {
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                        Талия: @measurement.Waist.Value.ToString("0.################") см
+                                    </MudText>
+                                }
+                            </div>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <div class="measurements-container">
+        <MudCard Elevation="2" Class="empty-state-card">
+            <MudCardContent>
+                <div class="empty-state">
+                    <MudIcon Icon="@Icons.Material.Filled.Assessment" Size="Size.Large" Color="Color.Secondary" Class="mb-4" />
+                    <MudText Typo="Typo.h6" Align="Align.Center" Class="mb-2">
+                        Нет записей измерений
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Align="Align.Center" Class="mb-4">
+                        Добавьте первую запись измерений
+                    </MudText>
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.Add"
+                               OnClick="AddMeasurement">
+                        Добавить замер
+                    </MudButton>
+                </div>
+            </MudCardContent>
+        </MudCard>
+    </div>
+}
+
+<style>
+    .measurements-container {
+        max-width: 100%;
+    }
+
+    .measurement-card-wrapper {
+        cursor: pointer;
+    }
+
+    .measurement-item-card {
+        border-radius: 12px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .measurement-card-wrapper:hover .measurement-item-card {
+        transform: translateY(-2px);
+    }
+
+    .measurement-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+    }
+
+    .measurement-info {
+        flex: 1;
+    }
+
+    .measurement-arrow-icon {
+        flex-shrink: 0;
+        margin-top: 4px;
+    }
+
+    .empty-state-card {
+        border-radius: 12px;
+        margin-top: 32px;
+    }
+
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px;
+    }
+
+    .error-card {
+        border-radius: 12px;
+        margin-top: 32px;
+    }
+
+    .error-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 24px;
+    }
+
+    .chart-card {
+        border-radius: 12px;
+    }
+
+    .chart-card-content {
+        padding: 12px !important;
+    }
+
+    .chart-title {
+        margin-bottom: 8px !important;
+    }
+
+    .chart-controls {
+        display: flex;
+        flex-direction: row;
+        gap: 12px;
+        margin-bottom: 8px;
+    }
+
+    .chart-select {
+        flex: 1;
+    }
+
+    .chart-container {
+        margin-top: 0 !important;
+        margin-bottom: 0 !important;
+        padding: 0 !important;
+    }
+</style>
+
+@code {
+    private List<MeasurementsHistory> measurementsList = new();
+    private bool isLoading = true;
+    private string? errorMessage;
+
+    private MeasurementParameter selectedParameter = MeasurementParameter.BodyWeight;
+    private TimePeriod selectedPeriod = TimePeriod.AllTime;
+    private List<ChartDataPoint> chartData = new();
+    private ChartOptions chartOptions = new();
+    private AxisChartOptions axisChartOptions = new();
+    private List<ChartSeries> chartSeriesList = new();
+    private string[] xAxisLabels = Array.Empty<string>();
+
+    private enum MeasurementParameter
+    {
+        BodyWeight,
+        Waist,
+        BodyFatPercentage,
+        LeanBodyMass,
+        Neck,
+        Shoulder,
+        Chest,
+        LeftBicep,
+        RightBicep,
+        LeftForearm,
+        RightForearm,
+        Buttocks,
+        LeftThigh,
+        RightThigh,
+        LeftCalf,
+        RightCalf
+    }
+
+    private enum TimePeriod
+    {
+        ThreeMonths,
+        OneYear,
+        AllTime
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await WaitForInitializationAsync(AppInitializationService);
+            await TelegramBackButtonService.ShowAsync();
+            await LoadMeasurements();
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadMeasurements()
+    {
+        isLoading = true;
+        errorMessage = null;
+
+        try
+        {
+            Guid userId = Guid.Empty;
+            if (TelegramWebAppStateService.ValidationResult?.Data?.User != null)
+            {
+                userId = TelegramWebAppStateService.ValidationResult.Data.User.Id;
+            }
+
+            if (userId == Guid.Empty)
+            {
+                errorMessage = "Не удалось определить пользователя";
+                return;
+            }
+
+            var data = await MeasurementsHistoryService.GetMeasurementsHistoryByUserIdAsync(userId);
+            if (data != null)
+            {
+                measurementsList = data.OrderByDescending(m => m.Date).ToList();
+                UpdateChart();
+            }
+            else
+            {
+                errorMessage = "Не удалось загрузить записи измерений. Проверьте подключение к API.";
+                measurementsList = new List<MeasurementsHistory>();
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = $"Ошибка сети при подключении к API: {ex.Message}. " +
+                          "Убедитесь, что API сервер запущен и доступен.";
+            measurementsList = new List<MeasurementsHistory>();
+        }
+        catch (TaskCanceledException ex) when (ex.InnerException is TimeoutException)
+        {
+            errorMessage = "Превышено время ожидания ответа от API. Сервер может быть перегружен или недоступен.";
+            measurementsList = new List<MeasurementsHistory>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Не удалось загрузить записи измерений: {ex.Message}";
+            measurementsList = new List<MeasurementsHistory>();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ViewMeasurementDetails(Guid measurementId)
+    {
+        Navigation.NavigateTo($"/profile/measurements/{measurementId}");
+    }
+
+    private void AddMeasurement()
+    {
+        Navigation.NavigateTo("/profile/measurements/add");
+    }
+
+    private string FormatDate(DateTime date)
+    {
+        var localDate = date.AddHours(3); // UTC+3
+        return localDate.ToString("dd MMMM yyyy", new System.Globalization.CultureInfo("ru-RU"));
+    }
+
+    private string GetParameterName(MeasurementParameter parameter)
+    {
+        return parameter switch
+        {
+            MeasurementParameter.BodyWeight => "Масса тела (кг)",
+            MeasurementParameter.Waist => "Талия (см)",
+            MeasurementParameter.BodyFatPercentage => "Процент жира (%)",
+            MeasurementParameter.LeanBodyMass => "Сухая мышечная масса (кг)",
+            MeasurementParameter.Neck => "Шея (см)",
+            MeasurementParameter.Shoulder => "Плечевой пояс (см)",
+            MeasurementParameter.Chest => "Грудная клетка (см)",
+            MeasurementParameter.LeftBicep => "Левый бицепс (см)",
+            MeasurementParameter.RightBicep => "Правый бицепс (см)",
+            MeasurementParameter.LeftForearm => "Левое предплечье (см)",
+            MeasurementParameter.RightForearm => "Правое предплечье (см)",
+            MeasurementParameter.Buttocks => "Ягодицы (см)",
+            MeasurementParameter.LeftThigh => "Левое бедро (см)",
+            MeasurementParameter.RightThigh => "Правое бедро (см)",
+            MeasurementParameter.LeftCalf => "Левая икра (см)",
+            MeasurementParameter.RightCalf => "Правая икра (см)",
+            _ => parameter.ToString()
+        };
+    }
+
+    private string GetPeriodName(TimePeriod period)
+    {
+        return period switch
+        {
+            TimePeriod.ThreeMonths => "3 месяца",
+            TimePeriod.OneYear => "Год",
+            TimePeriod.AllTime => "Всё время",
+            _ => period.ToString()
+        };
+    }
+
+    private void OnParameterChanged(MeasurementParameter parameter)
+    {
+        selectedParameter = parameter;
+        UpdateChart();
+    }
+
+    private void OnPeriodChanged(TimePeriod period)
+    {
+        selectedPeriod = period;
+        UpdateChart();
+    }
+
+    private void UpdateChart()
+    {
+        var filteredMeasurements = FilterMeasurementsByPeriod(measurementsList, selectedPeriod);
+        chartData = PrepareChartData(filteredMeasurements, selectedParameter);
+
+        if (chartData.Any())
+        {
+            const int maxVisibleLabels = 15;
+            xAxisLabels = BuildXAxisLabels(chartData, maxVisibleLabels);
+            var values = chartData.Select(d => (double)d.Value).ToArray();
+
+            chartSeriesList = new List<ChartSeries>
+            {
+                new ChartSeries
+                {
+                    Name = GetParameterName(selectedParameter),
+                    Data = values,
+                    ShowDataMarkers = true
+                }
+            };
+
+            chartOptions = new ChartOptions
+            {
+                YAxisTicks = 1,
+                XAxisLines = true,
+                YAxisLines = true,
+                InterpolationOption = InterpolationOption.Straight,
+                ChartPalette = new[] { "#6750A4" },
+            };
+
+            var manyPoints = chartData.Count > maxVisibleLabels;
+
+            axisChartOptions = new AxisChartOptions
+            {
+                // при большом количестве точек чуть поворачиваем подписи,
+                // при небольшом — оставляем горизонтальными
+                XAxisLabelRotation = manyPoints ? 45 : 0,
+                MatchBoundsToSize = true
+            };
+        }
+        else
+        {
+            chartSeriesList = new List<ChartSeries>();
+            xAxisLabels = Array.Empty<string>();
+        }
+
+        StateHasChanged();
+    }
+
+    private List<MeasurementsHistory> FilterMeasurementsByPeriod(List<MeasurementsHistory> measurements, TimePeriod period)
+    {
+        var now = DateTime.UtcNow;
+        var cutoffDate = period switch
+        {
+            TimePeriod.ThreeMonths => now.AddMonths(-3),
+            TimePeriod.OneYear => now.AddYears(-1),
+            TimePeriod.AllTime => DateTime.MinValue,
+            _ => DateTime.MinValue
+        };
+
+        return measurements.Where(m => m.Date >= cutoffDate).OrderBy(m => m.Date).ToList();
+    }
+
+    private List<ChartDataPoint> PrepareChartData(List<MeasurementsHistory> measurements, MeasurementParameter parameter)
+    {
+        var dataPoints = new List<ChartDataPoint>();
+
+        foreach (var measurement in measurements)
+        {
+            decimal? value = parameter switch
+            {
+                MeasurementParameter.BodyWeight => measurement.BodyWeight,
+                MeasurementParameter.Waist => measurement.Waist,
+                MeasurementParameter.BodyFatPercentage => measurement.BodyFatPercentage,
+                MeasurementParameter.LeanBodyMass => measurement.LeanBodyMass,
+                MeasurementParameter.Neck => measurement.Neck,
+                MeasurementParameter.Shoulder => measurement.Shoulder,
+                MeasurementParameter.Chest => measurement.Chest,
+                MeasurementParameter.LeftBicep => measurement.LeftBicep,
+                MeasurementParameter.RightBicep => measurement.RightBicep,
+                MeasurementParameter.LeftForearm => measurement.LeftForearm,
+                MeasurementParameter.RightForearm => measurement.RightForearm,
+                MeasurementParameter.Buttocks => measurement.Buttocks,
+                MeasurementParameter.LeftThigh => measurement.LeftThigh,
+                MeasurementParameter.RightThigh => measurement.RightThigh,
+                MeasurementParameter.LeftCalf => measurement.LeftCalf,
+                MeasurementParameter.RightCalf => measurement.RightCalf,
+                _ => null
+            };
+
+            if (value.HasValue)
+            {
+                dataPoints.Add(new ChartDataPoint
+                {
+                    Date = measurement.Date,
+                    Value = value.Value
+                });
+            }
+        }
+
+        return dataPoints;
+    }
+
+    private static string[] BuildXAxisLabels(List<ChartDataPoint> data, int maxLabels)
+    {
+        if (data.Count <= maxLabels)
+        {
+            return data.Select(d => d.Date)
+                       .Select(FormatChartDateStatic)
+                       .ToArray();
+        }
+
+        var labels = new string[data.Count];
+        var step = (int)Math.Ceiling(data.Count / (double)maxLabels);
+
+        for (var i = 0; i < data.Count; i++)
+        {
+            labels[i] = i % step == 0 ? FormatChartDateStatic(data[i].Date) : string.Empty;
+        }
+
+        return labels;
+    }
+
+    private static string FormatChartDateStatic(DateTime date)
+    {
+        var localDate = date.AddHours(3); // UTC+3
+        return localDate.ToString("dd.MM", new System.Globalization.CultureInfo("ru-RU"));
+    }
+
+    private string FormatChartDate(DateTime date)
+    {
+        var localDate = date.AddHours(3); // UTC+3
+        return localDate.ToString("dd.MM", new System.Globalization.CultureInfo("ru-RU"));
+    }
+
+    private class ChartDataPoint
+    {
+        public DateTime Date { get; set; }
+        public decimal Value { get; set; }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+
+    }
+}
