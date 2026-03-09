@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Http;
 using MudBlazor.Services;
 using SetRep.Core.ApiRequestServices;
-using SetRep.MiniApp.Client.Options;
 using SetRep.MiniApp.Client.Services;
 
 namespace SetRep.MiniApp.Client.Extensions;
@@ -44,12 +43,6 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IFileUploadService, FileUploadService>();
         services.AddTransient<IReadyWorkoutPlanService, ReadyWorkoutPlanService>();
         services.AddScoped<IAppInitializationService, AppInitializationService>();
-        services.AddScoped<IImageConversionService, NoOpImageConversionService>();
-
-        services.Configure<Options.FileUploadOptions>(
-            builder.Configuration.GetSection(Options.FileUploadOptions.SectionName));
-        services.Configure<Options.ReadyWorkoutPlanOptions>(
-            builder.Configuration.GetSection(Options.ReadyWorkoutPlanOptions.SectionName));
 
         return services;
     }

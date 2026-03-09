@@ -1,4 +1,9 @@
+@using SetRep.Core.ApiRequestServices
+@using SetRep.MiniApp.Client.Services
+@using SetRep.Shared.DTO
+@using SetRep.Shared.Telegram
 @using System.Text.Json
+@using Microsoft.JSInterop
 
 @inject ITelegramWebAppService TelegramWebAppService
 @inject ITelegramWebAppStateService TelegramWebAppStateService
@@ -7,11 +12,11 @@
 @inject IJSRuntime JSRuntime
 @inject ILogger<TelegramWebAppInitializer>? Logger
 @implements IAsyncDisposable
+@rendermode InteractiveWebAssembly
 
 @* Компонент для инициализации и валидации Telegram WebApp данных при загрузке приложения *@
 
 @code {
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender && TelegramWebAppService != null && TelegramWebAppStateService != null)
@@ -27,6 +32,7 @@
             AppInitializationService?.SetInitializing(true);
             Logger?.LogInformation("Начало валидации Telegram WebApp данных");
 
+            // Валидация Telegram WebApp
             var validationResult = await TelegramWebAppService.GetAndValidateAsync();
 
             if (!validationResult.IsValid)
@@ -54,10 +60,15 @@
             Logger?.LogInformation("Telegram WebApp данные успешно валидированы. User ID: {UserId}",
                 validationResult.Data.User.TelegramId);
 
+            // Сохраняем успешный результат в сервисе состояния
             TelegramWebAppStateService.SetValidationResult(validationResult);
 
+            // Валидация пользователя
             await EnsureUserExistsAsync(validationResult.Data.User);
 
+            // Настройка темы и включение кнопки назад параллельно
+            var themeTask = InitializeThemeAsync();
+            // Завершаем инициализацию
             AppInitializationService?.SetInitializing(false);
             Logger?.LogInformation("Инициализация приложения завершена успешно");
         }
@@ -76,6 +87,42 @@
         }
     }
 
+    private async Task InitializeThemeAsync()
+    {
+        try
+        {
+            var startTime = DateTime.UtcNow;
+            var timeout = TimeSpan.FromSeconds(1);
+
+            while (DateTime.UtcNow - startTime < timeout)
+            {
+                try
+                {
+                    var isReady = await JSRuntime.InvokeAsync<bool>("telegramThemeHelper.isReady");
+
+                    if (isReady)
+                    {
+                        var theme = await JSRuntime.InvokeAsync<string>("telegramThemeHelper.getTheme");
+                        Logger?.LogInformation("Загружена тема Telegram: {Theme}", theme);
+                        return;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogDebug(ex, "Ожидание загрузки веб-приложения Telegram...");
+                }
+
+                await Task.Delay(50);
+            }
+
+            Logger?.LogWarning("Веб-приложение Telegram не загрузилось вовремя, используется тема по умолчанию");
+        }
+        catch (Exception ex)
+        {
+            Logger?.LogError(ex, "Ошибка при инициализации темы Telegram");
+        }
+    }
+
     private async Task EnsureUserExistsAsync(TelegramUser telegramUser)
     {
         try
@@ -86,6 +133,7 @@
                 return;
             }
 
+            // Сначала ищем по TelegramId
             var foundUser = await UserService.GetUserByTelegramIdAsync(telegramUser.TelegramId);
 
             if (foundUser != null)
@@ -120,6 +168,7 @@
                     Logger?.LogError("Ошибка при создании пользователя через сервис");
                 }
             }
+
         }
         catch (Exception ex)
         {
@@ -132,3 +181,4 @@
         await Task.CompletedTask;
     }
 }
+

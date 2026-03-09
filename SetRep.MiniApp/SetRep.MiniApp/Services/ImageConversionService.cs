@@ -1,13 +1,12 @@
 using ImageMagick;
 using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.Extensions.Options;
-using SetRep.MiniApp.Client.Options;
-using SetRep.MiniApp.Client.Services;
+using SetRep.MiniApp.Options;
 
 namespace SetRep.MiniApp.Services;
 
 /// <summary>
-/// Серверная реализация сервиса для конвертации изображений с использованием Magick.NET
+/// Реализация сервиса для конвертации изображений с использованием Magick.NET
 /// </summary>
 public class ImageConversionService : IImageConversionService
 {

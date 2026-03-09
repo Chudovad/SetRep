@@ -1,0 +1,502 @@
+@page "/profile/measurements/add"
+@page "/profile/measurements/{Id:guid}/edit"
+@using SetRep.Core.ApiRequestServices
+@using SetRep.Core.Entities
+@using SetRep.Shared.DTO
+@using SetRep.MiniApp.Client.Services
+@using static SetRep.MiniApp.Client.Services.InitializationHelper
+@using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.Extensions.Options
+@using SetRep.MiniApp.Options
+@rendermode InteractiveWebAssembly
+@inject IMeasurementsHistoryService WeightHistoryService
+@inject IFileUploadService FileUploadService
+@inject ITelegramWebAppStateService TelegramWebAppStateService
+@inject ITelegramBackButtonService TelegramBackButtonService
+@inject ITelegramHapticService TelegramHapticService
+@inject IAppInitializationService AppInitializationService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject IOptions<FileUploadOptions> FileUploadOptionsAccessor
+@implements IAsyncDisposable
+
+<PageTitle>SetRep - @(IsEditMode ? "Редактировать замер" : "Добавить замер")</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.False" Class="pa-4">
+    <MudForm @ref="form" @bind-IsValid="@isFormValid">
+        <MudCard Elevation="2" Class="mb-4">
+            <MudCardContent>
+                <MudText Typo="Typo.h6" GutterBottom="true">Дата измерения</MudText>
+                <MudDatePicker @bind-Date="selectedDate"
+                               Label="Дата"
+                               Variant="Variant.Outlined"
+                               Required="true"
+                               MaxDate="DateTime.Today"
+                               ShowToolbar="false"
+                               Class="mb-3" />
+            </MudCardContent>
+        </MudCard>
+
+        <MudCard Elevation="2" Class="mb-4">
+            <MudCardContent>
+                <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="mb-3">
+                    <MudText Typo="Typo.h6">Изображение прогресса</MudText>
+                </MudStack>
+
+                <ImageUpload ImageUrl="@measurementDto.ProgressImageUrl"
+                             ImageAlt="Изображение прогресса"
+                             UploadLabel="Добавить изображение"
+                             ReplaceLabel="Заменить изображение"
+                             UploadIcon="@Icons.Material.Filled.CameraAlt"
+                             FullWidth="true"
+                             OnFileSelected="OnImageFileSelected"
+                             OnRemoveRequested="RemoveImage" />
+            </MudCardContent>
+        </MudCard>
+
+        <MudCard Elevation="2" Class="mb-4 add-measurement-card">
+            <MudCardContent>
+                <MudText Typo="Typo.h6" GutterBottom="true">Измерения</MudText>
+
+                <MudNumericField T="decimal?"
+                                 Step="0.2m"
+                                 Label="Масса тела (kg)"
+                                 @bind-Value="measurementDto.BodyWeight"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.End"
+                                 AdornmentIcon="@Icons.Material.Filled.Scale"
+                                 Format="0.################"
+                                 Class="mb-3" />
+
+                <MudNumericField T="decimal?"
+                                 Label="Талия (cm)"
+                                 Step="0.5m"
+                                 @bind-Value="measurementDto.Waist"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.End"
+                                 Format="0.################"
+                                 Class="mb-3" />
+
+                <MudNumericField T="decimal?"
+                                 Label="Содержание жира (%)"
+                                 @bind-Value="measurementDto.BodyFatPercentage"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.End"
+                                 Format="0.################"
+                                 Class="mb-3" />
+
+                <MudNumericField T="decimal?"
+                                 Label="Сухая мышечная масса (kg)"
+                                 @bind-Value="measurementDto.LeanBodyMass"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.End"
+                                 Format="0.################"
+                                 Class="mb-3" />
+
+                <MudNumericField T="decimal?"
+                                 Label="Шея (cm)"
+                                 Step="0.2m"
+                                 @bind-Value="measurementDto.Neck"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.End"
+                                 Format="0.################"
+                                 Class="mb-3" />
+
+                <MudNumericField T="decimal?"
+                                 Label="Плечевой пояс (cm)"
+                                 @bind-Value="measurementDto.Shoulder"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.End"
+                                 Format="0.################"
+                                 Class="mb-3" />
+
+                <MudNumericField T="decimal?"
+                                 Label="Грудная клетка (cm)"
+                                 @bind-Value="measurementDto.Chest"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.End"
+                                 Format="0.################"
+                                 Class="mb-3" />
+
+                <MudNumericField T="decimal?"
+                                 Label="Левый бицепс (cm)"
+                                 Step="0.5m"
+                                 @bind-Value="measurementDto.LeftBicep"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.End"
+                                 Format="0.################"
+                                 Class="mb-3" />
+
+                <MudNumericField T="decimal?"
+                                 Label="Правый бицепс (cm)"
+                                 Step="0.5m"
+                                 @bind-Value="measurementDto.RightBicep"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.End"
+                                 Format="0.################"
+                                 Class="mb-3" />
+
+                <MudNumericField T="decimal?"
+                                 Label="Левое предплечье (cm)"
+                                 Step="0.2m"
+                                 @bind-Value="measurementDto.LeftForearm"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.End"
+                                 Format="0.################"
+                                 Class="mb-3" />
+
+                <MudNumericField T="decimal?"
+                                 Label="Правое предплечье (cm)"
+                                 Step="0.2m"
+                                 @bind-Value="measurementDto.RightForearm"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.End"
+                                 Format="0.################"
+                                 Class="mb-3" />
+
+                <MudNumericField T="decimal?"
+                                 Label="Ягодицы (cm)"
+                                 @bind-Value="measurementDto.Buttocks"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.End"
+                                 Format="0.################"
+                                 Class="mb-3" />
+
+                <MudNumericField T="decimal?"
+                                 Label="Левое бедро (cm)"
+                                 @bind-Value="measurementDto.LeftThigh"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.End"
+                                 Format="0.################"
+                                 Class="mb-3" />
+
+                <MudNumericField T="decimal?"
+                                 Label="Правое бедро (cm)"
+                                 @bind-Value="measurementDto.RightThigh"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.End"
+                                 Format="0.################"
+                                 Class="mb-3" />
+
+                <MudNumericField T="decimal?"
+                                 Label="Левая икра (cm)"
+                                 Step="0.2m"
+                                 @bind-Value="measurementDto.LeftCalf"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.End"
+                                 Format="0.################"
+                                 Class="mb-3" />
+
+                <MudNumericField T="decimal?"
+                                 Label="Правая икра (cm)"
+                                 Step="0.2m"
+                                 @bind-Value="measurementDto.RightCalf"
+                                 Variant="Variant.Outlined"
+                                 Adornment="Adornment.End"
+                                 Format="0.################"
+                                 Class="mb-3" />
+            </MudCardContent>
+        </MudCard>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-4">@errorMessage</MudAlert>
+        }
+
+        <MudStack Row Spacing="2" Justify="Justify.SpaceBetween" Class="mt-4">
+            <MudButton Variant="Variant.Text"
+                       Color="Color.Default"
+                       OnClick="Cancel"
+                       Disabled="@isSaving">
+                Отмена
+            </MudButton>
+            <MudButton Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       OnClick="Save"
+                       Disabled="@(!isFormValid || isSaving)">
+                @if (isSaving)
+                {
+                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                    <MudText Class="ms-2">Сохранение...</MudText>
+                }
+                else
+                {
+                    <text>Сохранить</text>
+                }
+            </MudButton>
+        </MudStack>
+    </MudForm>
+</MudContainer>
+
+<style>
+    .measurement-form {
+        max-width: 100%;
+    }
+
+    .add-measurement-card:active {
+        transform: none !important;
+    }
+</style>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private MudForm? form;
+    private bool isFormValid;
+    private bool isSaving = false;
+    private bool isUploadingImage = false;
+    private string? errorMessage;
+    private IBrowserFile? selectedImageFile;
+    private long maxFileSize;
+
+    private CreateMeasurementsHistoryDto measurementDto = new()
+    {
+        Date = DateTime.UtcNow.Date
+    };
+
+    private DateTime? selectedDate
+    {
+        get => measurementDto.Date;
+        set
+        {
+            if (value.HasValue)
+            {
+                measurementDto.Date = value.Value;
+            }
+        }
+    }
+
+    private bool IsEditMode => Id != Guid.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        maxFileSize = FileUploadOptionsAccessor.Value.MaxFileSizeBytes;
+
+        if (IsEditMode)
+        {
+            await LoadMeasurement();
+        }
+        else
+        {
+            await LoadLastMeasurement();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await WaitForInitializationAsync(AppInitializationService);
+            await TelegramBackButtonService.ShowAsync();
+        }
+    }
+
+    private async Task LoadMeasurement()
+    {
+        try
+        {
+            var measurement = await WeightHistoryService.GetMeasurementsHistoryByIdAsync(Id);
+            if (measurement != null)
+            {
+                measurementDto = new CreateMeasurementsHistoryDto
+                {
+                    UserId = measurement.UserId,
+                    Date = measurement.Date,
+                    ProgressImageUrl = measurement.ProgressImageUrl,
+                    BodyWeight = measurement.BodyWeight,
+                    Waist = measurement.Waist,
+                    BodyFatPercentage = measurement.BodyFatPercentage,
+                    LeanBodyMass = measurement.LeanBodyMass,
+                    Neck = measurement.Neck,
+                    Shoulder = measurement.Shoulder,
+                    Chest = measurement.Chest,
+                    LeftBicep = measurement.LeftBicep,
+                    RightBicep = measurement.RightBicep,
+                    LeftForearm = measurement.LeftForearm,
+                    RightForearm = measurement.RightForearm,
+                    Buttocks = measurement.Buttocks,
+                    LeftThigh = measurement.LeftThigh,
+                    RightThigh = measurement.RightThigh,
+                    LeftCalf = measurement.LeftCalf,
+                    RightCalf = measurement.RightCalf,
+                    Notes = measurement.Notes
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Не удалось загрузить запись: {ex.Message}";
+        }
+    }
+
+    private async Task LoadLastMeasurement()
+    {
+        try
+        {
+            Guid userId = Guid.Empty;
+            if (TelegramWebAppStateService.ValidationResult?.Data?.User != null)
+            {
+                userId = TelegramWebAppStateService.ValidationResult.Data.User.Id;
+            }
+
+            if (userId != Guid.Empty)
+            {
+                var allEntries = await WeightHistoryService.GetLastMeasurementsHistoryAsync(userId);
+                if (allEntries != null)
+                {
+                    measurementDto.BodyWeight = allEntries.BodyWeight;
+                    measurementDto.Waist = allEntries.Waist;
+                    measurementDto.BodyFatPercentage = allEntries.BodyFatPercentage;
+                    measurementDto.LeanBodyMass = allEntries.LeanBodyMass;
+                    measurementDto.Neck = allEntries.Neck;
+                    measurementDto.Shoulder = allEntries.Shoulder;
+                    measurementDto.Chest = allEntries.Chest;
+                    measurementDto.LeftBicep = allEntries.LeftBicep;
+                    measurementDto.RightBicep = allEntries.RightBicep;
+                    measurementDto.LeftForearm = allEntries.LeftForearm;
+                    measurementDto.RightForearm = allEntries.RightForearm;
+                    measurementDto.Buttocks = allEntries.Buttocks;
+                    measurementDto.LeftThigh = allEntries.LeftThigh;
+                    measurementDto.RightThigh = allEntries.RightThigh;
+                    measurementDto.LeftCalf = allEntries.LeftCalf;
+                    measurementDto.RightCalf = allEntries.RightCalf;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Игнорируем ошибку загрузки AllEntries, чтобы не блокировать создание нового замера
+            System.Diagnostics.Debug.WriteLine($"Не удалось загрузить AllEntries: {ex.Message}");
+        }
+    }
+
+    private void OnImageFileSelected(IBrowserFile file)
+    {
+        selectedImageFile = file;
+    }
+
+    private void RemoveImage()
+    {
+        selectedImageFile = null;
+        measurementDto.ProgressImageUrl = null;
+        StateHasChanged();
+    }
+
+    private async Task UploadImageAsync(IBrowserFile file)
+    {
+        if (file == null) return;
+
+        if (file.Size > maxFileSize)
+        {
+            var maxSizeMB = maxFileSize / 1024.0 / 1024.0;
+            await TelegramHapticService.NotificationErrorAsync();
+            Snackbar.Add($"Размер файла превышает {maxSizeMB:F1} МБ", Severity.Error);
+            return;
+        }
+
+        try
+        {
+            isUploadingImage = true;
+            using var stream = file.OpenReadStream(maxAllowedSize: maxFileSize);
+            var fileUrl = await FileUploadService.UploadImageAsync(stream, file.Name, file.ContentType);
+
+            if (!string.IsNullOrEmpty(fileUrl))
+            {
+                measurementDto.ProgressImageUrl = fileUrl;
+            }
+            else
+            {
+                await TelegramHapticService.NotificationErrorAsync();
+                Snackbar.Add("Ошибка при загрузке изображения", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            await TelegramHapticService.NotificationErrorAsync();
+            Snackbar.Add($"Ошибка при загрузке изображения: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isUploadingImage = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/profile/measurements");
+    }
+
+    private async Task Save()
+    {
+        await form!.Validate();
+
+        if (!isFormValid || isSaving)
+            return;
+
+        isSaving = true;
+        errorMessage = null;
+
+        try
+        {
+            if (measurementDto.UserId == Guid.Empty && TelegramWebAppStateService.ValidationResult?.Data?.User != null)
+            {
+                measurementDto.UserId = TelegramWebAppStateService.ValidationResult.Data.User.Id;
+            }
+
+            if (measurementDto.UserId == Guid.Empty)
+            {
+                errorMessage = "Не удалось определить пользователя";
+                return;
+            }
+
+            // Загружаем изображение, если оно выбрано
+            if (selectedImageFile != null)
+            {
+                await UploadImageAsync(selectedImageFile);
+            }
+
+            if (IsEditMode)
+            {
+                var success = await WeightHistoryService.UpdateMeasurementsHistoryAsync(Id, measurementDto);
+                if (success)
+                {
+                    Snackbar.Add("Замер успешно обновлен", Severity.Success);
+                    Navigation.NavigateTo("/profile/measurements");
+                }
+                else
+                {
+                    errorMessage = "Ошибка при обновлении замера. Проверьте подключение к API.";
+                }
+            }
+            else
+            {
+                var created = await WeightHistoryService.CreateMeasurementsHistoryAsync(measurementDto);
+                if (created != null)
+                {
+                    Navigation.NavigateTo("/profile/measurements");
+                }
+                else
+                {
+                    errorMessage = "Ошибка при создании замера. Проверьте подключение к API.";
+                }
+            }
+        }
+        catch (HttpRequestException ex)
+        {
+            errorMessage = $"Ошибка сети: {ex.Message}";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Не удалось сохранить замер: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+
+    }
+}

@@ -53,12 +53,12 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IFileUploadService, FileUploadService>();
         services.AddTransient<IReadyWorkoutPlanService, ReadyWorkoutPlanService>();
         services.AddScoped<IAppInitializationService, AppInitializationService>();
-        services.AddScoped<SetRep.MiniApp.Client.Services.IImageConversionService, SetRep.MiniApp.Services.ImageConversionService>();
+        services.AddScoped<IImageConversionService, ImageConversionService>();
 
-        services.Configure<SetRep.MiniApp.Client.Options.FileUploadOptions>(
-            builder.Configuration.GetSection(SetRep.MiniApp.Client.Options.FileUploadOptions.SectionName));
-        services.Configure<SetRep.MiniApp.Client.Options.ReadyWorkoutPlanOptions>(
-            builder.Configuration.GetSection(SetRep.MiniApp.Client.Options.ReadyWorkoutPlanOptions.SectionName));
+        services.Configure<Options.FileUploadOptions>(
+            builder.Configuration.GetSection(Options.FileUploadOptions.SectionName));
+        services.Configure<Options.ReadyWorkoutPlanOptions>(
+            builder.Configuration.GetSection(Options.ReadyWorkoutPlanOptions.SectionName));
 
         return services;
     }
