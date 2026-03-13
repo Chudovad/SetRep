@@ -14,14 +14,14 @@ jobs:
       # 1. Установка cloudflared на стороне GitHub Actions
       - name: Install Cloudflared
         run: |
-          # Добавляем ключ репозитория и сам репозиторий Cloudflare
-          sudo mkdir -p /etc/apt/keyrings
-          curl -fsSL https://pkg.cloudflare.com | sudo tee /etc/apt/keyrings/cloudflare-main.gpg >/dev/null
-          echo "deb [signed-by=/etc/apt/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/cloudflared.list
-          
-          # Обновляем списки и устанавливаем
-          sudo apt-get update
-          sudo apt-get install -y cloudflared
+          # Скачиваем бинарный файл напрямую (он универсален для Linux x86_64)
+          curl -L --output cloudflared https://github.com
+          # Даем права на исполнение
+          chmod +x cloudflared
+          # Переносим в системную папку
+          sudo mv cloudflared /usr/local/bin/
+          # Проверяем установку
+          cloudflared --version
 
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
@@ -36,7 +36,7 @@ jobs:
           mkdir -p ~/.ssh
           # Эта команда заставляет SSH использовать cloudflared для подключения к вашему хосту
           echo "Host ${HOST}" >> ~/.ssh/config
-          echo "  ProxyCommand /usr/local/bin/cloudflared access ssh --hostname %h" >> ~/.ssh/config
+          echo "  ProxyCommand cloudflared access ssh --hostname %h" >> ~/.ssh/config
           
           # Сканируем ключи через прокси
           ssh-keyscan -v -t ed25519 ${HOST} >> ~/.ssh/known_hosts
