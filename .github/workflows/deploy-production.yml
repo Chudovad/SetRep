@@ -14,17 +14,17 @@ jobs:
       # 1. Установка cloudflared на стороне GitHub Actions
       - name: Install Cloudflared
         run: |
-          # 1. Добавляем ключ репозитория
-          sudo mkdir -p /etc/apt/keyrings
-          curl -fsSL https://pkg.cloudflare.com | sudo tee /etc/apt/keyrings/cloudflare-main.gpg >/dev/null
-          
-          # 2. Добавляем репозиторий, принудительно указывая версию 'jammy' (22.04), так как она стабильна
-          echo "deb [signed-by=/etc/apt/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com jammy main" | sudo tee /etc/apt/sources.list.d/cloudflared.list
-          
-          # 3. Устанавливаем пакет
+          # 1. Добавляем GPG‑ключ репозитория Cloudflare (официальная инструкция)
+          sudo mkdir -p --mode=0755 /usr/share/keyrings
+          curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg | sudo tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
+
+          # 2. Добавляем репозиторий для Ubuntu 24.04 (noble), который сейчас использует ubuntu-latest
+          echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared noble main" | sudo tee /etc/apt/sources.list.d/cloudflared.list
+
+          # 3. Устанавливаем cloudflared
           sudo apt-get update
           sudo apt-get install -y cloudflared
-          
+
           # 4. Проверяем работоспособность
           cloudflared --version
 
