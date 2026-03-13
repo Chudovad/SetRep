@@ -112,12 +112,12 @@ jobs:
             docker info || true
             
             echo "[INFO] Stopping and removing old containers..."
-            docker compose down || true
+            docker-compose down || true
             docker rm -f setrep-api setrep-bot setrep-miniapp setrep-postgres 2>/dev/null || true
             
             echo "[INFO] Pull images/build and restart..."
-            docker compose pull || true
-            docker compose up -d --build
+            docker-compose pull || true
+            docker-compose up -d --build
 
             echo "[INFO] Cleanup old images..."
             docker image prune -f
