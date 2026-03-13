@@ -103,18 +103,13 @@ jobs:
             fi
             
             echo "[INFO] Stopping and removing old containers..."
-            if docker compose version &> /dev/null; then
-              COMPOSE_CMD="docker compose"
-            else
-              COMPOSE_CMD="docker-compose"
-            fi
-            
-            \${COMPOSE_CMD} down || true
+            docker compose down || true
             docker rm -f setrep-api setrep-bot setrep-miniapp setrep-postgres 2>/dev/null || true
             
             echo "[INFO] Pull images/build and restart..."
-            \${COMPOSE_CMD} pull || true
-            \${COMPOSE_CMD} up -d --build
+            docker compose pull || true
+            docker compose up -d --build
 
             echo "[INFO] Cleanup old images..."
             docker image prune -f
+EOF
