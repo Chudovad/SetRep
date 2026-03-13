@@ -83,6 +83,10 @@ jobs:
             -o KbdInteractiveAuthentication=no \
             ${USER}@${HOST} bash -s -- <<EOF
             set -e
+            set -x
+
+            echo "[INFO] Remote deploy script started"
+
             # Явно добавляем типичные пути для Docker на macOS (brew / стандартные)
             export PATH="/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:\$PATH"
 
