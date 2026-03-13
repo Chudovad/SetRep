@@ -85,8 +85,16 @@ jobs:
             set -e
             # Явно добавляем типичные пути для Docker на macOS (brew / стандартные)
             export PATH="/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:\$PATH"
-            export DOCKER_BUILDKIT=1
-            export COMPOSE_DOCKER_CLI_BUILD=1
+
+            # Изолируем Docker от macOS Keychain, чтобы pull публичных образов не требовал UI
+            export DOCKER_CONFIG="/tmp/docker-ci-config"
+            mkdir -p "\$DOCKER_CONFIG"
+            cat > "\$DOCKER_CONFIG/config.json" <<'DOCKERCFG'
+            {
+              "credsStore": "",
+              "credHelpers": {}
+            }
+            DOCKERCFG
             
             # Переходим в папку проекта
             cd "${APP_PATH}"
@@ -96,13 +104,9 @@ jobs:
             git fetch origin production
             git reset --hard origin/production
 
-            echo "[INFO] Setting up Docker Buildx..."
-            if ! docker buildx version &> /dev/null; then
-              echo "[INFO] Docker Buildx not found, installing..."
-              mkdir -p ~/.docker/cli-plugins
-              curl -SL https://github.com/docker/buildx/releases/download/v0.12.1/buildx-v0.12.1.linux-amd64 -o ~/.docker/cli-plugins/docker-buildx
-              chmod +x ~/.docker/cli-plugins/docker-buildx
-            fi
+            echo "[INFO] Docker info (for debug):"
+            docker version || true
+            docker info || true
             
             echo "[INFO] Stopping and removing old containers..."
             docker compose down || true
