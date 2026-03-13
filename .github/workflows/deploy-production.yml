@@ -60,8 +60,15 @@ jobs:
           USER: ${{ secrets.DEPLOY_USER }}
         run: |
           echo "Testing SSH connection via Cloudflare Tunnel..."
-          # Добавляем -o StrictHostKeyChecking=no на случай проблем с keyscan
-          ssh -v -o StrictHostKeyChecking=no ${USER}@${HOST} "echo 'SSH connection successful!'"
+          # Используем только ключ из ssh-agent, отключаем password / keyboard-interactive
+          ssh -v \
+            -o StrictHostKeyChecking=no \
+            -o IdentitiesOnly=yes \
+            -o PreferredAuthentications=publickey \
+            -o PubkeyAuthentication=yes \
+            -o PasswordAuthentication=no \
+            -o KbdInteractiveAuthentication=no \
+            ${USER}@${HOST} "echo 'SSH connection successful!'"
 
       - name: Deploy
         env:
@@ -69,7 +76,14 @@ jobs:
           USER: ${{ secrets.DEPLOY_USER }}
           APP_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
-          ssh -o StrictHostKeyChecking=no ${USER}@${HOST} bash -s -- <<EOF
+          ssh \
+            -o StrictHostKeyChecking=no \
+            -o IdentitiesOnly=yes \
+            -o PreferredAuthentications=publickey \
+            -o PubkeyAuthentication=yes \
+            -o PasswordAuthentication=no \
+            -o KbdInteractiveAuthentication=no \
+            ${USER}@${HOST} bash -s -- <<EOF
             set -e
             export DOCKER_BUILDKIT=1
             export COMPOSE_DOCKER_CLI_BUILD=1
