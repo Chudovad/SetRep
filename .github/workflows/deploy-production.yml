@@ -83,6 +83,8 @@ jobs:
             -o KbdInteractiveAuthentication=no \
             ${USER}@${HOST} bash -s -- <<EOF
             set -e
+            # Явно добавляем типичные пути для Docker на macOS (brew / стандартные)
+            export PATH="/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin:\$PATH"
             export DOCKER_BUILDKIT=1
             export COMPOSE_DOCKER_CLI_BUILD=1
             
