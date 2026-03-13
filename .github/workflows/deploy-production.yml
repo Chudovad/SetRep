@@ -14,19 +14,19 @@ jobs:
       # 1. Установка cloudflared на стороне GitHub Actions
       - name: Install Cloudflared
         run: |
-          # Скачиваем стабильную версию напрямую с серверов Cloudflare (не с GitHub)
-          # Это гарантирует, что мы получим бинарный файл, а не HTML-страницу
-          curl -L --output cloudflared https://bin.equinox.io
+          # 1. Добавляем ключ репозитория
+          sudo mkdir -p /etc/apt/keyrings
+          curl -fsSL https://pkg.cloudflare.com | sudo tee /etc/apt/keyrings/cloudflare-main.gpg >/dev/null
           
-          # Распаковываем архив
-          tar -xvzf cloudflared.tgz
+          # 2. Добавляем репозиторий, принудительно указывая версию 'jammy' (22.04), так как она стабильна
+          echo "deb [signed-by=/etc/apt/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com jammy main" | sudo tee /etc/apt/sources.list.d/cloudflared.list
           
-          # Даем права и переносим в систему
-          chmod +x cloudflared
-          sudo mv cloudflared /usr/local/bin/
+          # 3. Устанавливаем пакет
+          sudo apt-get update
+          sudo apt-get install -y cloudflared
           
-          # Проверяем, что это не HTML (должно вывести версию)
-          /usr/local/bin/cloudflared --version
+          # 4. Проверяем работоспособность
+          cloudflared --version
 
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
