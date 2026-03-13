@@ -11,25 +11,38 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # 1. Установка cloudflared на стороне GitHub Actions
+      - name: Install Cloudflared
+        run: |
+          curl -L --output cloudflared.deb https://github.com
+          sudo dpkg -i cloudflared.deb
+
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
 
-      - name: Add server to known_hosts
+      # 2. Настройка SSH для использования туннеля
+      - name: Configure SSH Proxy
         env:
           HOST: ${{ secrets.DEPLOY_HOST }}
         run: |
           mkdir -p ~/.ssh
-          ssh-keyscan -H ${HOST} >> ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/known_hosts
+          # Эта команда заставляет SSH использовать cloudflared для подключения к вашему хосту
+          echo "Host ${HOST}" >> ~/.ssh/config
+          echo "  ProxyCommand /usr/local/bin/cloudflared access ssh --hostname %h" >> ~/.ssh/config
+          
+          # Сканируем ключи через прокси
+          ssh-keyscan -v -t ed25519 ${HOST} >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts ~/.ssh/config
 
       - name: Test SSH connection
         env:
           HOST: ${{ secrets.DEPLOY_HOST }}
           USER: ${{ secrets.DEPLOY_USER }}
         run: |
-          echo "Testing SSH connection..."
+          echo "Testing SSH connection via Cloudflare Tunnel..."
+          # Добавляем -o StrictHostKeyChecking=no на случай проблем с keyscan
           ssh -v -o StrictHostKeyChecking=no ${USER}@${HOST} "echo 'SSH connection successful!'"
 
       - name: Deploy
@@ -42,56 +55,36 @@ jobs:
             set -e
             export DOCKER_BUILDKIT=1
             export COMPOSE_DOCKER_CLI_BUILD=1
-            cd "${{ secrets.DEPLOY_PATH }}"
+            
+            # Переходим в папку проекта
+            cd "${APP_PATH}"
+            
             echo "[INFO] Current directory: \$(pwd)"
             echo "[INFO] Fetching code..."
             git fetch origin production
             git reset --hard origin/production
 
             echo "[INFO] Setting up Docker Buildx..."
-            # Проверяем наличие buildx
             if ! docker buildx version &> /dev/null; then
               echo "[INFO] Docker Buildx not found, installing..."
               mkdir -p ~/.docker/cli-plugins
-              if command -v curl &> /dev/null; then
-                curl -SL https://github.com/docker/buildx/releases/download/v0.12.1/buildx-v0.12.1.linux-amd64 -o ~/.docker/cli-plugins/docker-buildx
-                chmod +x ~/.docker/cli-plugins/docker-buildx
-                docker buildx install || true
-              fi
+              curl -SL https://github.com/docker/buildx/releases/download/v0.12.1/buildx-v0.12.1.linux-amd64 -o ~/.docker/cli-plugins/docker-buildx
+              chmod +x ~/.docker/cli-plugins/docker-buildx
             fi
             
-            # Создаем или используем builder
-            if docker buildx version &> /dev/null; then
-              if docker buildx ls 2>/dev/null | grep -q "default"; then
-                echo "[INFO] Using existing default builder"
-                docker buildx use default || true
-              else
-                echo "[INFO] Creating default buildx builder..."
-                docker buildx create --name default --use --driver docker || true
-                docker buildx inspect --bootstrap default || true
-              fi
-            else
-              echo "[WARNING] Docker Buildx is not available. BuildKit cache will not work."
-            fi
-
             echo "[INFO] Stopping and removing old containers..."
-            if command -v docker &> /dev/null && docker compose version &> /dev/null; then
+            if docker compose version &> /dev/null; then
               COMPOSE_CMD="docker compose"
-            elif command -v docker-compose &> /dev/null; then
-              COMPOSE_CMD="docker-compose"
             else
-              echo "Error: docker-compose not found!"
-              exit 1
+              COMPOSE_CMD="docker-compose"
             fi
             
             \${COMPOSE_CMD} down || true
-
             docker rm -f setrep-api setrep-bot setrep-miniapp setrep-postgres 2>/dev/null || true
             
             echo "[INFO] Pull images/build and restart..."
-            \${COMPOSE_CMD} pull
+            \${COMPOSE_CMD} pull || true
             \${COMPOSE_CMD} up -d --build
 
             echo "[INFO] Cleanup old images..."
             docker image prune -f
-          EOF
