@@ -93,12 +93,11 @@ jobs:
             # Изолируем Docker от macOS Keychain, чтобы pull публичных образов не требовал UI
             export DOCKER_CONFIG="/tmp/docker-ci-config"
             mkdir -p "\$DOCKER_CONFIG"
-            cat > "\$DOCKER_CONFIG/config.json" <<'DOCKERCFG'
-            {
-              "credsStore": "",
-              "credHelpers": {}
-            }
-            DOCKERCFG
+            printf '%s\n' \
+              '{' \
+              '  "credsStore": "",' \
+              '  "credHelpers": {}' \
+              '}' > "\$DOCKER_CONFIG/config.json"
             
             # Переходим в папку проекта
             cd "${APP_PATH}"
