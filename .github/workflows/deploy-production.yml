@@ -75,12 +75,12 @@ jobs:
           USER: ${{ secrets.DEPLOY_USER }}
           APP_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
-          ssh
-            -o StrictHostKeyChecking=no
-            -o PreferredAuthentications=publickey
-            -o PubkeyAuthentication=yes
-            -o PasswordAuthentication=no
-            -o KbdInteractiveAuthentication=no
+          ssh \
+            -o StrictHostKeyChecking=no \
+            -o PreferredAuthentications=publickey \
+            -o PubkeyAuthentication=yes \
+            -o PasswordAuthentication=no \
+            -o KbdInteractiveAuthentication=no \
             ${USER}@${HOST} bash -s -- "${APP_PATH}" <<'EOF'
             set -e
             set -x
