@@ -1,9 +1,8 @@
-version: '3.8'
-
 services:
   postgres:
     image: postgres:16-alpine
     container_name: setrep-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-SetRepDb}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
@@ -25,6 +24,7 @@ services:
       context: .
       dockerfile: SetRep.API/Dockerfile
     container_name: setrep-api
+    restart: unless-stopped
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
@@ -49,6 +49,7 @@ services:
       context: .
       dockerfile: SetRep.Bot/Dockerfile
     container_name: setrep-bot
+    restart: unless-stopped
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
@@ -67,6 +68,7 @@ services:
       context: .
       dockerfile: SetRep.MiniApp/SetRep.MiniApp/Dockerfile
     container_name: setrep-miniapp
+    restart: unless-stopped
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
