@@ -75,63 +75,46 @@ jobs:
           USER: ${{ secrets.DEPLOY_USER }}
           APP_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
-          ssh \
-            -o StrictHostKeyChecking=no \
-            -o PreferredAuthentications=publickey \
-            -o PubkeyAuthentication=yes \
-            -o PasswordAuthentication=no \
-            -o KbdInteractiveAuthentication=no \
+          ssh
+            -o StrictHostKeyChecking=no
+            -o PreferredAuthentications=publickey
+            -o PubkeyAuthentication=yes
+            -o PasswordAuthentication=no
+            -o KbdInteractiveAuthentication=no
             ${USER}@${HOST} bash -s -- "${APP_PATH}" <<'EOF'
             set -e
             set -x
-
+          
             APP_PATH="$1"
-
-            echo "[INFO] Remote deploy script started (macOS, docker compose)"
-
-            # macOS: добавляем типичные пути для Docker / Homebrew
-            export PATH="/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
-
-            # Изолируем Docker от macOS Keychain и проблемных локальных плагинов
-            export DOCKER_CONFIG="/tmp/docker-ci-config"
-            mkdir -p "$DOCKER_CONFIG"
-            cat > "$DOCKER_CONFIG/config.json" <<'JSON'
-            {
-              "credsStore": "",
-              "credHelpers": {}
-            }
-            JSON
-
-            # Отключаем сломанный docker-buildx, если он есть
-            if [ -f "$HOME/.docker/cli-plugins/docker-buildx" ]; then
-              echo "[WARN] Disabling broken docker-buildx plugin for CI..."
-              mv "$HOME/.docker/cli-plugins/docker-buildx" \
-                 "$HOME/.docker/cli-plugins/docker-buildx.disabled" || true
-            fi
-
+          
+            echo "[INFO] Remote deploy script started (macOS)"
+          
+            # PATH для macOS + Homebrew
+            export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+          
             cd "$APP_PATH"
             echo "[INFO] Current directory: $(pwd)"
-
+          
             echo "[INFO] Syncing git to origin/production..."
             git fetch origin production
             git reset --hard origin/production
-
-            echo "[INFO] Docker client/server info (for debug)..."
-            docker version || true
-            docker info || true
-
-            echo "[INFO] Stopping old stack with docker compose..."
+          
+            echo "[INFO] Docker info..."
+            docker version
+            docker compose version
+          
+            echo "[INFO] Stopping existing stack..."
             docker compose down || true
-
-            echo "[INFO] Removing old containers by name (if any)..."
-            docker rm -f setrep-api setrep-bot setrep-miniapp setrep-postgres 2>/dev/null || true
-
-            echo "[INFO] Pulling images (may be skipped for local builds)..."
-            docker compose pull || true
-
-            echo "[INFO] Building and starting stack with docker compose..."
-            docker compose up -d --build
-
-            echo "[INFO] Pruning unused images..."
+          
+            echo "[INFO] Building images..."
+            docker compose build --pull
+          
+            echo "[INFO] Starting containers..."
+            docker compose up -d
+          
+            echo "[INFO] Removing unused images..."
             docker image prune -f || true
+          
+            echo "[INFO] Deploy finished successfully"
+          
           EOF
