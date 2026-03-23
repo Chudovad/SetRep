@@ -15,7 +15,8 @@ public interface IWorkoutHistoryService
     /// <summary>
     /// Завершить тренировку - обновляет EndTime
     /// </summary>
-    Task<bool> EndWorkoutAsync(Guid workoutHistoryId);
+    /// <param name="updateWorkoutTemplateFromHistory">Если true, подходы и веса в шаблоне тренировки синхронизируются с результатами сессии.</param>
+    Task<bool> EndWorkoutAsync(Guid workoutHistoryId, bool updateWorkoutTemplateFromHistory = true);
 
     /// <summary>
     /// Получить активную тренировку пользователя

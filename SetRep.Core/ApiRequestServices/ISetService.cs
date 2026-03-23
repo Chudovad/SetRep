@@ -19,6 +19,11 @@ public interface ISetService
     Task<List<Set>?> GetSetsByWorkoutIdAsync(Guid workoutId);
 
     /// <summary>
+    /// Создать подход в шаблоне упражнения
+    /// </summary>
+    Task<Set?> CreateSetAsync(CreateSetDto dto);
+
+    /// <summary>
     /// Обновить подход
     /// </summary>
     Task<bool> UpdateSetAsync(Guid setId, CreateSetDto dto);

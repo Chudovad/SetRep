@@ -951,7 +951,8 @@ else if (workout != null && currentExercise != null)
             { nameof(ConfirmDialog.Title), "Подтверждение завершения" },
             { nameof(ConfirmDialog.ContentText), $"Вы уверены, что хотите завершить тренировку?" },
             { nameof(ConfirmDialog.ButtonText), "Завершить" },
-            { nameof(ConfirmDialog.Color), Color.Error }
+            { nameof(ConfirmDialog.Color), Color.Error },
+            { nameof(ConfirmDialog.ShowUpdateWorkoutTemplateCheckbox), true }
         };
         var options = new DialogOptions
         {
@@ -963,20 +964,21 @@ else if (workout != null && currentExercise != null)
         var dialogReference = await DialogService.ShowAsync<ConfirmDialog>("Подтверждение завершения", parameters, options);
         var result = await dialogReference.Result;
 
-        if (!result.Canceled)
+        if (result != null && !result.Canceled)
         {
-            await EndWorkout();
+            var updateTemplate = result.Data is bool b ? b : true;
+            await EndWorkout(updateTemplate);
         }
     }
 
-    private async Task EndWorkout()
+    private async Task EndWorkout(bool updateWorkoutTemplateFromHistory = true)
     {
         isEndingWorkout = true;
         StateHasChanged();
 
         try
         {
-            var success = await WorkoutHistoryService.EndWorkoutAsync(WorkoutHistoryId);
+            var success = await WorkoutHistoryService.EndWorkoutAsync(WorkoutHistoryId, updateWorkoutTemplateFromHistory);
             if (success)
             {
                 await ClearWorkoutDataFromStorage();

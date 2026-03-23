@@ -71,7 +71,7 @@ public class WorkoutHistoryService : IWorkoutHistoryService
         }
     }
 
-    public async Task<bool> EndWorkoutAsync(Guid workoutHistoryId)
+    public async Task<bool> EndWorkoutAsync(Guid workoutHistoryId, bool updateWorkoutTemplateFromHistory = true)
     {
         try
         {
@@ -92,7 +92,10 @@ public class WorkoutHistoryService : IWorkoutHistoryService
                 return false;
             }
 
-            await UpdateWorkoutSetsFromHistoryAsync(workoutHistoryId, existing.WorkoutId);
+            if (updateWorkoutTemplateFromHistory)
+            {
+                await UpdateWorkoutSetsFromHistoryAsync(workoutHistoryId, existing.WorkoutId);
+            }
 
             // Обновляем только EndTime
             var dto = new CreateWorkoutHistoryDto
@@ -120,7 +123,8 @@ public class WorkoutHistoryService : IWorkoutHistoryService
 
     /// <summary>
     /// Синхронизирует подходы шаблона тренировки с выполненными подходами из истории.
-    /// Обновляет вес и повторения в шаблоне, если в истории есть лучшие результаты.
+    /// Обновляет существующие подходы и создаёт в шаблоне недостающие номера подходов из истории.
+    /// Подставляет вес и повторения из истории (в том числе меньшие, чем в шаблоне).
     /// </summary>
     private async Task UpdateWorkoutSetsFromHistoryAsync(Guid workoutHistoryId, Guid? workoutId)
     {
@@ -147,45 +151,40 @@ public class WorkoutHistoryService : IWorkoutHistoryService
                 if (!historySetsByExercise.TryGetValue(workoutExercise.ExerciseId, out var exerciseHistorySets))
                     continue;
 
-                var workoutSets = await _setService.GetSetsByWorkoutExerciseIdAsync(workoutExercise.Id);
-                if (workoutSets == null || !workoutSets.Any())
-                    continue;
+                var workoutSets = await _setService.GetSetsByWorkoutExerciseIdAsync(workoutExercise.Id)
+                                   ?? new List<Set>();
+                var existingSetNumbers = workoutSets.Select(s => s.SetNumber).ToHashSet();
 
-                var maxValuesBySetNumber = exerciseHistorySets
+                var historyValuesBySetNumber = exerciseHistorySets
                     .GroupBy(s => s.SetNumber)
                     .ToDictionary(
                         g => g.Key,
-                        g => new
+                        g =>
                         {
-                            MaxWeight = g.Where(s => s.Weight.HasValue).Max(s => s.Weight),
-                            MaxReps = g.Max(s => s.Reps)
+                            var withWeight = g.Where(s => s.Weight.HasValue).ToList();
+                            var latest = g.OrderByDescending(s => s.CompletedAt).First();
+                            return (
+                                HistWeight: withWeight.Count > 0 ? withWeight.Max(s => s.Weight!.Value) : (decimal?)null,
+                                HistReps: g.Max(s => s.Reps),
+                                DurationSeconds: latest.DurationSeconds,
+                                DistanceMeters: latest.DistanceMeters,
+                                Notes: latest.Notes,
+                                CompletedAt: latest.CompletedAt
+                            );
                         });
 
                 foreach (var workoutSet in workoutSets)
                 {
-                    if (!maxValuesBySetNumber.TryGetValue(workoutSet.SetNumber, out var maxValues))
+                    if (!historyValuesBySetNumber.TryGetValue(workoutSet.SetNumber, out var historyValues))
                         continue;
 
-                    bool needsUpdate = false;
-                    decimal? newWeight = workoutSet.Weight;
-                    int newReps = workoutSet.Reps;
+                    var newWeight = historyValues.HistWeight ?? workoutSet.Weight;
+                    var newReps = historyValues.HistReps;
 
-                    if (maxValues.MaxWeight.HasValue)
-                    {
-                        if (!workoutSet.Weight.HasValue || maxValues.MaxWeight.Value > workoutSet.Weight.Value)
-                        {
-                            newWeight = maxValues.MaxWeight.Value;
-                            needsUpdate = true;
-                        }
-                    }
-
-                    if (maxValues.MaxReps > workoutSet.Reps)
-                    {
-                        newReps = maxValues.MaxReps;
-                        needsUpdate = true;
-                    }
-
-                    if (needsUpdate)
+                    var weightDiffers = historyValues.HistWeight.HasValue
+                        ? !workoutSet.Weight.HasValue || workoutSet.Weight.Value != historyValues.HistWeight.Value
+                        : false;
+                    if (weightDiffers || newReps != workoutSet.Reps)
                     {
                         var updateDto = new CreateSetDto
                         {
@@ -201,6 +200,27 @@ public class WorkoutHistoryService : IWorkoutHistoryService
                         };
                         await _setService.UpdateSetAsync(workoutSet.Id, updateDto);
                     }
+                }
+
+                foreach (var (setNumber, hv) in historyValuesBySetNumber)
+                {
+                    if (existingSetNumbers.Contains(setNumber))
+                        continue;
+
+                    var completedAt = hv.CompletedAt == default ? DateTime.UtcNow : hv.CompletedAt;
+                    var createDto = new CreateSetDto
+                    {
+                        WorkoutExerciseId = workoutExercise.Id,
+                        SetNumber = setNumber,
+                        Reps = hv.HistReps,
+                        Weight = hv.HistWeight,
+                        DurationSeconds = hv.DurationSeconds,
+                        DistanceMeters = hv.DistanceMeters,
+                        IsCompleted = true,
+                        Notes = hv.Notes,
+                        CompletedAt = completedAt
+                    };
+                    await _setService.CreateSetAsync(createDto);
                 }
             }
         }

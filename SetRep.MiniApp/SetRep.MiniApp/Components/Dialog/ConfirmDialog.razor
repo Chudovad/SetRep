@@ -6,6 +6,16 @@
     </TitleContent>
     <DialogContent>
         <MudText Typo="Typo.body1">@ContentText</MudText>
+        @if (ShowUpdateWorkoutTemplateCheckbox)
+        {
+            <MudCheckBox T="bool"
+                         Class="mt-3"
+                         Color="Color.Primary"
+                         Value="_updateWorkoutTemplate"
+                         ValueChanged="OnUpdateWorkoutTemplateChanged">
+                Обновить подходы и веса в шаблоне тренировки
+            </MudCheckBox>
+        }
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel">Отмена</MudButton>
@@ -24,6 +34,14 @@
     [Parameter] public string ContentText { get; set; } = string.Empty;
     [Parameter] public string ButtonText { get; set; } = "Подтвердить";
     [Parameter] public Color Color { get; set; } = Color.Primary;
+    [Parameter] public bool ShowUpdateWorkoutTemplateCheckbox { get; set; }
+
+    private bool _updateWorkoutTemplate = true;
+
+    private void OnUpdateWorkoutTemplateChanged(bool value)
+    {
+        _updateWorkoutTemplate = value;
+    }
 
     private void Cancel()
     {
@@ -32,6 +50,7 @@
 
     private void Confirm()
     {
-        MudDialog?.Close(DialogResult.Ok(true));
+        var data = ShowUpdateWorkoutTemplateCheckbox ? _updateWorkoutTemplate : true;
+        MudDialog?.Close(DialogResult.Ok(data));
     }
 }
