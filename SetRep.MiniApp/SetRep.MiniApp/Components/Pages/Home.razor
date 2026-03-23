@@ -337,7 +337,7 @@
 
     private async Task StartSelectedWorkout()
     {
-        if (!selectedWorkoutId.HasValue)
+        if (!selectedWorkoutId.HasValue || isStartingWorkout)
         {
             return;
         }
@@ -357,29 +357,31 @@
             {
                 await TelegramHapticService.NotificationErrorAsync();
                 Snackbar.Add("Не удалось определить пользователя", Severity.Error);
-                isStartingWorkout = false;
-                StateHasChanged();
                 return;
             }
 
-            var workoutHistory = await WorkoutHistoryService.StartWorkoutAsync(selectedWorkoutId.Value, userId);
+            var workoutId = selectedWorkoutId.Value;
+            var workoutHistory = await WorkoutHistoryService.StartWorkoutAsync(workoutId, userId);
 
             if (workoutHistory != null)
             {
+                await WorkoutHistoryService.CopySetsFromWorkoutAsync(workoutHistory.Id, workoutId);
+                activeWorkoutHistory = workoutHistory;
                 Navigation.NavigateTo($"/workouts/{workoutHistory.WorkoutId}/active/{workoutHistory.Id}");
             }
             else
             {
                 await TelegramHapticService.NotificationErrorAsync();
                 Snackbar.Add("Не удалось начать тренировку. Попробуйте еще раз.", Severity.Error);
-                isStartingWorkout = false;
-                StateHasChanged();
             }
         }
         catch (Exception ex)
         {
             await TelegramHapticService.NotificationErrorAsync();
             Snackbar.Add($"Ошибка при начале тренировки: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
             isStartingWorkout = false;
             StateHasChanged();
         }
@@ -400,7 +402,8 @@
             { nameof(ConfirmDialog.Title), "Подтверждение завершения" },
             { nameof(ConfirmDialog.ContentText), $"Вы уверены, что хотите завершить тренировку?" },
             { nameof(ConfirmDialog.ButtonText), "Завершить" },
-            { nameof(ConfirmDialog.Color), Color.Error }
+            { nameof(ConfirmDialog.Color), Color.Error },
+            { nameof(ConfirmDialog.ShowUpdateWorkoutTemplateCheckbox), true }
         };
         var options = new DialogOptions
         {
@@ -414,11 +417,12 @@
 
         if (result != null && !result.Canceled)
         {
-            await EndActiveWorkout();
+            var updateTemplate = result.Data is bool b ? b : true;
+            await EndActiveWorkout(updateTemplate);
         }
     }
 
-    private async Task EndActiveWorkout()
+    private async Task EndActiveWorkout(bool updateWorkoutTemplateFromHistory = true)
     {
         if (activeWorkoutHistory == null)
         {
@@ -430,7 +434,7 @@
 
         try
         {
-            var success = await WorkoutHistoryService.EndWorkoutAsync(activeWorkoutHistory.Id);
+            var success = await WorkoutHistoryService.EndWorkoutAsync(activeWorkoutHistory.Id, updateWorkoutTemplateFromHistory);
 
             if (success)
             {

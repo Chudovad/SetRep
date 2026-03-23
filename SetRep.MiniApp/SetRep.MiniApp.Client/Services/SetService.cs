@@ -65,6 +65,32 @@ public class SetService : ISetService
     }
 
     /// <summary>
+    /// Создать подход в шаблоне упражнения
+    /// </summary>
+    public async Task<Set?> CreateSetAsync(CreateSetDto dto)
+    {
+        try
+        {
+            var request = new HttpRequestMessage(HttpMethod.Post, "api/sets")
+            {
+                Content = JsonContent.Create(dto)
+            };
+            request.AddBearerToken(_telegramWebAppStateService);
+            var response = await _httpClient.SendAsync(request);
+            if (response.IsSuccessStatusCode)
+            {
+                return await response.Content.ReadFromJsonAsync<Set>();
+            }
+
+            return null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
     /// Обновить подход
     /// </summary>
     public async Task<bool> UpdateSetAsync(Guid setId, CreateSetDto dto)
