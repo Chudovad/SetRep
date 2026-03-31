@@ -130,14 +130,25 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
+// Настройка CORS для доступа из WebApp и MiniApp
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowWebApp", policy =>
     {
-        policy.WithOrigins(
-                "https://localhost:7001", "http://localhost:5186", // WebApp
-                "https://localhost:7001", "http://localhost:5096"  // MiniApp
-              )
+        policy.SetIsOriginAllowed(origin =>
+              {
+                  var allowedOrigins = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                  {
+                      "https://setrepbot.ru",
+                      "https://localhost:7001",
+                      "http://localhost:5186",
+                      "http://localhost:5096"
+                  };
+                  if (allowedOrigins.Contains(origin))
+                      return true;
+                  return Uri.TryCreate(origin, UriKind.Absolute, out var uri)
+                      && uri.Host.EndsWith(".devtunnels.ms", StringComparison.OrdinalIgnoreCase);
+              })
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials();
