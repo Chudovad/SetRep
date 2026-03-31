@@ -54,6 +54,14 @@ window.getTelegramWebAppData = function() {
         if (typeof webApp.disableVerticalSwipes === 'function') {
             webApp.disableVerticalSwipes();
         }
+
+        if (typeof webApp.expand === 'function') {
+            webApp.expand();
+        }
+
+        if (typeof webApp.requestFullscreen === 'function') {
+            webApp.requestFullscreen();
+        }
     }
 })();
 

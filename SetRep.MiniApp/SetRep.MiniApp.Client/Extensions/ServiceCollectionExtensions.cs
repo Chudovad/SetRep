@@ -1,9 +1,6 @@
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Http;
 using MudBlazor.Services;
 using SetRep.Core.ApiRequestServices;
-using SetRep.MiniApp.Client.Options;
 using SetRep.MiniApp.Client.Services;
 
 namespace SetRep.MiniApp.Client.Extensions;
@@ -17,19 +14,19 @@ public static class ServiceCollectionExtensions
 
         // Регистрируем TelegramWebAppStateService первым
         services.AddScoped<ITelegramWebAppStateService, TelegramWebAppStateService>();
-        
+
         // Настройка HTTP клиента для API
         var apiBaseUrl = builder.Configuration["ApiBaseUrl"] ?? "https://localhost:7097";
-        services.AddScoped(sp => new HttpClient 
+        services.AddScoped(sp => new HttpClient
         {
-            BaseAddress = new Uri(apiBaseUrl) 
+            BaseAddress = new Uri(apiBaseUrl)
         });
 
         // Регистрация сервисов для работы с Telegram WebApp
         services.AddTransient<ITelegramWebAppService, TelegramWebAppService>();
         services.AddScoped<ITelegramBackButtonService, TelegramBackButtonService>();
         services.AddScoped<ITelegramHapticService, TelegramHapticService>();
-        
+
         // Регистрация бизнес-сервисов
         services.AddScoped<IActiveWorkoutService, ActiveWorkoutService>();
         services.AddTransient<IWorkoutHistoryService, WorkoutHistoryService>();

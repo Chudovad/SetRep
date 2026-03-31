@@ -1,0 +1,14 @@
+﻿<MudStack Spacing="0"
+          AlignItems="AlignItems.Center"
+          Class="mb-2 w-100">
+    <MudText Typo="Typo.subtitle1"
+             Class="mud-typography-bold text-center text-truncate"
+             Style="max-width: calc(100% - 88px); box-sizing: border-box;">
+        @Title
+    </MudText>
+</MudStack>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = "";
+}
