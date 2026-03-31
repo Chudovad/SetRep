@@ -19,7 +19,10 @@ public static class ServiceCollectionExtensions
         // Регистрация сервисов для работы с Telegram WebApp (для prerendering)
         // На сервере эти сервисы будут использоваться только при prerendering
         // В WebAssembly они будут переопределены регистрацией из Client/Program.cs
-        var apiBaseUrl = builder.Configuration["ApiBaseUrl"] ?? "https://localhost:7097";
+        // Поддержка переменной окружения API_BASE_URL из Docker (.env)
+        var apiBaseUrl = builder.Configuration["ApiBaseUrl"]
+            ?? builder.Configuration["API_BASE_URL"]
+            ?? "https://localhost:7097";
 
         // Регистрация HttpClient для серверных компонентов
         services.AddHttpClient("ApiClient", client =>
