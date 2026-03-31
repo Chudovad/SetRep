@@ -17,12 +17,12 @@ public static class ServiceCollectionExtensions
 
         // Регистрируем TelegramWebAppStateService первым
         services.AddScoped<ITelegramWebAppStateService, TelegramWebAppStateService>();
-
+        
         // Настройка HTTP клиента для API
-        // WASM-клиент шлёт запросы на свой origin, а сервер MiniApp проксирует их к API
+        var apiBaseUrl = builder.Configuration["ApiBaseUrl"] ?? "https://localhost:7097";
         services.AddScoped(sp => new HttpClient 
         {
-            BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) 
+            BaseAddress = new Uri(apiBaseUrl) 
         });
 
         // Регистрация сервисов для работы с Telegram WebApp

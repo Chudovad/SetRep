@@ -139,6 +139,7 @@ builder.Services.AddCors(options =>
               {
                   var allowedOrigins = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
                   {
+                      "https://setrepbot.ru",
                       "https://localhost:7001",
                       "http://localhost:5186",
                       "http://localhost:5096"
