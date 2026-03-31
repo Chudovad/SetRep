@@ -1,5 +1,6 @@
 using SetRep.MiniApp.Components;
 using SetRep.MiniApp.Extensions;
+using SetRep.MiniApp.Middleware;
 using System.Globalization;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -32,6 +33,9 @@ if (!string.IsNullOrEmpty(httpsPort))
 }
 
 app.UseAntiforgery();
+
+// Проксируем /api/* запросы от WASM-клиента к бэкенд API
+app.UseMiddleware<ApiProxyMiddleware>();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
