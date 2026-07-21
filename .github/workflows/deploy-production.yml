@@ -99,11 +99,6 @@ jobs:
             git fetch origin production
             git reset --hard origin/production
           
-            DOCKER_CI_CONFIG="$(mktemp -d)"
-            printf '%s\n' '{}' > "$DOCKER_CI_CONFIG/config.json"
-            export DOCKER_CONFIG="$DOCKER_CI_CONFIG"
-            echo "[INFO] Using DOCKER_CONFIG=$DOCKER_CONFIG (no keychain credsStore)"
-          
             echo "[INFO] Docker info..."
             docker version
             docker compose version
@@ -119,8 +114,6 @@ jobs:
           
             echo "[INFO] Removing unused images..."
             docker image prune -f || true
-          
-            rm -rf "$DOCKER_CI_CONFIG" || true
           
             echo "[INFO] Deploy finished successfully"
           
