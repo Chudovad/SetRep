@@ -39,6 +39,7 @@ SetRep - это комплексное решение для отслежива�
 - **Docker** - Контейнеризация
 - **Docker Compose** - Оркестрация контейнеров
 - **Yandex Object Storage** - Хранилище изображений
+- **Яндекс.Диск** - синхронизация бэкапов PostgreSQL с хоста (клиент на сервере)
 
 ---
 
@@ -745,11 +746,46 @@ SetRep - это комплексное решение для отслежива�
 2. **api** - SetRep.API
 3. **bot** - SetRep.Bot
 4. **miniapp** - SetRep.MiniApp
+5. **postgres-backup** - автоматические бэкапы PostgreSQL (`pg_dumpall`)
 
 **Сеть:** `setrep-network` (bridge)
 
 **Volumes:**
 - `postgres_data` - Данные PostgreSQL
+- `${POSTGRES_BACKUP_DIR}` - каталог бэкапов на хосте (bind mount)
+
+### Бэкапы PostgreSQL и Яндекс.Диск
+
+Сервис `postgres-backup` (образ `prodrigestivill/postgres-backup-local:16`) делает **полный дамп всего кластера** через `pg_dumpall`: все базы (не только `SetRepDb`), роли и права. Файлы сохраняются в папку на хосте.
+
+**Как работает синхронизация с Яндекс.Диском:**
+
+1. На Mac Mini должен быть установлен и авторизован клиент Яндекс.Диска.
+2. В `.env` укажите `POSTGRES_BACKUP_DIR` на папку **внутри** синхронизируемого каталога Яндекс.Диска, например:
+   ```bash
+   POSTGRES_BACKUP_DIR=/Users/ваш_логин/Yandex.Disk/SetRep/backups
+   ```
+3. Создайте папку заранее: `mkdir -p "$POSTGRES_BACKUP_DIR"`.
+4. После `docker compose up -d` контейнер пишет дампы в эту папку, клиент Яндекс.Диска загружает их в облако.
+
+**Переменные:**
+- `POSTGRES_BACKUP_DIR` — путь на хосте (по умолчанию `./backups/postgres`)
+- `POSTGRES_BACKUP_SCHEDULE` — расписание (`@daily`, `@hourly`, cron; по умолчанию `@daily`)
+- `POSTGRES_BACKUP_KEEP_DAYS` / `KEEP_WEEKS` / `KEEP_MONTHS` — ротация локальных копий
+- `POSTGRES_BACKUP_ON_START` — бэкап сразу при старте контейнера (`TRUE`/`FALSE`)
+- `TZ` — часовой пояс для расписания (по умолчанию `Europe/Moscow`)
+
+**Ручной бэкап вне расписания:**
+```bash
+docker compose exec postgres-backup /backup.sh
+```
+
+**Восстановление из бэкапа** (пример, файл `.sql.gz`):
+```bash
+gunzip -c /path/to/backup.sql.gz | docker compose exec -T postgres psql -U postgres
+```
+
+> Важно: это бэкап через клиент Яндекс.Диска на хосте, не через Object Storage (S3). Object Storage по-прежнему используется только для изображений приложением.
 
 ### Переменные окружения
 
@@ -768,6 +804,11 @@ SetRep - это комплексное решение для отслежива�
 - `BOT_HTTP_PORT` - Порт бота (по умолчанию: 5083)
 - `MINIAPP_HTTP_PORT` - Порт MiniApp (по умолчанию: 5096)
 - `POSTGRES_PORT` - Порт PostgreSQL (по умолчанию: 5432)
+
+**Бэкапы:**
+- `POSTGRES_BACKUP_DIR` - папка на хосте для дампов (для Яндекс.Диска — внутри его каталога)
+- `POSTGRES_BACKUP_SCHEDULE` - расписание бэкапов (по умолчанию: `@daily`)
+- `TZ` - часовой пояс для расписания (по умолчанию: `Europe/Moscow`)
 
 ### Запуск
 
@@ -819,7 +860,8 @@ SetRep/
 ├── SetRep.Shared/           # Общие DTO
 ├── docker-compose.yml       # Docker Compose конфигурация
 ├── env.example              # Пример переменных окружения
-└── Documentation.md        # Эта документация
+├── backups/                 # Локальные дампы PostgreSQL (в .gitignore; на сервере — папка Яндекс.Диска)
+└── README.md                # Эта документация
 ```
 
 ---
@@ -978,4 +1020,4 @@ SetRep/
 
 ---
 
-**Последнее обновление:** 2026-02-23
+**Последнее обновление:** 2026-07-21
