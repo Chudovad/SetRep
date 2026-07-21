@@ -80,35 +80,6 @@ services:
     networks:
       - setrep-network
 
-  # Полный бэкап всего кластера PostgreSQL (pg_dumpall: все БД, роли, права).
-  # Пишет в папку на хосте — укажите POSTGRES_BACKUP_DIR внутри каталога Яндекс.Диска.
-  postgres-backup:
-    image: prodrigestivill/postgres-backup-local:16
-    container_name: setrep-postgres-backup
-    restart: unless-stopped
-    environment:
-      POSTGRES_HOST: postgres
-      # Служебная БД только для подключения; при POSTGRES_CLUSTER дампятся все базы
-      POSTGRES_DB: postgres
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-localdb}
-      POSTGRES_CLUSTER: "TRUE"
-      POSTGRES_EXTRA_OPTS: ""
-      SCHEDULE: ${POSTGRES_BACKUP_SCHEDULE:-@daily}
-      BACKUP_KEEP_DAYS: ${POSTGRES_BACKUP_KEEP_DAYS:-7}
-      BACKUP_KEEP_WEEKS: ${POSTGRES_BACKUP_KEEP_WEEKS:-4}
-      BACKUP_KEEP_MONTHS: ${POSTGRES_BACKUP_KEEP_MONTHS:-6}
-      BACKUP_ON_START: ${POSTGRES_BACKUP_ON_START:-TRUE}
-      BACKUP_LATEST_TYPE: none
-      TZ: ${TZ:-Europe/Moscow}
-    volumes:
-      - ${POSTGRES_BACKUP_DIR:-./backups/postgres}:/backups
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks:
-      - setrep-network
-
 volumes:
   postgres_data:
 
