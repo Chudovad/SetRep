@@ -367,3 +367,6 @@ FodyWeavers.xsd
 /SetRep.MiniApp/SetRep.MiniApp/appsettings.Development.json
 /SetRep.API/appsettings.Development.json
 /SetRep.MiniApp/SetRep.MiniApp.Client/wwwroot/appsettings.Development.json
+
+# Local PostgreSQL dumps (synced via Yandex.Disk on the host)
+/backups/
